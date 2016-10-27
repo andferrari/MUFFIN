@@ -9,7 +9,7 @@ include("easy_muffinfunc.jl")
 nb = 8
 
 nitermax = 10
-file_in = "m31_3d_small"
+file_in = "m31_3d_conv_10db"
 n_simus = 3
 
 μ_s = linspace(0.0, 1.0, n_simus)
