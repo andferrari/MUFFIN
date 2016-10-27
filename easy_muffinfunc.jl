@@ -14,6 +14,7 @@ function easy_muffin(μ_s::Float64, μ_λ::Float64, nb::Int, nitermax::Int, file
 
   folder = "/Users/ferrari/.julia/v0.4/MUFFIN_dev/data/"
   folder="/Users/antonyschutz/Desktop/MUFFIN_dev.jl-master/data/"
+
   println(string(folder,file_in,"_psf.fits"))
   f = FITS(string(folder,file_in,"_psf.fits"))
   psf = read(f[1])
@@ -87,7 +88,7 @@ function easy_muffin(μ_s::Float64, μ_λ::Float64, nb::Int, nitermax::Int, file
     for freq in 1:nfreq
 
       # compute iuwt adjoint
-      wstu = iuwt_recomp(squeeze(u[:,:,freq,:],3),0)
+      wstu = iuwt_recomp(u[:,:,freq,:],0)
       #wstu = IUWT.iuwt_decomp_adj(u[:,:,freq,:], nb)
 
       # compute xt
