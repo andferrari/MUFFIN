@@ -12,7 +12,7 @@ import matplotlib.pylab as pl
 
 file_in = 'm31_3d_conv_10db'
 mu_s = .5
-mu_l = 0.1
+mu_l = 0.
 nb = 8
 nbitermax = 10
 
