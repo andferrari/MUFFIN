@@ -13,7 +13,7 @@ function easy_muffin(μ_s::Float64, μ_λ::Float64, nb::Int, nitermax::Int, file
   println("loading...")
 
   folder = "/Users/ferrari/.julia/v0.4/MUFFIN_dev/data/"
-  
+  folder='/Users/antonyschutz/Documents/easy_muffin_py/data/'
   println(string(folder,file_in,"_psf.fits"))
   f = FITS(string(folder,file_in,"_psf.fits"))
   psf = read(f[1])
