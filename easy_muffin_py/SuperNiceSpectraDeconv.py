@@ -8,7 +8,7 @@ Created on Fri Oct 28 10:07:31 2016
 import numpy as np 
 from numpy.fft import fft2, ifft2, ifftshift
 from scipy.fftpack import dct,idct
-
+import time
 class SNSD: 
     def __init__(self,nitermax=10,
                  mu_s=0.5,
@@ -148,12 +148,12 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit):
         
     while loop and niter<nitermax:
         niter+=1 
+
         t = idct(v, axis=2, norm='ortho') # to check 
 
         # compute gradient
         tmp = myifftshift( myifft2( myfft2(x) * hth_fft ) ) 
         Delta_freq = tmp.real- fty
-
         for freq in range(nfreq):
             
             # compute iuwt adjoint
@@ -161,12 +161,11 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit):
 
             # compute xt
             xt[:,:,freq] = np.maximum(x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu + mu_l*t[:,:,freq]), 0.0 )
-            
+
             # update u
             tmp_spat_scal = iuwt_decomp(2*xt[:,:,freq] - x[:,:,freq],nb)
-            for b in range(nb):
-                u[:,:,freq,b] = sat( u[:,:,freq,b] + sigma*mu_s*tmp_spat_scal[:,:,b])
-        
+            u[:,:,freq,:] = sat( u[:,:,freq,:] + sigma*mu_s*tmp_spat_scal)
+   
         # update v
         v = sat(v + sigma*mu_l*dct(2*xt - x, axis=2, norm='ortho'))
         x = xt.copy()
