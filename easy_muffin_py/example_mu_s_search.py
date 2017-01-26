@@ -73,38 +73,35 @@ pl.imshow(sky[:,:,0])
 #==============================================================================
 #%% Test DWT 
 #==============================================================================
-
-DM = SNSD(mu_s=0.5,nitermax=50,nb=('db1','db2','db3','db4','db5','db6','db7','db8'),truesky=sky)
-
-DM.parameters()
-
-DM.setSpectralPSF(CubePSF)
-DM.setSpectralDirty(CubeDirty)
-
-[SpectralSkyModel, cost, snr]=DM.main()
-
-# check results
-resid = sky-SpectralSkyModel
-print(10*np.log10( sky2 / np.sum(resid*resid)  ))
-
-pl.figure()
-pl.plot(cost,label='cost')
-pl.legend(loc='best')
-
-pl.figure()
-pl.plot(snr,label='snr')
-pl.legend(loc='best')
+#DM = SNSD(mu_s=0.5,nitermax=50,nb=('db1','db2','db3','db4','db5','db6','db7','db8'),truesky=sky)
+#
+#DM.parameters()
+#
+#DM.setSpectralPSF(CubePSF)
+#DM.setSpectralDirty(CubeDirty)
+#
+#[SpectralSkyModel, cost, snr]=DM.main()
+#
+## check results
+#resid = sky-SpectralSkyModel
+#print(10*np.log10( sky2 / np.sum(resid*resid)  ))
+#
+#pl.figure()
+#pl.plot(cost,label='cost')
+#pl.legend(loc='best')
+#
+#pl.figure()
+#pl.plot(snr,label='snr')
+#pl.legend(loc='best')
 
 #%% ============================================================================
 # Search for best mu_s 
 # ==============================================================================
 
-from SuperNiceSpectraDeconv import SNSD
-
 mu_s_ = np.linspace(0,2,num=21)
 snr_ = np.zeros(mu_s_.shape)
 niter = 0
-
+ 
 for mu_s in mu_s_:
     print(mu_s)
     DM = SNSD(mu_s=mu_s,nitermax=1000,nb=('db1','db2','db3','db4','db5','db6','db7','db8'),truesky=sky)
@@ -120,12 +117,14 @@ for mu_s in mu_s_:
     snr_[niter] = snr
     niter+=1
 
-
 pl.figure()
 pl.plot(mu_s_,snr_)
-pl.show()
+pl.savefig('search_mu_s.png')
+
+np.save('mu_s_.npy', mu_s_)
+np.save('snr_.npy', snr_)
 
 pl.figure()
 pl.plot(cost)
-pl.show()
+pl.savefig('cost.png')
 

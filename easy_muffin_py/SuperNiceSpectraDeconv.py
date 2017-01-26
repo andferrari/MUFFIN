@@ -163,7 +163,7 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None
         nbw_decomp = nb
         nbw_recomp = nb 
         
-        tau = compute_tau_DWT(psf,nfreq,mu_s,mu_l,sigma,nbw_decomp)
+        tau = compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp)
         print('')
         print('DWT: tau = ', tau)
         
@@ -238,14 +238,14 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None
 #==============================================================================
 # Compute tau        
 #==============================================================================
-def compute_tau_DWT(psf,nfreq,mu_s,mu_l,sigma,nbw_decomp):
+def compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp):
     
-    beta = np.max(np.abs(myfft2(psf))**2)
+    beta = np.max(abs2(myfft2(psf)))
     
     print('nbw_decomp=',len(nbw_decomp))    
 
     tau = 0.9/(beta/2  + sigma*(mu_s**2)*len(nbw_decomp) + sigma*(mu_l**2))
-    return tau
+    return tau/100
 
 #==============================================================================
 # TOOLS        
