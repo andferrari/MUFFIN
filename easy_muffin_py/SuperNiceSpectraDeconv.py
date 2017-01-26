@@ -17,7 +17,8 @@ class SNSD:
                  nb=(8,0),
                  tau = 1e-4,
                  sigma = 1,
-                 dirtyinit=[]):    
+                 dirtyinit=[],
+                 truesky=[]):    
         
         print('')
         
@@ -59,6 +60,7 @@ class SNSD:
         self.sigma = sigma        
         self.tau = tau
         self.dirtyinit = dirtyinit 
+        self.truesky = truesky
 
     def parameters(self):
         print('')
@@ -97,12 +99,14 @@ class SNSD:
         tau = self.tau 
         sigma = self.sigma 
         
-        return easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit)
+        truesky = self.truesky
+        
+        return easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky)
         
 #==============================================================================
 # MAIN FONCTION 
 #==============================================================================
-def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit):
+def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None):
                   
     
     psfadj = defadj(psf)
@@ -119,11 +123,16 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit):
     else:
         x = init_dirty_admm(dirty, psf, psfadj, 5e1)
         
+    if truesky.any():
+        snr = np.zeros((nitermax))
+        truesky2 = np.sum(truesky*truesky)
+        
+    cost = np.zeros((nitermax))
     
     # precomputations
     print('')    
     print("precomputations...")
-
+    
     hth_fft = np.zeros((nxy,nxy,nfreq), dtype=np.complex) 
     fty = np.zeros((nxy,nxy,nfreq), dtype=np.float) 
     
@@ -144,8 +153,9 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit):
         Recomp = iuwt_recomp   
         nbw_decomp = [f for f in range(nb[0])]
         nbw_recomp = nb[-1] 
-#        for freq in range(nfreq):        
-#            u[freq] = Decomp(np.zeros((nxy,nxy,range(nb[0]))) , nbw_decomp)
+
+        print('')
+        print('IUWT: tau = ', tau)
                     
     else:
         Decomp = dwt_decomp
@@ -153,11 +163,15 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit):
         nbw_decomp = nb
         nbw_recomp = nb 
         
+        tau = compute_tau_DWT(psf,nfreq,mu_s,mu_l,sigma,nbw_decomp)
+        print('')
+        print('DWT: tau = ', tau)
+        
     u = {}   
     for freq in range(nfreq):        
         u[freq] = Decomp(np.zeros((nxy,nxy)) , nbw_decomp)
-            
-        
+             
+    
     # Iteration 
     print('')    
     print("iterate...")
@@ -171,6 +185,12 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit):
     print('iteration: ',niter)
         
     while loop and niter<nitermax:
+        
+        # compute snr if truesky given
+        if truesky.any():
+            resid = truesky - x
+            snr[niter]= 10*np.log10(truesky2 / np.sum(resid*resid))
+            
         niter+=1 
 
         t = idct(v, axis=2, norm='ortho') # to check 
@@ -196,10 +216,37 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit):
         v = sat(v + sigma*mu_l*dct(2*xt - x, axis=2, norm='ortho'))
         x = xt.copy()
                
+        # compute cost 
+        tmp = dirty - myifftshift(myifft2(myfft2(x)*myfft2(psf)))
+        LS_cst = 0.5*(np.linalg.norm(tmp)**2)
+        tmp = 0.
+        for freq in range(nfreq):
+            tmp1 = Decomp(x[:,:,freq],nbw_decomp)
+            for b in nbw_decomp:
+                tmp = tmp + np.sum(np.abs(tmp1[b]))
+        Spt_cst = mu_s*tmp
+        Spc_cst = mu_l*np.sum(np.abs(dct(x,axis=2,norm='ortho')))
+        cost[niter-1] = LS_cst + Spt_cst + Spc_cst 
+
         print('iteration: ',niter)
 
-    return xt
+    if truesky.any():
+        return xt, cost, snr
+    else:
+        return xt, cost
         
+#==============================================================================
+# Compute tau        
+#==============================================================================
+def compute_tau_DWT(psf,nfreq,mu_s,mu_l,sigma,nbw_decomp):
+    
+    beta = np.max(np.abs(myfft2(psf))**2)
+    
+    print('nbw_decomp=',len(nbw_decomp))    
+
+    tau = 0.9/(beta/2  + sigma*(mu_s**2)*len(nbw_decomp) + sigma*(mu_l**2))
+    return tau
+
 #==============================================================================
 # TOOLS        
 #==============================================================================

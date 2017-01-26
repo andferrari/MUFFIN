@@ -11,57 +11,86 @@ Created on Fri Oct 28 10:08:49 2016
 import os
 import numpy as np 
 from astropy.io import fits
+import pylab as pl 
 
 def checkdim(x):
     if len(x.shape)==4:
         x =np.squeeze(x)
-    x = x.transpose((2,1,0))
+        x = x.transpose((2,1,0))
     return x
     
     
-folder='/Users/antonyschutz/Documents/easy_muffin_py/data/'
-file_in = 'm31_3d_conv_10db'
+folder='data256'
+file_in = 'M31_3d_conv_256_10db'
 
 folder = os.path.join(os.getcwd(),folder)
 genname = os.path.join(folder,file_in) 
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))
-CubeDirty = checkdim(fits.getdata(drtname, ext=0))
+CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:2]
+CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:2]
 
 skyname = genname+'_sky.fits'
-sky = checkdim(fits.getdata(skyname, ext=0)) 
+sky = checkdim(fits.getdata(skyname, ext=0))[:,:,0:2]
 sky2 = np.sum(sky*sky)
-#==============================================================================
-# 
-#==============================================================================
 
 from SuperNiceSpectraDeconv import SNSD 
 
-# %% test IUWT
-DM = SNSD(mu_s=.5,nb=(8,0))
+pl.figure()
+pl.imshow(CubePSF[:,:,0])
 
-DM.parameters()
+pl.figure()
+pl.imshow(CubeDirty[:,:,0])
 
-DM.setSpectralPSF(CubePSF)
-DM.setSpectralDirty(CubeDirty)
+pl.figure()
+pl.imshow(sky[:,:,0])
 
-SpectralSkyModel=DM.main()
-
-# %% test DWT
-DM = SNSD(mu_s=.5,nb=('db1','db2'))
-
-DM.parameters()
-
-DM.setSpectralPSF(CubePSF)
-DM.setSpectralDirty(CubeDirty)
-
-SpectralSkyModel=DM.main()
-
-##==============================================================================
-## Check results 
-##==============================================================================
+#==============================================================================
+#%% Test IUWT 
+#==============================================================================
+#DM = SNSD(mu_s=.5,nb=(8,0),tau=1e-4,truesky=sky)
 #
+#DM.parameters()
+#
+#DM.setSpectralPSF(CubePSF)
+#DM.setSpectralDirty(CubeDirty)
+#
+#[SpectralSkyModel, cost, snr]=DM.main()
+#
+## check results
 #resid = sky-SpectralSkyModel
 #print(10*np.log10( sky2 / np.sum(resid*resid)  ))
+#
+#pl.figure()
+#pl.plot(cost,label='cost')
+#pl.legend(loc='best')
+#
+#pl.figure()
+#pl.plot(snr,label='snr')
+#pl.legend(loc='best')
+
+#==============================================================================
+#%% Test DWT 
+#==============================================================================
+DM = SNSD(mu_s=0.5,nitermax=500,nb=('db1','db2','db3','db4','db5','db6','db7','db8'),truesky=sky)
+
+DM.parameters()
+
+DM.setSpectralPSF(CubePSF)
+DM.setSpectralDirty(CubeDirty)
+
+[SpectralSkyModel, cost, snr]=DM.main()
+
+# check results
+resid = sky-SpectralSkyModel
+print(10*np.log10( sky2 / np.sum(resid*resid)  ))
+
+pl.figure()
+pl.plot(cost,label='cost')
+pl.legend(loc='best')
+
+pl.figure()
+pl.plot(snr,label='snr')
+pl.legend(loc='best')
+
