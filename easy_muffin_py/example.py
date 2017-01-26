@@ -39,8 +39,8 @@ sky2 = np.sum(sky*sky)
 
 from SuperNiceSpectraDeconv import SNSD 
 
-
-DM = SNSD(mu_s=.5,nb=8)
+# %% test IUWT
+DM = SNSD(mu_s=.5,nb=(8,0))
 
 DM.parameters()
 
@@ -49,9 +49,19 @@ DM.setSpectralDirty(CubeDirty)
 
 SpectralSkyModel=DM.main()
 
-#==============================================================================
-# Check results 
-#==============================================================================
+# %% test DWT
+DM = SNSD(mu_s=.5,nb=('db1','db2'))
 
-resid = sky-SpectralSkyModel
-print(10*np.log10( sky2 / np.sum(resid*resid)  ))
+DM.parameters()
+
+DM.setSpectralPSF(CubePSF)
+DM.setSpectralDirty(CubeDirty)
+
+SpectralSkyModel=DM.main()
+
+##==============================================================================
+## Check results 
+##==============================================================================
+#
+#resid = sky-SpectralSkyModel
+#print(10*np.log10( sky2 / np.sum(resid*resid)  ))
