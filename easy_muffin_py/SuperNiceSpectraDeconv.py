@@ -85,7 +85,7 @@ class SNSD:
         # MAIN PROGRAM - EASY MUFFIN         
         #======================================================================
 
-    def main(self):   
+    def main(self,method='easy_muffin'):   
         
         psf = self.psf
         dirty = self.dirty
@@ -101,7 +101,10 @@ class SNSD:
         
         truesky = self.truesky
         
-        return easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky)
+        if method == 'easy_muffin':
+            return easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky)
+        elif method == 'sure':
+            return easy_muffin_sure(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky)
         
 #==============================================================================
 # MAIN FONCTION 
@@ -234,6 +237,135 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None
         return xt, cost, snr
     else:
         return xt, cost
+
+def easy_muffin_sure(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None):
+                  
+    psfadj = defadj(psf)
+    
+    print('')
+    print('psf size ', psf.shape)
+    print('drt size ', dirty.shape)
+    
+    nfreq = dirty.shape[2]
+    nxy = dirty.shape[0]
+
+    if dirtyinit:
+        x = dirtyinit
+    else:
+        x = init_dirty_admm(dirty, psf, psfadj, 5e1)
+        
+    if truesky.any():
+        snr = np.zeros((nitermax))
+        truesky2 = np.sum(truesky*truesky)
+        
+    cost = np.zeros((nitermax))
+    
+    # precomputations
+    print('')    
+    print("precomputations...")
+    
+    hth_fft = np.zeros((nxy,nxy,nfreq), dtype=np.complex) 
+    fty = np.zeros((nxy,nxy,nfreq), dtype=np.float) 
+    
+    psfadj_fft = myfft2(psfadj)               
+    hth_fft = myfft2( myifftshift( myifft2( psfadj_fft * myfft2(psf) ) ) )        
+    tmp = myifftshift(myifft2(myfft2(dirty)*psfadj_fft))
+    fty = tmp.real
+
+
+    wstu = np.zeros((nxy,nxy), dtype=np.float) 
+    Delta_freq = np.zeros((nxy,nxy), dtype=np.float) 
+#    tmp_spat_cal = np.zeros((nxy,nxy,nb), dtype=np.float) 
+    xt = np.zeros((nxy,nxy,nfreq), dtype=np.float) 
+
+ 
+    if type(nb[0]) == int:
+        Decomp = iuwt_decomp
+        Recomp = iuwt_recomp   
+        nbw_decomp = [f for f in range(nb[0])]
+        nbw_recomp = nb[-1] 
+
+        print('')
+        print('IUWT: tau = ', tau)
+                    
+    else:
+        Decomp = dwt_decomp
+        Recomp = dwt_recomp        
+        nbw_decomp = nb
+        nbw_recomp = nb 
+        
+        tau = compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp)
+        print('')
+        print('DWT: tau = ', tau)
+        
+    u = {}   
+    for freq in range(nfreq):        
+        u[freq] = Decomp(np.zeros((nxy,nxy)) , nbw_decomp)
+             
+    
+    # Iteration 
+    print('')    
+    print("iterate...")
+
+    loop = True
+    niter = 0
+    
+#    u = np.zeros((nxy,nxy,nfreq,nb), dtype=np.float)
+    v = np.zeros((nxy,nxy,nfreq), dtype=np.float)
+          
+    print('iteration: ',niter)
+        
+    while loop and niter<nitermax:
+        
+        # compute snr if truesky given
+        if truesky.any():
+            resid = truesky - x
+            snr[niter]= 10*np.log10(truesky2 / np.sum(resid*resid))
+            
+        niter+=1 
+
+        t = idct(v, axis=2, norm='ortho') # to check 
+
+        # compute gradient
+        tmp = myifftshift( myifft2( myfft2(x) * hth_fft ) ) 
+        Delta_freq = tmp.real- fty
+        for freq in range(nfreq):
+            
+            # compute iuwt adjoint
+            wstu = Recomp(u[freq], nbw_recomp)
+
+            # compute xt
+            xt[:,:,freq] = np.maximum(x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu + mu_l*t[:,:,freq]), 0.0 )
+
+            # update u
+            tmp_spat_scal = Decomp(2*xt[:,:,freq] - x[:,:,freq] , nbw_decomp)
+
+            for b in nbw_decomp:
+                u[freq][b] = sat( u[freq][b] + sigma*mu_s*tmp_spat_scal[b])
+                
+        # update v
+        v = sat(v + sigma*mu_l*dct(2*xt - x, axis=2, norm='ortho'))
+        x = xt.copy()
+               
+        # compute cost 
+        tmp = dirty - myifftshift(myifft2(myfft2(x)*myfft2(psf)))
+        LS_cst = 0.5*(np.linalg.norm(tmp)**2)
+        tmp = 0.
+        for freq in range(nfreq):
+            tmp1 = Decomp(x[:,:,freq],nbw_decomp)
+            for b in nbw_decomp:
+                tmp = tmp + np.sum(np.abs(tmp1[b]))
+        Spt_cst = mu_s*tmp
+        Spc_cst = mu_l*np.sum(np.abs(dct(x,axis=2,norm='ortho')))
+        cost[niter-1] = LS_cst + Spt_cst + Spc_cst 
+
+        print('iteration: ',niter)
+
+    if truesky.any():
+        return xt, cost, snr
+    else:
+        return xt, cost
+
         
 #==============================================================================
 # Compute tau        

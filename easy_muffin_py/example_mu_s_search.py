@@ -28,11 +28,11 @@ genname = os.path.join(folder,file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:1]
-CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:1]
+CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,150:151]
+CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,150:151]
 
 skyname = genname+'_sky.fits'
-sky = checkdim(fits.getdata(skyname, ext=0))[:,:,0:1]
+sky = checkdim(fits.getdata(skyname, ext=0))[:,:,150:151]
 sky2 = np.sum(sky*sky)
 
 from SuperNiceSpectraDeconv import SNSD 
@@ -101,7 +101,7 @@ pl.imshow(sky[:,:,0])
 mu_s_ = np.linspace(0,2,num=21)
 snr_ = np.zeros(mu_s_.shape)
 niter = 0
- 
+
 for mu_s in mu_s_:
     print(mu_s)
     DM = SNSD(mu_s=mu_s,nitermax=1000,nb=('db1','db2','db3','db4','db5','db6','db7','db8'),truesky=sky)
@@ -116,6 +116,9 @@ for mu_s in mu_s_:
     
     snr_[niter] = snr
     niter+=1
+    
+    pl.figure()
+    pl.plot(cost)
 
 pl.figure()
 pl.plot(mu_s_,snr_)

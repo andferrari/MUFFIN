@@ -28,11 +28,11 @@ genname = os.path.join(folder,file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:1]
-CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:1]
+CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,250:251]
+CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,250:251]
 
 skyname = genname+'_sky.fits'
-sky = checkdim(fits.getdata(skyname, ext=0))[:,:,0:1]
+sky = checkdim(fits.getdata(skyname, ext=0))[:,:,250:251]
 sky2 = np.sum(sky*sky)
 
 from SuperNiceSpectraDeconv import SNSD 
