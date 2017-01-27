@@ -108,6 +108,9 @@ class SNSD:
         elif method == 'sure':
             var = self.var
             return easy_muffin_sure(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var,truesky)
+        elif method == 'gs':
+            var = self.var
+            return easy_muffin_sure_gs(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var,truesky)
         
 #==============================================================================
 # MAIN FONCTION 
@@ -192,13 +195,6 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None
         
     while loop and niter<nitermax:
         
-        # compute snr if truesky given
-        if truesky.any():
-            resid = truesky - x
-            snr[niter]= 10*np.log10(truesky2 / np.sum(resid*resid))
-            
-        niter+=1 
-
         t = idct(v, axis=2, norm='ortho') # to check 
 
         # compute gradient
@@ -232,8 +228,15 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None
                 tmp = tmp + np.sum(np.abs(tmp1[b]))
         Spt_cst = mu_s*tmp
         Spc_cst = mu_l*np.sum(np.abs(dct(x,axis=2,norm='ortho')))
-        cost[niter-1] = LS_cst + Spt_cst + Spc_cst 
+        cost[niter] = LS_cst + Spt_cst + Spc_cst 
 
+        # compute snr if truesky given
+        if truesky.any():
+            resid = truesky - x
+            snr[niter]= 10*np.log10(truesky2 / np.sum(resid*resid))
+            
+        niter+=1 
+        
         print('iteration: ',niter)
 
     if truesky.any():
@@ -336,44 +339,8 @@ def easy_muffin_sure(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=0,t
     while loop and niter<nitermax:
         
         #=================================
-        # Compute evaluation metrics
-        #=================================
-
-        # snr
-        if truesky.any():
-            resid = truesky - x
-            snr[niter]= 10*np.log10(truesky2 / np.sum(resid*resid))
-
-        # cost 
-        tmp = dirty - conv(x,psf)
-        LS_cst = (np.linalg.norm(tmp)**2)
-        tmp = 0.
-        for freq in range(nfreq):
-            tmp1 = Decomp(x[:,:,freq],nbw_decomp)
-            for b in nbw_decomp:
-                tmp = tmp + np.sum(np.abs(tmp1[b]))
-        Spt_cst = mu_s*tmp
-        Spc_cst = mu_l*np.sum(np.abs(dct(x,axis=2,norm='ortho')))
-        cost[niter] = 0.5*LS_cst + Spt_cst + Spc_cst 
-        
-        # wmse_true
-        wmse_true[niter] = (np.linalg.norm(conv(psf,truesky-x))**2)/(nxy*nxy*nfreq)
-        
-        # wmse_est (wmse given by SURE) 
-        tmp = n*conv(Jx,psf)
-        wmse_est[niter] = LS_cst/(nxy*nxy*nfreq) - var + 2*(var/(nxy*nxy*nfreq))*(np.sum(tmp))
-        
-        # psnr_true
-        psnr_true[niter] = 10*np.log10(psnr_num/wmse_true[niter])
-        
-        # psnr_est
-        psnr_est[niter] = 10*np.log10(psnr_num/wmse_est[niter])
-
-        #=================================
         # MUFFIN Alg.
         #=================================
-
-        niter+=1 
 
         t = idct(v, axis=2, norm='ortho') # to check 
         Jt = idct(Jv, axis=2,norm='ortho')
@@ -415,6 +382,41 @@ def easy_muffin_sure(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=0,t
         x = xt.copy()
         Jx = Jxt.copy()
 
+        #=================================
+        # Compute evaluation metrics
+        #=================================
+
+        # snr
+        if truesky.any():
+            resid = truesky - x
+            snr[niter]= 10*np.log10(truesky2 / np.sum(resid*resid))
+
+        # cost 
+        tmp = dirty - conv(x,psf)
+        LS_cst = (np.linalg.norm(tmp)**2)
+        tmp = 0.
+        for freq in range(nfreq):
+            tmp1 = Decomp(x[:,:,freq],nbw_decomp)
+            for b in nbw_decomp:
+                tmp = tmp + np.sum(np.abs(tmp1[b]))
+        Spt_cst = mu_s*tmp
+        Spc_cst = mu_l*np.sum(np.abs(dct(x,axis=2,norm='ortho')))
+        cost[niter] = 0.5*LS_cst + Spt_cst + Spc_cst 
+        
+        # wmse_true
+        wmse_true[niter] = (np.linalg.norm(conv(psf,truesky-x))**2)/(nxy*nxy*nfreq)
+        
+        # wmse_est (wmse given by SURE) 
+        tmp = n*conv(Jx,psf)
+        wmse_est[niter] = LS_cst/(nxy*nxy*nfreq) - var + 2*(var/(nxy*nxy*nfreq))*(np.sum(tmp))
+        
+        # psnr_true
+        psnr_true[niter] = 10*np.log10(psnr_num/wmse_true[niter])
+        
+        # psnr_est
+        psnr_est[niter] = 10*np.log10(psnr_num/wmse_est[niter])
+
+        niter+=1 
         print('iteration: ',niter)
 
     if truesky.any():
@@ -423,6 +425,194 @@ def easy_muffin_sure(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=0,t
         return xt, cost
 
         
+def easy_muffin_sure_gs(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=0,truesky=None):
+                  
+    psfadj = defadj(psf)
+    
+    print('')
+    print('psf size ', psf.shape)
+    print('drt size ', dirty.shape)
+    
+    nfreq = dirty.shape[2]
+    nxy = dirty.shape[0]
+
+    if dirtyinit:
+        x = dirtyinit
+    else:
+        x = init_dirty_wiener(dirty, psf, psfadj, 5e1)
+        
+    if truesky.any():
+        snr = np.zeros((nitermax))
+        truesky2 = np.sum(truesky*truesky)
+        
+    cost = np.zeros((nitermax))
+    wmse_true = np.zeros((nitermax))
+    wmse_est = np.zeros((nitermax))
+    psnr_true = np.zeros((nitermax))
+    psnr_est = np.zeros((nitermax))
+    psnr_num = np.sum((dirty-truesky)**2)/(nxy*nxy*nfreq)
+    mu_s_ = np.zeros(nitermax)
+    
+    # precomputations
+    print('')    
+    print("precomputations...")
+    
+    hth_fft = np.zeros((nxy,nxy,nfreq), dtype=np.complex) 
+    fty = np.zeros((nxy,nxy,nfreq), dtype=np.float) 
+    
+    psfadj_fft = myfft2(psfadj)               
+    hth_fft = myfft2( myifftshift( myifft2( psfadj_fft * myfft2(psf) ) ) )        
+    tmp = myifftshift(myifft2(myfft2(dirty)*psfadj_fft))
+    fty = tmp.real
+
+
+    wstu = np.zeros((nxy,nxy), dtype=np.float) 
+    Delta_freq = np.zeros((nxy,nxy), dtype=np.float) 
+    xt = np.zeros((nxy,nxy,nfreq), dtype=np.float) 
+
+ 
+    if type(nb[0]) == int:
+        Decomp = iuwt_decomp
+        Recomp = iuwt_recomp   
+        nbw_decomp = [f for f in range(nb[0])]
+        nbw_recomp = nb[-1] 
+        print('')
+        print('IUWT: tau = ', tau)
+                    
+    else:
+        Decomp = dwt_decomp
+        Recomp = dwt_recomp        
+        nbw_decomp = nb
+        nbw_recomp = nb         
+        tau = compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp)        
+        print('')
+        print('DWT: tau = ', tau)
+        
+    u = {}   
+    for freq in range(nfreq):        
+        u[freq] = Decomp(np.zeros((nxy,nxy)) , nbw_decomp)
+             
+    v = np.zeros((nxy,nxy,nfreq), dtype=np.float)
+    
+    # compute Hn 
+    Hn = np.zeros((nxy,nxy,nfreq))
+    np.random.seed(1)
+    n = np.random.binomial(1,0.5,(nxy,nxy,nfreq))
+    n[n==0] = -1
+    Hn = conv(n,psf)
+    
+    # init Jacobians 
+    Jv = np.zeros((nxy,nxy,nfreq))
+    Jx = init_dirty_wiener(n, psf, psfadj, 5e1)
+    Jxt = np.zeros((nxy,nxy,nfreq))
+    Ju = {}   
+    for freq in range(nfreq):        
+        Ju[freq] = Decomp(np.zeros((nxy,nxy)) , nbw_decomp)
+        
+    # Iteration 
+    print('')    
+    print("iterate...")
+
+    loop = True
+    niter = 0   
+          
+    print('iteration: ',niter)
+        
+    while loop and niter<nitermax:
+        
+        #=================================
+        # MUFFIN Alg.
+        #=================================
+
+        t = idct(v, axis=2, norm='ortho') # to check 
+        Jt = idct(Jv, axis=2,norm='ortho')
+
+        # compute gradient
+        tmp = myifftshift( myifft2( myfft2(x) * hth_fft ) ) 
+        Delta_freq = tmp.real- fty
+        tmp = myifftshift( myifft2( myfft2(Jx) * hth_fft ) ) 
+        JDelta_freq = tmp.real- Hn
+        
+        # set m_s using gs (golden section search)
+        args = (t,Jt,Delta_freq,JDelta_freq,u,Ju,x,tau,mu_l,Jx,xt,nbw_recomp,nbw_decomp,Recomp,Decomp,Jxt,sigma,v,Jv,dirty,psf,n,nxy,nfreq,var)
+        mu_s = gs_search(One_MUFFIN_iter, a=0, b=1, args=args,absolutePrecision=1e-2,maxiter=100)
+        mu_s_[niter] = mu_s
+
+        
+        for freq in range(nfreq):
+            
+            # compute iuwt adjoint
+            wstu = Recomp(u[freq], nbw_recomp)
+            Js_l = Recomp(Ju[freq], nbw_recomp)
+
+            # compute xt
+            xtt = x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu + mu_l*t[:,:,freq])
+            xt[:,:,freq] = np.maximum(xtt, 0.0 )
+            Jxtt = Jx[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l + mu_l*Jt[:,:,freq])
+            Jxt[:,:,freq] = Heavy(xtt)*Jxtt
+            
+            # update u
+            tmp_spat_scal = Decomp(2*xt[:,:,freq] - x[:,:,freq] , nbw_decomp)
+            tmp_spat_scal_J = Decomp(2*Jxt[:,:,freq] - Jx[:,:,freq] , nbw_decomp)
+            for b in nbw_decomp:
+                utt = u[freq][b] + sigma*mu_s*tmp_spat_scal[b]
+                u[freq][b] = sat( utt )
+                Jutt = Ju[freq][b] + sigma*mu_s*tmp_spat_scal_J[b]
+                Ju[freq][b] = sat( Jutt )
+                
+
+        # update v
+        vtt = v + sigma*mu_l*dct(2*xt - x, axis=2, norm='ortho')
+        v = sat(vtt)
+        Jvtt = Jv + sigma*mu_l*dct(2*Jxt - Jx, axis=2, norm='ortho')
+        Jv = Rect(vtt)*Jvtt
+        
+        x = xt.copy()
+        Jx = Jxt.copy()
+
+        #=================================
+        # Compute evaluation metrics
+        #=================================
+
+        # snr
+        if truesky.any():
+            resid = truesky - x
+            snr[niter]= 10*np.log10(truesky2 / np.sum(resid*resid))
+
+        # cost 
+        tmp = dirty - conv(x,psf)
+        LS_cst = (np.linalg.norm(tmp)**2)
+        tmp = 0.
+        for freq in range(nfreq):
+            tmp1 = Decomp(x[:,:,freq],nbw_decomp)
+            for b in nbw_decomp:
+                tmp = tmp + np.sum(np.abs(tmp1[b]))
+        Spt_cst = mu_s*tmp
+        Spc_cst = mu_l*np.sum(np.abs(dct(x,axis=2,norm='ortho')))
+        cost[niter] = 0.5*LS_cst + Spt_cst + Spc_cst 
+        
+        # wmse_true
+        wmse_true[niter] = (np.linalg.norm(conv(psf,truesky-x))**2)/(nxy*nxy*nfreq)
+        
+        # wmse_est (wmse given by SURE) 
+        tmp = n*conv(Jx,psf)
+        wmse_est[niter] = LS_cst/(nxy*nxy*nfreq) - var + 2*(var/(nxy*nxy*nfreq))*(np.sum(tmp))
+        
+        # psnr_true
+        psnr_true[niter] = 10*np.log10(psnr_num/wmse_true[niter])
+        
+        # psnr_est
+        psnr_est[niter] = 10*np.log10(psnr_num/wmse_est[niter])
+
+        niter+=1
+        print('iteration: ',niter)
+
+    if truesky.any():
+        return xt, cost, snr, psnr_true, psnr_est, wmse_true, wmse_est, mu_s_
+    else:
+        return xt, cost
+
+
 #==============================================================================
 # Compute tau        
 #==============================================================================
@@ -435,13 +625,14 @@ def compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp):
     tau = 0.9/(beta/2  + sigma*(mu_s**2)*len(nbw_decomp) + sigma*(mu_l**2))
     return tau/100
 #==============================================================================
-# tools for Jacobians comp.        
+# tools for Jacobians comp. 
 #==============================================================================
 def Heavy(x):
     return (np.sign(x)+1)/2
 
 def Rect(x):
     return Heavy(x+1)-Heavy(x-1)
+    
 #==============================================================================
 # TOOLS        
 #==============================================================================
@@ -608,13 +799,68 @@ def init_dirty_wiener(dirty, psf, psfadj, mu):
     result = myifft2( A * myfft2(B.real) )
     return result.real    
     
-    
+#==============================================================================
+# tools for golden section search  
+#==============================================================================
 
+def gs_search(f, a, b, args=(),absolutePrecision=1e-2,maxiter=100):
+
+    gr = (1+np.sqrt(5))/2
+    c = b - (b - a)/gr
+    d = a + (b - a)/gr
+    niter = 0
+    
+    while abs(a - b) > absolutePrecision and niter < maxiter:
+        if f( *((c,) + args) ) < f( *((d,) + args) ):
+            b = d
+        else:
+            a = c
+                        
+        c = b - (b - a)/gr
+        d = a + (b - a)/gr 
+
+    return (a + b)/2
         
+def One_MUFFIN_iter(mu_s,t,Jt,Delta_freq,JDelta_freq,u,Ju,x,tau,mu_l,Jx,xt,nbw_recomp,nbw_decomp,Recomp,Decomp,Jxt,sigma,v,Jv,dirty,psf,n,nxy,nfreq,var):
+    
+        for freq in range(nfreq):
+            
+            # compute iuwt adjoint
+            wstu = Recomp(u[freq], nbw_recomp)
+            Js_l = Recomp(Ju[freq], nbw_recomp)
+
+            # compute xt
+            xtt = x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu + mu_l*t[:,:,freq])
+            xt[:,:,freq] = np.maximum(xtt, 0.0 )
+            Jxtt = Jx[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l + mu_l*Jt[:,:,freq])
+            Jxt[:,:,freq] = Heavy(xtt)*Jxtt
+            
+            # update u
+            tmp_spat_scal = Decomp(2*xt[:,:,freq] - x[:,:,freq] , nbw_decomp)
+            tmp_spat_scal_J = Decomp(2*Jxt[:,:,freq] - Jx[:,:,freq] , nbw_decomp)
+            for b in nbw_decomp:
+                utt = u[freq][b] + sigma*mu_s*tmp_spat_scal[b]
+                u[freq][b] = sat( utt )
+                Jutt = Ju[freq][b] + sigma*mu_s*tmp_spat_scal_J[b]
+                Ju[freq][b] = sat( Jutt )
+                
+
+        # update v
+        vtt = v + sigma*mu_l*dct(2*xt - x, axis=2, norm='ortho')
+        v = sat(vtt)
+        Jvtt = Jv + sigma*mu_l*dct(2*Jxt - Jx, axis=2, norm='ortho')
+        Jv = Rect(vtt)*Jvtt
         
+        x = xt.copy()
+        Jx = Jxt.copy()
+
+        # wmse_est (wmse given by SURE) 
+        tmp = dirty - conv(x,psf)
+        LS_cst = (np.linalg.norm(tmp)**2)
+        tmp = n*conv(Jx,psf)
+        wmse_est = LS_cst/(nxy*nxy*nfreq) - var + 2*(var/(nxy*nxy*nfreq))*(np.sum(tmp))
         
-        
-        
+        return wmse_est
         
         
         
