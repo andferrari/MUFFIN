@@ -35,6 +35,7 @@ function easy_muffin_dwt(params)
   μ_s = params["μ_s"]
   μ_λ = params["μ_λ"]
   τ = params["τ"]
+  ρ = params["ρ"]
 
   spatialwlt = params["spatialwlt"]
 
@@ -129,16 +130,16 @@ function easy_muffin_dwt(params)
       end
 
       for b in 1:nb
-          u[:,:,freq,b] = sat(u[:,:,freq,b] + σ*μ_s*tmp_spat_cal[:,:,b])
+          u[:,:,freq,b] = ρ*sat(u[:,:,freq,b] + σ*μ_s*tmp_spat_cal[:,:,b]) + (1-ρ)*u[:,:,freq,b]
       end
 
     end
 
     # update v
-    v = sat(v + σ*μ_λ*dct(2*xt - x, 3))
+    v = ρ*sat(v + σ*μ_λ*dct(2*xt - x, 3)) + (1-ρ)*v
 
     # update x
-    x = copy(xt)
+    x = copy(ρ*xt + (1-ρ)*x)
 
     push!(snr, 10*log10(nrj_sky/vecnorm(sky-x)^2))
     push!(cost,sum(compute_costs(params, x, dirty, psf_fft)))
@@ -188,6 +189,7 @@ function parameters_init()
     "μ_s" => 1e-1,
     "μ_λ" => 1e-1,
     "β" => 1.0,
+    "ρ" => 1.0,
     "mask" => 0,
     "mode" => "DWT", #-- DWT/IUWT
     "spatialwlt" => [WT.db1,WT.db2,WT.db3,WT.db4,WT.db5,WT.db6,WT.db7,WT.db8])
