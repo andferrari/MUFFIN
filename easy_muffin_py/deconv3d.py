@@ -123,12 +123,14 @@ class EasyMuffin():
         else:
             self.Decomp = dwt_decomp
             self.Recomp = dwt_recomp        
-            self.nbw_decomp =self. nb
+            self.nbw_decomp =self.nb
             self.nbw_recomp = self.nb 
             
             self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
             print('')
             print('DWT: tau = ', self.tau)
+            
+        
             
         self.u = {}   
         for freq in range(self.nfreq):        
