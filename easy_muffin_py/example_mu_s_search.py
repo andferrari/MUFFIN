@@ -28,23 +28,23 @@ genname = os.path.join(folder,file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,150:151]
-CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,150:151]
+CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,150:155]
+CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,150:155]
 
 skyname = genname+'_sky.fits'
-sky = checkdim(fits.getdata(skyname, ext=0))[:,:,150:151]
+sky = checkdim(fits.getdata(skyname, ext=0))[:,:,150:155]
 sky2 = np.sum(sky*sky)
 
 from SuperNiceSpectraDeconv import SNSD 
 
-pl.figure()
-pl.imshow(CubePSF[:,:,0])
-
-pl.figure()
-pl.imshow(CubeDirty[:,:,0])
-
-pl.figure()
-pl.imshow(sky[:,:,0])
+#pl.figure()
+#pl.imshow(CubePSF[:,:,0])
+#
+#pl.figure()
+#pl.imshow(CubeDirty[:,:,0])
+#
+#pl.figure()
+#pl.imshow(sky[:,:,0])
 
 #==============================================================================
 #%% Test IUWT 
@@ -98,18 +98,18 @@ pl.imshow(sky[:,:,0])
 # Search for best mu_s 
 # ==============================================================================
 
-mu_s_ = np.linspace(0,2,num=21)
-snr_ = np.zeros(mu_s_.shape)
+mu_l_ = np.linspace(0,3,num=21)
+snr_ = np.zeros(mu_l_.shape)
 niter = 0
 
-for mu_s in mu_s_:
-    print(mu_s)
-    DM = SNSD(mu_s=mu_s,nitermax=1000,nb=('db1','db2','db3','db4','db5','db6','db7','db8'),truesky=sky)
+for mu_l in mu_l_:
+    print(mu_l)
+    DM = SNSD(mu_l=mu_l,mu_s=0.8,nitermax=100,nb=('db1','db2','db3','db4','db5','db6','db7','db8'),truesky=sky)
     DM.parameters()
     DM.setSpectralPSF(CubePSF)
     DM.setSpectralDirty(CubeDirty)
     
-    [SpectralSkyModel , cost, snr] = DM.main()
+    [SpectralSkyModel , cost, snr,psnr_] = DM.main(method = 'easy_muffin')
     
     resid = sky-SpectralSkyModel
     snr = 10*np.log10(sky2 / np.sum(resid*resid))
@@ -121,13 +121,50 @@ for mu_s in mu_s_:
     pl.plot(cost)
 
 pl.figure()
+pl.plot(mu_l_,snr_)
+pl.savefig('search_mu_l.png')
+
+np.save('mu_l_.npy', mu_l_)
+np.save('snr_mu_l.npy', snr_)
+
+pl.figure()
+pl.plot(cost)
+pl.savefig('cost_mu_l.png')
+
+
+#%%
+
+mu_s_ = np.linspace(0,1,num=21)
+snr_ = np.zeros(mu_s_.shape)
+niter = 0
+
+for mu_s in mu_s_:
+    print(mu_s)
+    DM = SNSD(mu_s=mu_s,nitermax=500,nb=('db1','db2','db3','db4','db5','db6','db7','db8'),truesky=sky)
+    DM.parameters()
+    DM.setSpectralPSF(CubePSF)
+    DM.setSpectralDirty(CubeDirty)
+    
+    [SpectralSkyModel , cost, snr,psnr_] = DM.main(method = 'easy_muffin')
+    
+    resid = sky-SpectralSkyModel
+    snr = 10*np.log10(sky2 / np.sum(resid*resid))
+    
+    snr_[niter] = snr
+    niter+=1
+    
+    #pl.figure()
+    #pl.plot(cost)
+
+pl.figure()
 pl.plot(mu_s_,snr_)
 pl.savefig('search_mu_s.png')
 
 np.save('mu_s_.npy', mu_s_)
-np.save('snr_.npy', snr_)
+np.save('snr_mu_s.npy', snr_)
 
 pl.figure()
 pl.plot(cost)
-pl.savefig('cost.png')
+pl.savefig('cost_mu_l.png')
 
+ 

@@ -17,7 +17,7 @@ class SNSD:
                  mu_l=0.0,
                  nb=(8,0),
                  tau = 1e-4,
-                 sigma = 1,
+                 sigma = 10,
                  var = 0,
                  dirtyinit=[],
                  truesky=[]):    
@@ -115,7 +115,11 @@ class SNSD:
         elif method=='la':
             var = self.var
             return easy_muffin_sure_gs_la(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var,truesky)
-        
+        elif method=='gs2':
+            var = self.var
+            return easy_muffin_sure_gs2(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var,truesky)
+
+    
 #==============================================================================
 # MAIN FONCTION 
 #==============================================================================
@@ -141,6 +145,7 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None
         truesky2 = np.sum(truesky*truesky)
         
     cost = np.zeros((nitermax+1))
+    psnr_ = np.zeros((nitermax+1)) 
     
     # precomputations
     print('')    
@@ -209,11 +214,19 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None
         resid = truesky - x
         snr[niter]= 10*np.log10(truesky2 / np.sum(resid*resid))
             
+    psnr_num = np.sum((dirty-truesky)**2)/(nxy*nxy*nfreq)
+
+    # psnr_true
+    psnr_[niter] = 10*np.log10(psnr_num/((np.linalg.norm(conv(psf,truesky-x))**2)/(nxy*nxy*nfreq)))
+    
     v = np.zeros((nxy,nxy,nfreq), dtype=np.float)
           
     print('iteration: ',niter)
         
     while loop and niter<nitermax:
+        
+        if niter == 500 :
+            mu_l = 1.7
         
         t = idct(v, axis=2, norm='ortho') # to check 
 
@@ -250,6 +263,8 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None
         Spc_cst = mu_l*np.sum(np.abs(dct(x,axis=2,norm='ortho')))
         cost[niter+1] = LS_cst + Spt_cst + Spc_cst 
 
+        psnr_[niter+1] = 10*np.log10(psnr_num/((np.linalg.norm(conv(psf,truesky-x))**2)/(nxy*nxy*nfreq)))
+        
         # compute snr if truesky given
         if truesky.any():
             resid = truesky - x
@@ -257,10 +272,10 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None
             
         niter+=1 
         
-        print('iteration: ',niter)
+        print('iteration: ',niter,' ',mu_s,' ',mu_l)
 
     if truesky.any():
-        return xt, cost, snr
+        return xt, cost, snr, psnr_
     else:
         return xt, cost
 
@@ -337,7 +352,7 @@ def easy_muffin_sure(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=0,t
     np.random.seed(1)
     n = np.random.binomial(1,0.5,(nxy,nxy,nfreq))
     n[n==0] = -1
-    Hn = conv(n,psf)
+    Hn = conv(n,psfadj) # wrong 
     
     # init Jacobians 
     Jv = np.zeros((nxy,nxy,nfreq))
@@ -554,7 +569,7 @@ def easy_muffin_sure_gs(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=
     np.random.seed(1)
     n = np.random.binomial(1,0.5,(nxy,nxy,nfreq))
     n[n==0] = -1
-    Hn = conv(n,psf)
+    Hn = conv(n,psfadj)
     
     # init Jacobians 
     Jv = np.zeros((nxy,nxy,nfreq))
@@ -603,8 +618,7 @@ def easy_muffin_sure_gs(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=
     psnr_true[niter] = 10*np.log10(psnr_num/wmse_true[niter])
         
     # psnr_est
-    psnr_est[niter] = 10*np.log10(psnr_num/wmse_est[niter])
-        
+    psnr_est[niter] = 10*np.log10(psnr_num/wmse_est[niter])        
     
     tau = compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp) 
     
@@ -705,6 +719,241 @@ def easy_muffin_sure_gs(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=
     else:
         return xt, cost
 
+        
+def easy_muffin_sure_gs2(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=0,truesky=None):
+                  
+    psfadj = defadj(psf)
+    
+    print('')
+    print('psf size ', psf.shape)
+    print('drt size ', dirty.shape)
+    
+    nfreq = dirty.shape[2]
+    nxy = dirty.shape[0]
+
+    if dirtyinit:
+        x = dirtyinit
+    else:
+        x = init_dirty_wiener(dirty, psf, psfadj, 5e1)
+        
+    if truesky.any():
+        snr = np.zeros((nitermax+1))
+        truesky2 = np.sum(truesky*truesky)
+        
+    cost = np.zeros((nitermax+1))
+    wmse_true = np.zeros((nitermax+1))
+    wmse_est = np.zeros((nitermax+1))
+    psnr_true = np.zeros((nitermax+1))
+    psnr_est = np.zeros((nitermax+1))
+    psnr_num = np.sum((dirty-truesky)**2)/(nxy*nxy*nfreq)
+    mu_s_ = np.zeros(nitermax)
+    mu_l_ = np.zeros(nitermax)
+    
+    # precomputations
+    print('')    
+    print("precomputations...")
+    
+    hth_fft = np.zeros((nxy,nxy,nfreq), dtype=np.complex) 
+    fty = np.zeros((nxy,nxy,nfreq), dtype=np.float) 
+    
+    psfadj_fft = myfft2(psfadj)               
+    hth_fft = myfft2( myifftshift( myifft2( psfadj_fft * myfft2(psf) ) ) )        
+    tmp = myifftshift(myifft2(myfft2(dirty)*psfadj_fft))
+    fty = tmp.real
+
+
+    wstu = np.zeros((nxy,nxy), dtype=np.float) 
+    Delta_freq = np.zeros((nxy,nxy), dtype=np.float) 
+    xt = np.zeros((nxy,nxy,nfreq), dtype=np.float) 
+
+ 
+    if type(nb[0]) == int:
+        Decomp = iuwt_decomp
+        Recomp = iuwt_recomp   
+        nbw_decomp = [f for f in range(nb[0])]
+        nbw_recomp = nb[-1] 
+        print('')
+        print('IUWT: tau = ', tau)
+                    
+    else:
+        Decomp = dwt_decomp
+        Recomp = dwt_recomp        
+        nbw_decomp = nb
+        nbw_recomp = nb         
+        tau = compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp)        
+        print('')
+        print('DWT: tau = ', tau)
+        
+    u = {}   
+    for freq in range(nfreq):        
+        u[freq] = Decomp(np.zeros((nxy,nxy)) , nbw_decomp)
+             
+    v = np.zeros((nxy,nxy,nfreq), dtype=np.float)
+    
+    # compute Hn 
+    Hn = np.zeros((nxy,nxy,nfreq))
+    np.random.seed(1)
+    n = np.random.binomial(1,0.5,(nxy,nxy,nfreq))
+    n[n==0] = -1
+    Hn = conv(n,psfadj)
+    
+    # init Jacobians 
+    Jv = np.zeros((nxy,nxy,nfreq))
+    Jx = init_dirty_wiener(n, psf, psfadj, 5e1)
+    Jxt = np.zeros((nxy,nxy,nfreq))
+    Ju = {}   
+    for freq in range(nfreq):        
+        Ju[freq] = Decomp(np.zeros((nxy,nxy)) , nbw_decomp)
+        
+    # Iteration 
+    print('')    
+    print("iterate...")
+
+    loop = True
+    niter = 0   
+    
+    #=================================
+    # initialise evaluation metrics
+    #=================================
+
+    # snr
+    if truesky.any():
+        resid = truesky - x
+        snr[niter]= 10*np.log10(truesky2 / np.sum(resid*resid))
+        
+    # cost 
+    tmp = dirty - conv(x,psf)
+    LS_cst = (np.linalg.norm(tmp)**2)
+    tmp = 0.
+    for freq in range(nfreq):
+        tmp1 = Decomp(x[:,:,freq],nbw_decomp)
+        for b in nbw_decomp:
+            tmp = tmp + np.sum(np.abs(tmp1[b]))
+    Spt_cst = mu_s*tmp
+    Spc_cst = mu_l*np.sum(np.abs(dct(x,axis=2,norm='ortho')))
+    cost[niter] = 0.5*LS_cst + Spt_cst + Spc_cst 
+        
+    # wmse_true
+    wmse_true[niter] = (np.linalg.norm(conv(psf,truesky-x))**2)/(nxy*nxy*nfreq)
+        
+    # wmse_est (wmse given by SURE) 
+    tmp = n*conv(Jx,psf)
+    wmse_est[niter] = LS_cst/(nxy*nxy*nfreq) - var + 2*(var/(nxy*nxy*nfreq))*(np.sum(tmp))
+        
+    # psnr_true
+    psnr_true[niter] = 10*np.log10(psnr_num/wmse_true[niter])
+        
+    # psnr_est
+    psnr_est[niter] = 10*np.log10(psnr_num/wmse_est[niter])        
+    
+    tau = compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp) 
+    
+    print('iteration: ',niter)
+    
+    mu_l = 0
+        
+    while loop and niter<nitermax:
+        
+        #=================================
+        # MUFFIN Alg.
+        #=================================
+
+        t = idct(v, axis=2, norm='ortho') # to check 
+        Jt = idct(Jv, axis=2,norm='ortho')
+
+        # compute gradient
+        tmp = myifftshift( myifft2( myfft2(x) * hth_fft ) ) 
+        Delta_freq = tmp.real- fty
+        tmp = myifftshift( myifft2( myfft2(Jx) * hth_fft ) ) 
+        JDelta_freq = tmp.real- Hn
+        
+        # set m_s using gs (golden section search)
+        if niter < nitermax/2:
+            args = (t,Jt,Delta_freq,JDelta_freq,u,Ju,x,tau,mu_l,Jx,xt,nbw_recomp,nbw_decomp,Recomp,Decomp,Jxt,sigma,v,Jv,dirty,psf,n,nxy,nfreq,var)
+            mu_s = gs_search(One_MUFFIN_iter, a=0.5, b=1.0, args=args,absolutePrecision=1e-1,maxiter=100)
+        else:
+            args = (t,Jt,Delta_freq,JDelta_freq,u,Ju,x,tau,mu_s,Jx,xt,nbw_recomp,nbw_decomp,Recomp,Decomp,Jxt,sigma,v,Jv,dirty,psf,n,nxy,nfreq,var)
+            mu_l = gs_search(One_MUFFIN_iter_mu_l, a=0.5, b=3.0, args=args,absolutePrecision=1e-1,maxiter=100)
+            
+        mu_s_[niter] = mu_s
+        mu_l_[niter] = mu_l
+        print('mu_s',mu_s)
+        
+        
+        for freq in range(nfreq):
+            
+            # compute iuwt adjoint
+            wstu = Recomp(u[freq], nbw_recomp)
+            Js_l = Recomp(Ju[freq], nbw_recomp)
+
+            # compute xt
+            xtt = x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu + mu_l*t[:,:,freq])
+            xt[:,:,freq] = np.maximum(xtt, 0.0 )
+            Jxtt = Jx[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l + mu_l*Jt[:,:,freq])
+            Jxt[:,:,freq] = Heavy(xtt)*Jxtt
+            
+            # update u
+            tmp_spat_scal = Decomp(2*xt[:,:,freq] - x[:,:,freq] , nbw_decomp)
+            tmp_spat_scal_J = Decomp(2*Jxt[:,:,freq] - Jx[:,:,freq] , nbw_decomp)
+            for b in nbw_decomp:
+                utt = u[freq][b] + sigma*mu_s*tmp_spat_scal[b]
+                u[freq][b] = sat( utt )
+                Jutt = Ju[freq][b] + sigma*mu_s*tmp_spat_scal_J[b]
+                Ju[freq][b] = Rect( utt )*Jutt
+                
+
+        # update v
+        vtt = v + sigma*mu_l*dct(2*xt - x, axis=2, norm='ortho')
+        v = sat(vtt)
+        Jvtt = Jv + sigma*mu_l*dct(2*Jxt - Jx, axis=2, norm='ortho')
+        Jv = Rect(vtt)*Jvtt
+        
+        x = xt.copy()
+        Jx = Jxt.copy()
+
+        #=================================
+        # Compute evaluation metrics
+        #=================================
+
+        # snr
+        if truesky.any():
+            resid = truesky - x
+            snr[niter+1]= 10*np.log10(truesky2 / np.sum(resid*resid))
+
+        # cost 
+        tmp = dirty - conv(x,psf)
+        LS_cst = (np.linalg.norm(tmp)**2)
+        tmp = 0.
+        for freq in range(nfreq):
+            tmp1 = Decomp(x[:,:,freq],nbw_decomp)
+            for b in nbw_decomp:
+                tmp = tmp + np.sum(np.abs(tmp1[b]))
+        Spt_cst = mu_s*tmp
+        Spc_cst = mu_l*np.sum(np.abs(dct(x,axis=2,norm='ortho')))
+        cost[niter+1] = 0.5*LS_cst + Spt_cst + Spc_cst 
+        
+        # wmse_true
+        wmse_true[niter+1] = (np.linalg.norm(conv(psf,truesky-x))**2)/(nxy*nxy*nfreq)
+        
+        # wmse_est (wmse given by SURE) 
+        tmp = n*conv(Jx,psf)
+        wmse_est[niter+1] = LS_cst/(nxy*nxy*nfreq) - var + 2*(var/(nxy*nxy*nfreq))*(np.sum(tmp))
+        
+        # psnr_true
+        psnr_true[niter+1] = 10*np.log10(psnr_num/wmse_true[niter])
+        
+        # psnr_est
+        psnr_est[niter+1] = 10*np.log10(psnr_num/wmse_est[niter])
+
+        niter+=1
+        print('iteration: ',niter)
+
+    if truesky.any():
+        return xt, cost, snr, psnr_true, psnr_est, wmse_true, wmse_est, mu_s_, mu_l_
+    else:
+        return xt, cost
+
+
 
 def easy_muffin_sure_gs_la(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=0,truesky=None):
                   
@@ -780,7 +1029,7 @@ def easy_muffin_sure_gs_la(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,v
     np.random.seed(1)
     n = np.random.binomial(1,0.5,(nxy,nxy,nfreq))
     n[n==0] = -1
-    Hn = conv(n,psf)
+    Hn = conv(n,psfadj)
     
     # init Jacobians 
     Jv = np.zeros((nxy,nxy,nfreq))
@@ -843,8 +1092,10 @@ def easy_muffin_sure_gs_la(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,v
         #=================================
 
         # set m_s using gs (golden section search)
-        args = (u,Ju,x,tau,mu_l,Jx,xt,nbw_recomp,nbw_decomp,Recomp,Decomp,Jxt,sigma,v,Jv,dirty,psf,n,nxy,nfreq,var,hth_fft,fty,Hn)
-        mu_s = gs_search(One_MUFFIN_iter_la, a=0.5, b=1.0, args=args,absolutePrecision=1e-1,maxiter=100)
+        if np.mod(niter,20)==0:
+            args = (u,Ju,x,tau,mu_l,Jx,xt,nbw_recomp,nbw_decomp,Recomp,Decomp,Jxt,sigma,v,Jv,dirty,psf,n,nxy,nfreq,var,hth_fft,fty,Hn)
+            mu_s = gs_search(One_MUFFIN_iter_la, a=0.5, b=1.0, args=args,absolutePrecision=1e-1,maxiter=100)
+            
         mu_s_[niter] = mu_s
 
         t = idct(v, axis=2, norm='ortho') # to check 
@@ -941,7 +1192,7 @@ def compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp):
     print('nbw_decomp=',len(nbw_decomp))    
 
     tau = 0.9/(beta/2  + sigma*(mu_s**2)*len(nbw_decomp) + sigma*(mu_l**2))
-    tau = tau/100
+    tau = tau
     return tau
 #==============================================================================
 # tools for Jacobians comp. 
@@ -1122,7 +1373,7 @@ def init_dirty_wiener(dirty, psf, psfadj, mu):
 # tools for golden section search  
 #==============================================================================
 
-def gs_search(f, a, b, args=(),absolutePrecision=1e-2,maxiter=100):
+def gs_search(f, a, b, args=(),absolutePrecision=0.2,maxiter=100):
 
     gr = (1+np.sqrt(5))/2
     c = b - (b - a)/gr
@@ -1183,10 +1434,55 @@ def One_MUFFIN_iter(mu_s,t,Jt,Delta_freq,JDelta_freq,u,Ju,x,tau,mu_l,Jx,xt,nbw_r
     tmp = n*conv(Jxt_,psf)
     wmse_est_ = LS_cst/(nxy*nxy*nfreq) - var + 2*(var/(nxy*nxy*nfreq))*(np.sum(tmp))
         
-    # print('(mu_s,wmse)=',mu_s,' ',wmse_est_)
+    #print('(mu_s,wmse)=',mu_s,' ',wmse_est_)
     return wmse_est_
         
+    
+def One_MUFFIN_iter_mu_l(mu_l,t,Jt,Delta_freq,JDelta_freq,u,Ju,x,tau,mu_s,Jx,xt,nbw_recomp,nbw_decomp,Recomp,Decomp,Jxt,sigma,v,Jv,dirty,psf,n,nxy,nfreq,var):
+    
+    xt_ = xt.copy()
+    Jxt_ = Jxt.copy()
+    u_ = copy.deepcopy(u)       
+    Ju_ = copy.deepcopy(Ju)
+
+    
+    for freq in range(nfreq):
+            
+            # compute iuwt adjoint
+            wstu_ = Recomp(u_[freq], nbw_recomp)
+            Js_l_ = Recomp(Ju_[freq], nbw_recomp)
+
+            # compute xt
+            xtt_ = x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu_ + mu_l*t[:,:,freq])
+            xt_[:,:,freq] = np.maximum(xtt_, 0.0 ) ### 
+            Jxtt_ = Jx[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l_ + mu_l*Jt[:,:,freq])
+            Jxt_[:,:,freq] = Heavy(xtt_)*Jxtt_ ## 
+            
+            # update u
+            tmp_spat_scal_ = Decomp(2*xt_[:,:,freq] - x[:,:,freq] , nbw_decomp)
+            tmp_spat_scal_J_ = Decomp(2*Jxt_[:,:,freq] - Jx[:,:,freq] , nbw_decomp)
+            for b in nbw_decomp:
+                 utt_ = u_[freq][b] + sigma*mu_s*tmp_spat_scal_[b]
+                 u_[freq][b] = sat( utt_ ) ## 
+                 Jutt_ = Ju_[freq][b] + sigma*mu_s*tmp_spat_scal_J_[b]
+                 Ju_[freq][b] = Rect( utt_ )*Jutt_ ## 
                 
+
+    # update v
+    vtt_ = v + sigma*mu_l*dct(2*xt_ - x, axis=2, norm='ortho')
+    v = sat(vtt_)
+    Jvtt_ = Jv + sigma*mu_l*dct(2*Jxt_ - Jx, axis=2, norm='ortho')
+    Jv = Rect(vtt_)*Jvtt_
+        
+    # wmse_est (wmse given by SURE) 
+    tmp = dirty - conv(xt_,psf)
+    LS_cst = (np.linalg.norm(tmp)**2)
+    tmp = n*conv(Jxt_,psf)
+    wmse_est_ = LS_cst/(nxy*nxy*nfreq) - var + 2*(var/(nxy*nxy*nfreq))*(np.sum(tmp))
+        
+    #print('(mu_s,wmse)=',mu_s,' ',wmse_est_)
+    return wmse_est_
+
 #==============================================================================
 # tools for golden section search + Look ahead   
 #==============================================================================
@@ -1202,7 +1498,7 @@ def One_MUFFIN_iter_la(mu_s,u,Ju,x,tau,mu_l,Jx,xt,nbw_recomp,nbw_decomp,Recomp,D
     v_ = v.copy()
     Jv_ = Jv.copy()
     
-    for i in range(2):
+    for i in range(10):
         
         t = idct(v_, axis=2, norm='ortho') # to check 
         Jt = idct(Jv_, axis=2,norm='ortho')
@@ -1253,12 +1549,7 @@ def One_MUFFIN_iter_la(mu_s,u,Ju,x,tau,mu_l,Jx,xt,nbw_recomp,nbw_decomp,Recomp,D
         #print('(mu_s,wmse)=',mu_s,' ',wmse_est)
 
     return wmse_est   
-        
-        
-        
-        
-        
-        
+
         
         
         

@@ -13,7 +13,7 @@ import os
 import numpy as np
 from astropy.io import fits
 import pylab as pl
-
+from deconv3d_tools import conv
 
 def checkdim(x):
     if len(x.shape) == 4:
@@ -30,31 +30,73 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))
-CubeDirty = checkdim(fits.getdata(drtname, ext=0))
+CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:5]
+CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:5]
+
 
 skyname = genname+'_sky.fits'
 sky = checkdim(fits.getdata(skyname, ext=0))
-sky = np.transpose(sky)
+sky = np.transpose(sky)[:,:,0:5]
 sky2 = np.sum(sky*sky)
 
-# ==============================================================================
+#%% ==============================================================================
 #
 # ==============================================================================
 
 from SuperNiceSpectraDeconv import SNSD
-from deconv3d import EasyMuffin
+from deconv3d import EasyMuffin, EasyMuffinSURE
 
-DM = SNSD(mu_s=.5, nb=8,nitermax=3,truesky=sky)
+nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+nitermax = 20
 
+DM = SNSD(mu_s=.5, nb=nb,nitermax=nitermax,truesky=sky)
 DM.parameters()
-
 DM.setSpectralPSF(CubePSF)
 DM.setSpectralDirty(CubeDirty)
+(SpectralSkyModel , cost, snr, psnr) = DM.main()
 
-(SpectralSkyModel , cost, snr) = DM.main()
+EM= EasyMuffin(mu_s=.5, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
+EM.loop(nitermax)
+SpectralSkyModel2 = EM.xt
+cost2 = EM.costlist
+snr2 = EM.snrlist
+psnr2 = EM.psnrlist
+wmse2 = EM.wmselist
 
+Noise = CubeDirty - conv(CubePSF,sky)
+var = np.sum(Noise**2)/Noise.size
+EMs= EasyMuffinSURE(mu_s=.5, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+EMs.loop(nitermax)
+SpectralSkyModel3 = EMs.xt
+cost3 = EMs.costlist
+snr3 = EMs.snrlist
+psnr3 = EMs.psnrlist
+psnrsure3 = EMs.psnrlistsure
+wmse3 = EMs.wmselist
+wmsesure3 = EMs.wmselistsure
 
-EM= EasyMuffin(mu_s=.5, nb=8,truesky=sky,psf=CubePSF,dirty=CubeDirty)
+pl.figure()
+pl.plot(snr,label='snr1')
+pl.plot(snr2,label='snr2')
+pl.plot(snr3,'*',label='snr3')
+pl.legend(loc='best')
 
-(SpectralSkyModel2 , cost2, snr2) = EM.loop(nitermax=3)
+pl.figure()
+pl.plot(cost,label='cost1')
+pl.plot(cost2,label='cost2')
+pl.plot(cost3,'*',label='cost3')
+pl.legend(loc='best')
+
+pl.figure()
+pl.plot(psnr,label='psnr1')
+pl.plot(psnr2,label='psnr2')
+pl.plot(psnr3,'*',label='psnr3')
+pl.plot(psnrsure3,'*',label='psnrsure3')
+pl.legend(loc='best')
+
+pl.figure()
+pl.plot(wmse2,label='wmse2')
+pl.plot(wmse3,label='wmse3')
+pl.plot(wmsesure3,'*',label='wmsesure3')
+pl.legend(loc='best')
+
