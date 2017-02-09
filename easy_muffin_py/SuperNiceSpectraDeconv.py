@@ -225,9 +225,6 @@ def easy_muffin(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,truesky=None
         
     while loop and niter<nitermax:
         
-        if niter == 500 :
-            mu_l = 1.7
-        
         t = idct(v, axis=2, norm='ortho') # to check 
 
         # compute gradient
@@ -1207,7 +1204,7 @@ def Rect(x):
 # TOOLS        
 #==============================================================================
 def defadj(x):
-    return x[::-1,::-1,:] 
+    return np.roll(np.roll(x[::-1,::-1,:],1,axis=0),1,axis=1) 
 
 def sat(x):
     """ Soft thresholding on array x"""

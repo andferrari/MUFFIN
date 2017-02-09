@@ -82,39 +82,41 @@ pl.imshow(sky[:,:,0])
 from deconv3d import EasyMuffinSURE
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 1000
+nitermax = 600
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
-EM00= EasyMuffinSURE(mu_s=.0, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+EM00= EasyMuffinSURE(mu_s=1.0, mu_l = 0, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
 EM00.loop(nitermax)
 
 np.save('EM00_.npy',EM00)
 
-#pl.figure()
-#pl.plot(EM00.wmselist,label='wmse3')
-#pl.plot(EM00.wmselistsure,'*',label='wmsesure3')
-#pl.legend(loc='best')
-#
-#pl.figure()
-#pl.plot(EM00.costlist,label='cost')
+pl.figure()
+pl.plot(EM00.wmselist,label='wmse3')
+pl.plot(EM00.wmselistsure,'*',label='wmsesure3')
+pl.legend(loc='best')
 
+pl.figure()
+pl.plot(EM00.costlist,label='cost')
+
+pl.figure()
+pl.plot(EM00.snrlist,label='cost')
 
 #%% ---------------------------------------------------------------------------
 from deconv3d import EasyMuffinSURE
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 1000
+nitermax = 100
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
-EM0= EasyMuffinSURE(mu_s=.2, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+EM0= EasyMuffinSURE(mu_s=0., mu_l=0., nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
 EM0.loop(nitermax)
 
 np.save('EM0_.npy',EM0)
 
-#pl.figure()
-#pl.plot(EM0.wmselist,label='wmse3')
-#pl.plot(EM0.wmselistsure,'*',label='wmsesure3')
-#pl.legend(loc='best')
+pl.figure()
+pl.plot(EM0.wmselist,label='wmse3')
+pl.plot(EM0.wmselistsure,label='wmsesure3')
+pl.legend(loc='best')
 
 
 #%% 
@@ -122,47 +124,60 @@ np.save('EM0_.npy',EM0)
 from deconv3d import EasyMuffinSURE
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 1000
+nitermax = 100
 
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
-EM= EasyMuffinSURE(mu_s=0, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+EM= EasyMuffinSURE(mu_s=1, mu_l=0,nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
 
 EM.loop_mu_s(nitermax)
 np.save('EM_.npy',EM)
 EM.loop_mu_l(nitermax)
 np.save('EM_.npy',EM)
 
-#pl.figure()
-#pl.plot(EM.mu_slist,label='mu_s')
-#pl.plot(EM.mu_llist,label='mu_l')
-#pl.legend(loc='best')
-#
-#pl.figure()
-#pl.plot(EM.wmselist,label='wmse')
-#pl.plot(EM.wmselistsure,label='wmsesure')
-#pl.legend(loc='best')
-#
-#pl.figure()
-#pl.plot(EM.costlist,label='cost')
-#pl.legend(loc='best')
+
+for i in range(10):
+    EM.loop_mu_s(3)
+    EM.loop_mu_l(3)
+    
+
+#np.save('EM_.npy',EM)
+
+pl.figure()
+pl.plot(EM.mu_slist,label='mu_s')
+pl.plot(EM.mu_llist,label='mu_l')
+pl.legend(loc='best')
+
+pl.figure()
+pl.plot(EM.wmselist,label='wmse')
+pl.plot(EM.wmselistsure,label='wmsesure')
+pl.legend(loc='best')
+
+pl.figure()
+pl.plot(EM.costlist,label='cost')
+pl.legend(loc='best')
+
+pl.figure()
+pl.plot(EM.snrlist,label='snr')
+pl.legend(loc='best')
 
 ##%%
-#
-#pl.figure()
-#pl.plot(EM00.wmselist,label='wmse00')
-#pl.plot(EM0.wmselist,label='wmse0')
-#pl.plot(EM.wmselist,label='wmse')
-#pl.legend(loc='best')
-#
-#pl.figure()
-#pl.plot(EM00.snrlist,label='snr00')
-#pl.plot(EM0.snrlist,label='snr0')
-#pl.plot(EM.snrlist,label='snr')
-#pl.legend(loc='best')
-#
-#
-#pl.figure()
-#pl.plot(EM00.costlist,label='cost00')
-#
 
+pl.figure()
+pl.plot(EM00.wmselist,label='wmse00')
+pl.plot(EM0.wmselist,label='wmse0')
+pl.plot(EM.wmselist,label='wmse')
+pl.legend(loc='best')
+
+pl.figure()
+pl.plot(EM00.snrlist,label='snr00')
+pl.plot(EM0.snrlist,label='snr0')
+pl.plot(EM.snrlist,label='snr')
+pl.legend(loc='best')
+#
+#
+pl.figure()
+pl.plot(EM00.costlist,label='cost00')
+pl.plot(EM0.costlist,label='cost0')
+pl.plot(EM.costlist,label='cost')
+pl.legend(loc='best')

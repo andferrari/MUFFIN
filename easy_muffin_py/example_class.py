@@ -47,15 +47,15 @@ from SuperNiceSpectraDeconv import SNSD
 from deconv3d import EasyMuffin, EasyMuffinSURE
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 20
+nitermax = 50
 
-DM = SNSD(mu_s=.5, nb=nb,nitermax=nitermax,truesky=sky)
+DM = SNSD(mu_s=0.7, mu_l = 5.2, nb=nb,nitermax=nitermax,truesky=sky)
 DM.parameters()
 DM.setSpectralPSF(CubePSF)
 DM.setSpectralDirty(CubeDirty)
 (SpectralSkyModel , cost, snr, psnr) = DM.main()
 
-EM= EasyMuffin(mu_s=.5, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
+EM= EasyMuffin(mu_s=0.7, mu_l = 5.2, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
 EM.loop(nitermax)
 SpectralSkyModel2 = EM.xt
 cost2 = EM.costlist
@@ -65,7 +65,7 @@ wmse2 = EM.wmselist
 
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
-EMs= EasyMuffinSURE(mu_s=.5, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+EMs= EasyMuffinSURE(mu_s=0.7, mu_l = 5.2, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
 EMs.loop(nitermax)
 SpectralSkyModel3 = EMs.xt
 cost3 = EMs.costlist

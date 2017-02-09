@@ -129,6 +129,10 @@ class EasyMuffin():
             print('DWT: tau = ', self.tau)
 
 
+        self.utt = {}   
+        for freq in range(self.nfreq):
+            self.utt[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
+
         self.u = {}   
         for freq in range(self.nfreq):
             self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
@@ -171,17 +175,24 @@ class EasyMuffin():
         return LS_cst + Spt_cst + Spc_cst
 
 
-    def snr(self):
-        resid = self.truesky - self.x
-        return 10*np.log10(self.truesky2 / np.sum(resid*resid))
+    def snr(self,change=True):
+        if change:
+            resid = self.truesky - self.x
+            return 10*np.log10(self.truesky2 / np.sum(resid*resid))
+        else:
+            resid = self.truesky - self.x2_
+            return 10*np.log10(self.truesky2 / np.sum(resid*resid))
 
 
     def psnr(self):
         resid = (np.linalg.norm(conv(self.psf,self.truesky-self.x))**2)/(self.nxy*self.nxy*self.nfreq)
         return 10*np.log10(self.psnrnum / resid)
 
-    def wmse(self):
-        return (np.linalg.norm(conv(self.psf,self.truesky-self.x))**2)/(self.nxy*self.nxy*self.nfreq)
+    def wmse(self,change=True):
+        if change:
+            return (np.linalg.norm(conv(self.psf,self.truesky-self.x))**2)/(self.nxy*self.nxy*self.nfreq)
+        else:
+            return (np.linalg.norm(conv(self.psf,self.truesky-self.x2_))**2)/(self.nxy*self.nxy*self.nfreq)
 
     def mse(self):
         return (np.linalg.norm(self.truesky-self.x)**2)/(self.nxy*self.nxy*self.nfreq)
@@ -189,12 +200,12 @@ class EasyMuffin():
     def update(self,change=True):
 
         if change:
-            xt_ = self.xt
+            xt_ = self.xt # xt_ is a pointer 
             u_ = self.u
             x_ = self.x
             v_ = self.v
         else:
-            xt_ = self.xt.copy()
+            xt_ = self.xt.copy() # xt is a new local matrix 
             u_  = copy.deepcopy(self.u)
             x_  = self.x.copy()
             v_  = self.v.copy()
@@ -226,7 +237,8 @@ class EasyMuffin():
         v_ = sat(self.vtt)
 
         if change:
-            self.x = xt_.copy()
+            self.v = v_.copy()
+            self.x = self.xt.copy()
 
             # compute cost
             self.costlist.append(self.cost())
@@ -237,7 +249,7 @@ class EasyMuffin():
                 self.psnrlist.append(self.psnr())
                 self.wmselist.append(self.wmse())
         else:
-            self.x_ = xt_.copy()
+            self.x2_ = xt_.copy()
 
     def parameters(self):
         print('')
@@ -379,9 +391,9 @@ class EasyMuffinSURE(EasyMuffin):
 
             return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
         else:
-            tmp = self.dirty - conv(self.x_,self.psf)
+            tmp = self.dirty - conv(self.x2_,self.psf)
             LS_cst = np.linalg.norm(tmp)**2
-            tmp = self.n*conv(self.Jx_,self.psf)
+            tmp = self.n*conv(self.Jx2_,self.psf)
 
             return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
 
@@ -393,12 +405,12 @@ class EasyMuffinSURE(EasyMuffin):
     def update_Jacobians(self,change=True):
 
         if change:
-            Jxt_ = self.Jxt
+            Jxt_ = self.Jxt # pointer 
             Ju_ = self.Ju
             Jx_ = self.Jx
             Jv_ = self.Jv
         else:
-            Jxt_ = self.Jxt.copy()
+            Jxt_ = self.Jxt.copy() # new matrix 
             Ju_  = copy.deepcopy(self.Ju)
             Jx_  = self.Jx.copy()
             Jv_  = self.Jv.copy()
@@ -429,6 +441,7 @@ class EasyMuffinSURE(EasyMuffin):
         Jv_ = Rect(self.vtt)*Jvtt
 
         if change:
+            self.Jv = Jv_.copy()
             self.Jx = self.Jxt.copy()
 
             # wmsesure
@@ -438,12 +451,9 @@ class EasyMuffinSURE(EasyMuffin):
             if self.truesky.any():
                 self.psnrlistsure.append(self.psnrsure())
         else:
-            self.Jx_ = Jxt_.copy()
-            tmp = self.dirty - conv(self.x_,self.psf)
-            LS_cst = np.linalg.norm(tmp)**2
-            tmp = self.n*conv(Jx_,self.psf)
+            self.Jx2_ = Jxt_.copy()
 
-            return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
+            return self.wmsesure(change=False)
 
 
     def loop(self,nitermax=10,change=True):
@@ -465,16 +475,13 @@ class EasyMuffinSURE(EasyMuffin):
     def loop_mu_s(self,nitermax=10):
         """ main loop """
 
-        self.tau = compute_tau_DWT(self.psf,1,self.mu_l,self.sigma,self.nbw_decomp)
-        print('')
-        print('DWT: tau = ', self.tau)
 
         if nitermax < 1:
             print('nitermax must be a positive integer, nitermax=10')
             nitermax=10
 
         for niter in range(nitermax):
-            self.mu_s = self.golds_search_mu_s(a=0, b=1, absolutePrecision=1e-1,maxiter=100)
+            self.mu_s = self.golds_search_mu_s(a=0, b=1, absolutePrecision=1e-2,maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
 
@@ -492,8 +499,9 @@ class EasyMuffinSURE(EasyMuffin):
         niter = 0
 
         while abs(a - b) > absolutePrecision and niter < maxiter:
+            #print('(a,f(a))=(',a,',',self.f_gs_mu_s(a),') - (b,f(b))=(',b,',',self.f_gs_mu_s(b),') - (c,f(c))=(',c,',',self.f_gs_mu_s(c),') - (d,f(d))=(',d,',',self.f_gs_mu_s(d),') ')
+            #print('')
             if self.f_gs_mu_s(c) < self.f_gs_mu_s(d):
-            #if f( *((c,) + args) ) < f( *((d,) + args) ):
                 b = d
             else:
                 a = c
@@ -502,29 +510,29 @@ class EasyMuffinSURE(EasyMuffin):
             d = a + (b - a)/gr
             niter+=1
 
+        #print('quit gs')
         return (a + b)/2
 
 
     def f_gs_mu_s(self,a):
+        mu_s_0 = self.mu_s
         self.mu_s = a
         super(EasyMuffinSURE,self).update(change=False)
         res = self.update_Jacobians(change=False)
+        self.mu_s = mu_s_0
         return res
 
 
     def loop_mu_l(self,nitermax=10):
         """ main loop """
 
-        self.tau = compute_tau_DWT(self.psf,self.mu_s,1,self.sigma,self.nbw_decomp)
-        print('')
-        print('DWT: tau = ', self.tau)
 
         if nitermax < 1:
             print('nitermax must be a positive integer, nitermax=10')
             nitermax=10
 
         for niter in range(nitermax):
-            self.mu_l = self.golds_search_mu_l(a=0, b=1, absolutePrecision=1e-1,maxiter=100)
+            self.mu_l = self.golds_search_mu_l(a=0, b=2, absolutePrecision=1e-1,maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
 
@@ -542,6 +550,8 @@ class EasyMuffinSURE(EasyMuffin):
         niter = 0
 
         while abs(a - b) > absolutePrecision and niter < maxiter:
+            #print('(a,f(a))=(',a,',',self.f_gs_mu_l(a),') - (b,f(b))=(',b,',',self.f_gs_mu_l(b),') - (c,f(c))=(',c,',',self.f_gs_mu_l(c),') - (d,f(d))=(',d,',',self.f_gs_mu_l(d),') ')
+            #print('')
             if self.f_gs_mu_l(c) < self.f_gs_mu_l(d):
                 b = d
             else:
@@ -550,12 +560,16 @@ class EasyMuffinSURE(EasyMuffin):
             c = b - (b - a)/gr
             d = a + (b - a)/gr
             niter+=1
+            
+        #print('quit gs')
 
         return (a + b)/2
 
 
     def f_gs_mu_l(self,a):
+        mu_l_0 = self.mu_l
         self.mu_l = a
         super(EasyMuffinSURE,self).update(change=False)
         res = self.update_Jacobians(change=False)
+        self.mu_l = mu_l_0
         return res

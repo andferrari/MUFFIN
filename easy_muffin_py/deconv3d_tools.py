@@ -21,7 +21,7 @@ def compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp):
 
     tau = 0.9/(beta/2  + sigma*(mu_s**2)*len(nbw_decomp) + sigma*(mu_l**2))
     tau = tau
-    return tau/100
+    return tau
 #==============================================================================
 # tools for Jacobians comp. 
 #==============================================================================
@@ -35,7 +35,7 @@ def Rect(x):
 # TOOLS        
 #==============================================================================
 def defadj(x):
-    return x[::-1,::-1,:] 
+    return np.roll(np.roll(x[::-1,::-1,:],1,axis=0),1,axis=1) 
 
 def sat(x):
     """ Soft thresholding on array x"""
