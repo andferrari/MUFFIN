@@ -1,41 +1,41 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-Created on Thu Feb  2 16:42:26 2017
+Created on Fri Feb  3 14:28:24 2017
 
-@author: rammanouil
+@author: rflamary
 """
 
-import numpy as np 
+import numpy as np
 from numpy.fft import fft2, ifft2, ifftshift
+from scipy.fftpack import dct,idct
 import pywt
 
-#==============================================================================
-# Compute tau        
-#==============================================================================
-def compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp):
-    
-    beta = np.max(abs2(myfft2(psf)))
-    
-    #print('nbw_decomp=',len(nbw_decomp))    
 
-    tau = 0.9/(beta/2  + sigma*(mu_s**2)*len(nbw_decomp) + sigma*(mu_l**2))
-    tau = tau
-    return tau
-#==============================================================================
-# tools for Jacobians comp. 
-#==============================================================================
-def Heavy(x):
-    return (np.sign(x)+1)/2
+import time
+__time_tic_toc=time.time()
 
-def Rect(x):
-    return Heavy(x+1)-Heavy(x-1)
-    
+def tic():
+    """ Python implementation of Matlab tic() function """
+    global __time_tic_toc
+    __time_tic_toc=time.time()
+
+def toc(message='Elapsed time : {} s'):
+    """ Python implementation of Matlab toc() function """
+    t=time.time()
+    print(message.format(t-__time_tic_toc))
+    return t-__time_tic_toc
+
+def toq():
+    """ Python implementation of Julia toc() function """
+    t=time.time()
+    return t-__time_tic_toc
+
 #==============================================================================
 # TOOLS        
 #==============================================================================
 def defadj(x):
-    return np.roll(np.roll(x[::-1,::-1,:],1,axis=0),1,axis=1) 
+    return x[::-1,::-1,:] 
 
 def sat(x):
     """ Soft thresholding on array x"""
@@ -55,55 +55,21 @@ def myifft2(x):
 def myifftshift(x):
     return ifftshift(x,axes=(0,1))   
     
-def conv(x,y):
-    tmp = myifftshift(myifft2(myfft2(x)*myfft2(y)))
-    return tmp.real
-#==============================================================================
-# DWT from adapted to same style as IUWT.jl from PyMoresane
-#==============================================================================    
-def dwt_decomp(x, list_wavelet, store_c0=False):
-    out = {}
-    coef = []
-    for base in list_wavelet:
-        a,(b,c,d) = pywt.dwt2(x, base)
-        coef.append((a,(b,c,d)))
-        out[base] = np.vstack( ( np.hstack((a,b)) , np.hstack((c,d)) ) )    
-    if store_c0:        
-        return out,coef
-    else:
-        return out
-
-def dwt_recomp(x_in, nbw, c0=False):
-    list_wavelet = nbw[0:-1]
-    out = 0
-    for n,base in enumerate(list_wavelet):
-        x = x_in[base]   
-        ny,nx = x.shape
-        y2 = int(ny/2)
-        x2 = int(nx/2)        
-        a = x[:y2,:x2]
-        b = x[:y2,x2:]
-        c = x[y2:,:x2]
-        d = x[y2:,x2:]
-        out += pywt.idwt2( (a,(b,c,d)), base )
-    return out      
     
 #==============================================================================
 # IUWT from IUWT.jl from PyMoresane
 #==============================================================================
 def iuwt_decomp(x, scale, store_c0=False):
 
-#    filter = (1./16,4./16,6./16,4./16,1./16)
-#    coeff = np.zeros((x.shape[0],x.shape[1],scale), dtype=np.float)
-    coeff = {}
+    filter = (1./16,4./16,6./16,4./16,1./16)
+
+    coeff = np.zeros((x.shape[0],x.shape[1],scale), dtype=np.float)
     c0 = x
 
-#    for i in range(scale):
-    for i in scale:    
-        c = a_trous(c0,i)
-        c1 = a_trous(c,i)
-#        coeff[:,:,i] = c0 - c1
-        coeff[i] = c0 - c1
+    for i in range(scale):
+        c = a_trous(c0,filter,i)
+        c1 = a_trous(c,filter,i)
+        coeff[:,:,i] = c0 - c1
         c0 = c
 
     if store_c0:
@@ -111,21 +77,21 @@ def iuwt_decomp(x, scale, store_c0=False):
     else:
         return coeff
 
-
+    
 def iuwt_recomp(x, scale, c0=False):
 
-#    filter = (1./16,4./16,6./16,4./16,1./16)
-        
-    max_scale = len(x) + scale
+    filter = (1./16,4./16,6./16,4./16,1./16)
+
+    max_scale = x.shape[2] + scale
 
     if c0 != False:
         recomp = c0
     else:
-        recomp = np.zeros((x[0].shape[0],x[0].shape[1]), dtype=np.float)
+        recomp = np.zeros((x.shape[0],x.shape[1]), dtype=np.float)
 
 
     for i in range(max_scale-1,-1,-1):
-        recomp = a_trous(recomp,i) + x[i-scale]
+        recomp = a_trous(recomp,filter,i) + x[:,:,i-scale]
 
 #    if scale > 0:
 #        for i in range(scale,0,-1):
@@ -141,7 +107,7 @@ def iuwt_decomp_adj(u,scale):
         htu += iuwt_decomp(u[:,:,k],k)[:,:,k]
     return htu
 
-def a_trous(C0, scale):
+def a_trous(C0, filter, scale):
     """
     Copy form https://github.com/ratt-ru/PyMORESANE
     The following is a serial implementation of the a trous algorithm. Accepts the following parameters:
@@ -152,10 +118,8 @@ def a_trous(C0, scale):
     scale       (no default):   The scale for which the decomposition is being carried out.
 
     OUTPUTS:
-    C1                          The result of applying the a trous algorithm to the input.    
+    C1                          The result of applying the a trous algorithm to the input.
     """
-    filter = (1./16,4./16,6./16,4./16,1./16)
-    
     tmp = filter[2]*C0
 
     tmp[(2**(scale+1)):,:] += filter[0]*C0[:-(2**(scale+1)),:]
@@ -187,36 +151,39 @@ def a_trous(C0, scale):
     return C1
 
 #==============================================================================
-# DIRTY INITIALIZATION FOR wienner 
+# DIRTY INITIALIZATION FOR ADMM 
 #==============================================================================
         
-def init_dirty_wiener(dirty, psf, psfadj, mu):
+def init_dirty_admm(dirty, psf, psfadj, mu):
     """ Initialization with Wiener Filter """
     A = 1.0/( abs2( myfft2(psf ) ) + mu  )
     B = myifftshift( myifft2( myfft2(dirty) * myfft2(psfadj) ) )
     result = myifft2( A * myfft2(B.real) )
     return result.real    
     
-#==============================================================================
-# tools for golden section search  
-#==============================================================================
+    
 
-#def gs_search(f, a, b, args=(),absolutePrecision=1e-2,maxiter=100):
-#
-#    gr = (1+np.sqrt(5))/2
-#    c = b - (b - a)/gr
-#    d = a + (b - a)/gr
-#    niter = 0
-#    
-#    while abs(a - b) > absolutePrecision and niter < maxiter:
-#        if f( *((c,) + args) ) < f( *((d,) + args) ):
-#            b = d
-#        else:
-#            a = c
-#                    
-#        c = b - (b - a)/gr
-#        d = a + (b - a)/gr
-#        niter+=1
-#
-#    return (a + b)/2
-
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        

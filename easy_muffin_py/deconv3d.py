@@ -129,11 +129,11 @@ class EasyMuffin():
             print('DWT: tau = ', self.tau)
 
 
-        self.utt = {}   
+        self.utt = {}
         for freq in range(self.nfreq):
             self.utt[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
 
-        self.u = {}   
+        self.u = {}
         for freq in range(self.nfreq):
             self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
 
@@ -172,7 +172,7 @@ class EasyMuffin():
                 tmp = tmp + np.sum(np.abs(tmp1[b]))
         Spt_cst = self.mu_s*tmp
         Spc_cst = self.mu_l*np.sum(np.abs(dct(self.x,axis=2,norm='ortho')))
-        return LS_cst + Spt_cst + Spc_cst
+        return (LS_cst + Spt_cst + Spc_cst)/(self.nxy*self.nxy*self.nfreq)
 
 
     def snr(self,change=True):
@@ -198,18 +198,17 @@ class EasyMuffin():
         return (np.linalg.norm(self.truesky-self.x)**2)/(self.nxy*self.nxy*self.nfreq)
 
     def update(self,change=True):
-
+        
         if change:
-            xt_ = self.xt # xt_ is a pointer 
+            xt_ = self.xt # xt_ is a pointer
             u_ = self.u
             x_ = self.x
             v_ = self.v
         else:
-            xt_ = self.xt.copy() # xt is a new local matrix 
+            xt_ = self.xt.copy() # xt is a new local matrix
             u_  = copy.deepcopy(self.u)
             x_  = self.x.copy()
             v_  = self.v.copy()
-
 
         t = idct(v_, axis=2, norm='ortho') # to check
 
@@ -405,12 +404,12 @@ class EasyMuffinSURE(EasyMuffin):
     def update_Jacobians(self,change=True):
 
         if change:
-            Jxt_ = self.Jxt # pointer 
+            Jxt_ = self.Jxt # pointer
             Ju_ = self.Ju
             Jx_ = self.Jx
             Jv_ = self.Jv
         else:
-            Jxt_ = self.Jxt.copy() # new matrix 
+            Jxt_ = self.Jxt.copy() # new matrix
             Ju_  = copy.deepcopy(self.Ju)
             Jx_  = self.Jx.copy()
             Jv_  = self.Jv.copy()
@@ -560,7 +559,7 @@ class EasyMuffinSURE(EasyMuffin):
             c = b - (b - a)/gr
             d = a + (b - a)/gr
             niter+=1
-            
+
         #print('quit gs')
 
         return (a + b)/2
