@@ -23,7 +23,6 @@ rank = comm.Get_rank()
 nbw = size - 1
 idw = rank - 1
 
-
 class EasyMuffin_mpi():
     def __init__(self,
                  mu_s=0.5,
@@ -97,6 +96,9 @@ class EasyMuffin_mpi():
             self.sendcounts.append(taille)
             nbsum+=taille
 
+        np.random.seed(1)
+        self.n = np.random.binomial(1,0.5,(self.nxy,self.nxy,self.nfreq))
+        self.n[self.n==0] = -1
 
         self.init_algo()
 
@@ -425,14 +427,14 @@ class EasyMuffin_mpi():
 #        while abs(a - b) > absolutePrecision and niter < maxiter:
 #
 #            self.mu_s = c
-#            self.init_algo()
+#            # self.init_algo()
 #            self.mu_s_lst.append(c)
 #            self.loop(nitermax)
 #            res1 = self.wmse()
 #            self.mse_lst.append(res1)
 #
 #            self.mu_s = d
-#            self.init_algo()
+#            # self.init_algo()
 #            self.mu_s_lst.append(d)
 #            self.loop(nitermax)
 #            res2 = self.wmse()
@@ -451,158 +453,210 @@ class EasyMuffin_mpi():
 #        return (a+b)/2
 
 
-#class EasyMuffinSURE(EasyMuffin):
-#
-#    def __init__(self,
-#                 mu_s=0.5,
-#                 mu_l=0.0,
-#                 nb=(8,0),
-#                 tau = 1e-4,
-#                 sigma = 10,
-#                 var = 0,
-#                 dirtyinit=[],
-#                 dirty=[],
-#                 truesky=[],
-#                 psf=[]):
-#
-#        super(EasyMuffinSURE,self).__init__(
-#                 mu_s,
-#                 mu_l,
-#                 nb,
-#                 tau,
-#                 sigma,
-#                 var,
-#                 dirtyinit,
-#                 dirty,
-#                 truesky,
-#                 psf)
-#
-#
-#    def init_algo(self):
-#
-#            super(EasyMuffinSURE,self).init_algo()
-#
-#            # compute Hn
-#            self.Hn = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
-#            np.random.seed(1)
-#            self.n = np.random.binomial(1,0.5,(self.nxy,self.nxy,self.nfreq))
-#            self.n[self.n==0] = -1
-#            self.Hn = conv(self.n,self.psfadj)
-#
-#            # init Jacobians
-#            self.Jv = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
-#            self.Jx = init_dirty_wiener(self.n, self.psf, self.psfadj, 5e1)
-#            self.Jxt = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
-#            self.Ju = {}
-#            for freq in range(self.nfreq):
-#                self.Ju[freq] = self.Decomp(np.zeros((self.nxy,self.nxy), order='F') , self.nbw_decomp)
-#
-#            # psnr, and wmse estimated using psure
-#            self.wmselistsure = []
-#            self.wmselistsure.append(self.wmsesure())
-#
-#            if self.truesky.any():
-#                self.psnrlistsure = []
-#                self.psnrlistsure.append(self.psnrsure())
-#
-#            # mu_s list
-#            self.mu_slist = []
-#            self.mu_slist.append(self.mu_s)
-#
-#            # mu_l list
-#            self.mu_llist = []
-#            self.mu_llist.append(self.mu_l)
-#
-#    def wmsesure(self,change=True):
-#
-#        if change:
-#            tmp = self.dirty - conv(self.x,self.psf)
-#            LS_cst = np.linalg.norm(tmp)**2
-#            tmp = self.n*conv(self.Jx,self.psf)
-#
-#            return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
-#        else:
-#            tmp = self.dirty - conv(self.x2_,self.psf)
-#            LS_cst = np.linalg.norm(tmp)**2
-#            tmp = self.n*conv(self.Jx2_,self.psf)
-#
-#            return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
-#
-#    def psnrsure(self):
-#
-#        return 10*np.log10(self.psnrnum/self.wmsesure())
-#
-#
-#    def update_Jacobians(self,change=True):
-#
-#        if change:
-#            Jxt_ = self.Jxt # pointer
-#            Ju_ = self.Ju
-#            Jx_ = self.Jx
-#            Jv_ = self.Jv
-#        else:
-#            Jxt_ = self.Jxt.copy() # new matrix
-#            Ju_  = copy.deepcopy(self.Ju)
-#            Jx_  = self.Jx.copy()
-#            Jv_  = self.Jv.copy()
-#
-#        Jt = idct(Jv_, axis=2,norm='ortho')
-#
-#        # compute gradient
-#        tmp = myifftshift( myifft2( myfft2(Jx_) * self.hth_fft ) )
-#        JDelta_freq = tmp.real- self.Hn
-#
-#        for freq in range(self.nfreq):
-#
-#            # compute iuwt adjoint
-#            Js_l = self.Recomp(Ju_[freq], self.nbw_recomp)
-#
-#            # compute xt
-#            Jxtt = Jx_[:,:,freq] - self.tau*(JDelta_freq[:,:,freq] + self.mu_s*Js_l + self.mu_l*Jt[:,:,freq])
-#            Jxt_[:,:,freq] = Heavy(self.xtt[:,:,freq])*Jxtt
-#
-#            # update u
-#            tmp_spat_scal_J = self.Decomp(2*Jxt_[:,:,freq] - Jx_[:,:,freq] , self.nbw_decomp)
-#            for b in self.nbw_decomp:
-#                Jutt = Ju_[freq][b] + self.sigma*self.mu_s*tmp_spat_scal_J[b]
-#                Ju_[freq][b] = Rect( self.utt[freq][b] )*Jutt
-#
-#        # update v
-#        Jvtt = Jv_ + self.sigma*self.mu_l*dct(2*Jxt_ - Jx_, axis=2, norm='ortho')
-#        Jv_ = Rect(self.vtt)*Jvtt
-#
-#        if change:
-#            self.Jv = Jv_.copy()
-#            self.Jx = self.Jxt.copy()
-#
-#            # wmsesure
-#            self.wmselistsure.append(self.wmsesure())
-#
-#            # psnrsure
-#            if self.truesky.any():
-#                self.psnrlistsure.append(self.psnrsure())
-#        else:
-#            self.Jx2_ = Jxt_.copy()
-#
-#            return self.wmsesure(change=False)
-#
-#
-#    def loop(self,nitermax=10,change=True):
-#        """ main loop """
-#
-#        if nitermax < 1:
-#            print('nitermax must be a positive integer, nitermax=10')
-#            nitermax=10
-#
-#        for niter in range(nitermax):
-#            self.mu_slist.append(self.mu_s)
-#            self.mu_llist.append(self.mu_l)
-#            super(EasyMuffinSURE,self).update(change)
-#            self.update_Jacobians(change)
-#            print('iteration: ',niter)
-#            self.nitertot+=1
-#
-#
+class EasyMuffinSURE_mpi(EasyMuffin_mpi):
+
+    def __init__(self,
+                 mu_s=0.5,
+                 mu_l=0.0,
+                 nb=(8,0),
+                 tau = 1e-4,
+                 sigma = 10,
+                 var = 0,
+                 dirtyinit=[],
+                 dirty=[],
+                 truesky=[],
+                 psf=[]):
+
+        super(EasyMuffinSURE_mpi,self).__init__(
+                 mu_s,
+                 mu_l,
+                 nb,
+                 tau,
+                 sigma,
+                 var,
+                 dirtyinit,
+                 dirty,
+                 truesky,
+                 psf)
+
+
+    def init_algo(self):
+
+            super(EasyMuffinSURE_mpi,self).init_algo()
+            
+            if rank==0:
+                self.psfadj = defadj(self.psf)
+                
+                # init Jacobians
+                self.Jv = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
+                
+                self.Jtf = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
+                self.Jt = np.zeros((0))
+                
+                self.Jx = np.zeros((0))
+                
+                self.Jdeltaf = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
+                self.Jdelta = np.zeros((0))
+            else:
+                self.n = self.n[:,:,idw*self.nf2:idw*self.nf2+self.nfreq]
+                
+                # compute Hn
+                self.Hn = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
+                self.Hn = conv(self.n,self.psfadj)
+                
+                # init Jacobians
+                self.Jt = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
+                self.Jtf = np.zeros((0))
+                
+                print('----------------------- rank',rank,'shape',np.shape(self.n))
+                print('idw :',idw,' - nf2 :',self.nf2,'nfreq :',self.nfreq)
+                print('int :',idw*self.nf2,'-',idw*self.nf2+self.nfreq)
+                
+                self.Jx = np.asfortranarray(init_dirty_wiener(self.n, self.psf, self.psfadj, 5e1))
+                self.Jxt = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
+                                  
+                self.Ju = {}
+                for freq in range(self.nfreq):
+                    self.Ju[freq] = self.Decomp(np.zeros((self.nxy,self.nxy), order='F') , self.nbw_decomp)            
+                    
+                self.Jdelta = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
+                self.Jdeltaf = np.zeros((0))
+
+            
+            # psnr, and wmse estimated using psure
+            self.wmselistsure = []
+            self.wmselistsure.append(self.wmsesure())
+
+            if self.truesky.any():
+                self.psnrlistsure = []
+                self.psnrlistsure.append(self.psnrsure())
+
+            # mu_s list
+            self.mu_slist = []
+            self.mu_slist.append(self.mu_s)
+
+            # mu_l list
+            self.mu_llist = []
+            self.mu_llist.append(self.mu_l)
+            
+    def wmsesure(self,change=True):
+
+        if change:
+            if not rank==0:
+                tmp = self.dirty - conv(self.x,self.psf)
+                LS_cst = np.linalg.norm(tmp)**2
+                tmp = self.n*conv(self.Jx,self.psf)
+                wmse = LS_cst + 2*self.var*np.sum(tmp)
+            else:
+                wmse = 0
+            
+            wmse_lst = comm.gather(wmse)
+            
+            if rank==0:
+                return sum(wmse_lst)/(self.nxy*self.nxy*self.nfreq) - self.var 
+            else:
+                return wmse_lst
+            
+        else: ##################
+            tmp = self.dirty - conv(self.x2_,self.psf)
+            LS_cst = np.linalg.norm(tmp)**2
+            tmp = self.n*conv(self.Jx2_,self.psf)
+
+            return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
+
+    def psnrsure(self):
+        if rank == 0:
+            return 10*np.log10(self.psnrnum/self.wmselistsure[-1])
+        else:
+            return 0
+
+
+    def update_Jacobians(self,change=True):
+
+        if change:
+            if rank ==0:
+                Jv_ = self.Jv
+            else:
+                Jxt_ = self.Jxt # pointer
+                Ju_ = self.Ju
+                Jx_ = self.Jx
+            
+        else:
+            if rank ==0:
+                Jv_  = self.Jv.copy()
+            else:
+                Jxt_ = self.Jxt.copy() # new matrix
+                Ju_  = copy.deepcopy(self.Ju)
+                Jx_  = self.Jx.copy()
+            
+        if rank==0:
+                self.Jtf = np.asfortranarray(idct(Jv_, axis=2,norm='ortho'))
+                
+        comm.Scatterv([self.Jtf,self.sendcounts,self.displacements,MPI.DOUBLE],self.Jt,root=0)
+
+        if not rank ==0:
+            # compute gradient
+            tmp = myifftshift( myifft2( myfft2(Jx_) * self.hth_fft ) )
+            JDelta_freq = tmp.real- self.Hn
+
+            for freq in range(self.nfreq):
+        
+                # compute iuwt adjoint
+                Js_l = self.Recomp(Ju_[freq], self.nbw_recomp)
+        
+                # compute xt
+                Jxtt = Jx_[:,:,freq] - self.tau*(JDelta_freq[:,:,freq] + self.mu_s*Js_l + self.mu_l*self.Jt[:,:,freq])
+                Jxt_[:,:,freq] = Heavy(self.xtt[:,:,freq])*Jxtt
+        
+                # update u
+                tmp_spat_scal_J = self.Decomp(2*Jxt_[:,:,freq] - Jx_[:,:,freq] , self.nbw_decomp)
+                for b in self.nbw_decomp:
+                    Jutt = Ju_[freq][b] + self.sigma*self.mu_s*tmp_spat_scal_J[b]
+                    Ju_[freq][b] = Rect( self.utt[freq][b] )*Jutt
+                       
+            self.Jdelta = np.asfortranarray(2*Jxt_ - Jx_)
+            
+        comm.Gatherv(self.Jdelta,[self.Jdeltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        
+        if rank==0:
+            # update v
+            Jvtt = np.asfortranarray(Jv_ + self.sigma*self.mu_l*dct(self.Jdeltaf, axis=2, norm='ortho'))
+            Jv_ = Rect(self.vtt)*Jvtt
+
+        if change:
+            if rank==0:
+                self.Jv = Jv_.copy(order='F')
+            else:
+                self.Jx = self.Jxt.copy(order='F')
+                       
+            # wmsesure
+            self.wmselistsure.append(self.wmsesure())
+
+            # psnrsure
+            if self.truesky.any():
+                self.psnrlistsure.append(self.psnrsure())
+        else:
+            self.Jx2_ = Jxt_.copy(order='F')
+
+            return self.wmsesure(change=False)
+
+
+    def loop(self,nitermax=10,change=True):
+        """ main loop """
+
+        if nitermax < 1:
+            print('nitermax must be a positive integer, nitermax=10')
+            nitermax=10
+
+        for niter in range(nitermax):
+            self.mu_slist.append(self.mu_s)
+            self.mu_llist.append(self.mu_l)
+            super(EasyMuffinSURE_mpi,self).update(change)
+            self.update_Jacobians(change)
+            print('iteration: ',niter)
+            self.nitertot+=1
+
+
 #    def loop_mu_s(self,nitermax=10):
 #        """ main loop """
 #
@@ -620,8 +674,8 @@ class EasyMuffin_mpi():
 #            self.mu_llist.append(self.mu_l)
 #            print('iteration: ',niter)
 #            self.nitertot+=1
-#
-#
+
+
 #    def golds_search_mu_s(self,a, b, absolutePrecision=1e-1,maxiter=100):
 #
 #        gr = (1+np.sqrt(5))/2
