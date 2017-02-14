@@ -134,6 +134,9 @@ class EasyMuffin():
             self.x = np.zeros((0))
             self.xt = np.zeros((0))
             
+            self.x2f_ = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
+            self.x2_ = np.zeros((0))
+            
             self.deltaf = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.delta = np.zeros((0))
             
@@ -178,6 +181,9 @@ class EasyMuffin():
             self.xtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.xt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.xf = np.zeros((0))
+            
+            self.x2_ = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
+            self.x2f_ = np.zeros((0))
     
             self.t = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.tf = np.zeros((0)) # even master has to send tloc when gatherv 
@@ -392,7 +398,10 @@ class EasyMuffin():
                 self.psnrlist.append(self.psnr())
                 self.wmselist.append(self.wmse())
         else:
-            self.x2_ = xt_.copy(order='F') ############
+            if not rank==0:
+                self.x2_ = xt_.copy(order='F')
+            
+            comm.Gatherv(self.x2_,[self.x2f_,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
             
 
     def parameters(self):
@@ -567,12 +576,22 @@ class EasyMuffinSURE(EasyMuffin):
             else:
                 return wmse_lst
             
-        else: ##################
-            tmp = self.dirty - conv(self.x2_,self.psf)
-            LS_cst = np.linalg.norm(tmp)**2
-            tmp = self.n*conv(self.Jx2_,self.psf)
-
-            return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
+        else: # x2_ Jx2_
+            if not rank==0:
+                tmp = self.dirty - conv(self.x2_,self.psf)
+                LS_cst = np.linalg.norm(tmp)**2
+                tmp = self.n*conv(self.Jx2_,self.psf)
+                wmse = LS_cst + 2*self.var*np.sum(tmp)
+            else:
+                wmse = 0
+            
+            wmse_lst = comm.gather(wmse)
+            
+            if rank==0:
+                return sum(wmse_lst)/(self.nxy*self.nxy*self.nfreq) - self.var 
+            else:
+                return wmse_lst
+            
 
     def psnrsure(self):
         if rank == 0:
@@ -593,11 +612,11 @@ class EasyMuffinSURE(EasyMuffin):
             
         else:
             if rank ==0:
-                Jv_  = self.Jv.copy()
+                Jv_  = self.Jv.copy(order='F')
             else:
-                Jxt_ = self.Jxt.copy() # new matrix
+                Jxt_ = self.Jxt.copy(order='F') # new matrix
                 Ju_  = copy.deepcopy(self.Ju)
-                Jx_  = self.Jx.copy()
+                Jx_  = self.Jx.copy(order='F')
             
         if rank==0:
                 self.Jtf = np.asfortranarray(idct(Jv_, axis=2,norm='ortho'))
@@ -646,9 +665,12 @@ class EasyMuffinSURE(EasyMuffin):
             if self.truesky.any():
                 self.psnrlistsure.append(self.psnrsure())
         else:
-            self.Jx2_ = Jxt_.copy(order='F')
+            if not rank==0:
+                self.Jx2_ = Jxt_.copy(order='F')
+                
+            wmsesure = self.wmsesure(change=False)
 
-            return self.wmsesure(change=False)
+            return wmsesure
 
 
     def loop(self,nitermax=10,change=True):
@@ -684,100 +706,94 @@ class EasyMuffinSURE(EasyMuffin):
             print('iteration: ',niter)
             self.nitertot+=1
 
-#        if nitermax < 1:
-#            print('nitermax must be a positive integer, nitermax=10')
-#            nitermax=10
-#
-#        for niter in range(nitermax):
-#            self.mu_s = self.golds_search_mu_s(a=0, b=1, absolutePrecision=1e-2,maxiter=100)
-#            super(EasyMuffinSURE,self).update()
-#            self.update_Jacobians()
-#
-#            self.mu_slist.append(self.mu_s)
-#            self.mu_llist.append(self.mu_l)
-#            print('iteration: ',niter)
-#            self.nitertot+=1
+
+    def golds_search_mu_s(self,a, b, absolutePrecision=1e-1,maxiter=100):
+
+        gr = (1+np.sqrt(5))/2
+        c = b - (b - a)/gr
+        d = a + (b - a)/gr
+        niter = 0
+
+        while abs(a - b) > absolutePrecision and niter < maxiter:
+            #print('(a,f(a))=(',a,',',self.f_gs_mu_s(a),') - (b,f(b))=(',b,',',self.f_gs_mu_s(b),') - (c,f(c))=(',c,',',self.f_gs_mu_s(c),') - (d,f(d))=(',d,',',self.f_gs_mu_s(d),') ')
+            #print('')
+            if self.f_gs_mu_s(c) < self.f_gs_mu_s(d):
+                b = d
+            else:
+                a = c
+
+            c = b - (b - a)/gr
+            d = a + (b - a)/gr
+            niter+=1
+
+        #print('quit gs')
+        return (a + b)/2
 
 
-#    def golds_search_mu_s(self,a, b, absolutePrecision=1e-1,maxiter=100):
-#
-#        gr = (1+np.sqrt(5))/2
-#        c = b - (b - a)/gr
-#        d = a + (b - a)/gr
-#        niter = 0
-#
-#        while abs(a - b) > absolutePrecision and niter < maxiter:
-#            #print('(a,f(a))=(',a,',',self.f_gs_mu_s(a),') - (b,f(b))=(',b,',',self.f_gs_mu_s(b),') - (c,f(c))=(',c,',',self.f_gs_mu_s(c),') - (d,f(d))=(',d,',',self.f_gs_mu_s(d),') ')
-#            #print('')
-#            if self.f_gs_mu_s(c) < self.f_gs_mu_s(d):
-#                b = d
-#            else:
-#                a = c
-#
-#            c = b - (b - a)/gr
-#            d = a + (b - a)/gr
-#            niter+=1
-#
-#        #print('quit gs')
-#        return (a + b)/2
-#
-#
-#    def f_gs_mu_s(self,a):
-#        mu_s_0 = self.mu_s
-#        self.mu_s = a
-#        super(EasyMuffinSURE,self).update(change=False)
-#        res = self.update_Jacobians(change=False)
-#        self.mu_s = mu_s_0
-#        return res
-#
-#
-#    def loop_mu_l(self,nitermax=10):
-#        """ main loop """
-#
-#
-#        if nitermax < 1:
-#            print('nitermax must be a positive integer, nitermax=10')
-#            nitermax=10
-#
-#        for niter in range(nitermax):
-#            self.mu_l = self.golds_search_mu_l(a=0, b=2, absolutePrecision=1e-1,maxiter=100)
-#            super(EasyMuffinSURE,self).update()
-#            self.update_Jacobians()
-#
-#            self.mu_llist.append(self.mu_l)
-#            self.mu_slist.append(self.mu_s)
-#            print('iteration: ',niter)
-#            self.nitertot+=1
-#
-#
-#    def golds_search_mu_l(self,a, b, absolutePrecision=1e-1,maxiter=100):
-#
-#        gr = (1+np.sqrt(5))/2
-#        c = b - (b - a)/gr
-#        d = a + (b - a)/gr
-#        niter = 0
-#
-#        while abs(a - b) > absolutePrecision and niter < maxiter:
-#            #print('(a,f(a))=(',a,',',self.f_gs_mu_l(a),') - (b,f(b))=(',b,',',self.f_gs_mu_l(b),') - (c,f(c))=(',c,',',self.f_gs_mu_l(c),') - (d,f(d))=(',d,',',self.f_gs_mu_l(d),') ')
-#            #print('')
-#            if self.f_gs_mu_l(c) < self.f_gs_mu_l(d):
-#                b = d
-#            else:
-#                a = c
-#
-#            c = b - (b - a)/gr
-#            d = a + (b - a)/gr
-#            niter+=1
-#
-#        #print('quit gs')
-#
-#        return (a + b)/2
-#
-#
-#    def f_gs_mu_l(self,a):
-#        mu_l_0 = self.mu_l
-#        self.mu_l = a
-#        super(EasyMuffinSURE,self).update(change=False)
-#        res = self.update_Jacobians(change=False)
-#        self.mu_l = mu_l_0
-#        return res
+    def f_gs_mu_s(self,a):
+        mu_s_0 = self.mu_s
+        self.mu_s = a
+        super(EasyMuffinSURE,self).update(change=False)
+        res = self.update_Jacobians(change=False)
+        
+        # mpi 
+        res = comm.bcast(res,root=0)
+        
+        self.mu_s = mu_s_0
+        return res
+
+
+    def loop_mu_l(self,nitermax=10):
+        """ main loop """
+
+
+        if nitermax < 1:
+            print('nitermax must be a positive integer, nitermax=10')
+            nitermax=10
+
+        for niter in range(nitermax):
+            self.mu_l = self.golds_search_mu_l(a=0, b=2, absolutePrecision=1e-1,maxiter=100)
+            super(EasyMuffinSURE,self).update()
+            self.update_Jacobians()
+
+            self.mu_llist.append(self.mu_l)
+            self.mu_slist.append(self.mu_s)
+            print('iteration: ',niter)
+            self.nitertot+=1
+
+
+    def golds_search_mu_l(self,a, b, absolutePrecision=1e-1,maxiter=100):
+
+        gr = (1+np.sqrt(5))/2
+        c = b - (b - a)/gr
+        d = a + (b - a)/gr
+        niter = 0
+
+        while abs(a - b) > absolutePrecision and niter < maxiter:
+            #print('(a,f(a))=(',a,',',self.f_gs_mu_l(a),') - (b,f(b))=(',b,',',self.f_gs_mu_l(b),') - (c,f(c))=(',c,',',self.f_gs_mu_l(c),') - (d,f(d))=(',d,',',self.f_gs_mu_l(d),') ')
+            #print('')
+            if self.f_gs_mu_l(c) < self.f_gs_mu_l(d):
+                b = d
+            else:
+                a = c
+
+            c = b - (b - a)/gr
+            d = a + (b - a)/gr
+            niter+=1
+
+        #print('quit gs')
+
+        return (a + b)/2
+
+
+    def f_gs_mu_l(self,a):
+        mu_l_0 = self.mu_l
+        self.mu_l = a
+        super(EasyMuffinSURE,self).update(change=False)
+        res = self.update_Jacobians(change=False)
+        
+        # mpi 
+        res = comm.bcast(res,root=0)
+        
+        self.mu_l = mu_l_0
+        return res
