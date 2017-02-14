@@ -64,7 +64,7 @@ from deconv3d_mpi import EasyMuffinSURE_mpi
 from deconv3d import EasyMuffinSURE, EasyMuffin 
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 20
+nitermax = 4
 mu_s = 0.5
 mu_l = 0.5
 

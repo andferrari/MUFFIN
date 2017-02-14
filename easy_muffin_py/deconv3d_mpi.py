@@ -12,7 +12,7 @@ from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heav
 from deconv3d_tools import myfft2, myifft2, myifftshift, conv
 from deconv3d_tools import iuwt_decomp, iuwt_recomp, dwt_decomp, dwt_recomp
 import copy
-
+import sys 
 from mpi4py import MPI
 
 # Global variable - 
@@ -79,6 +79,15 @@ class EasyMuffin_mpi():
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
         
+        if nbw > self.nfreq:
+            if rank ==0:
+                print('----------------------------------------------------------------')
+                print('   mpi:    !!!! You cannot more workers than bands !!!! ')
+                print('----------------------------------------------------------------')
+                sys.exit()
+            else:
+                sys.exit()
+        
         # max step possible
         self.nf2=int(np.ceil(self.nfreq*1.0/nbw))
     
@@ -86,7 +95,16 @@ class EasyMuffin_mpi():
         for i in range(nbw):
             step=min(self.nf2,max(self.nfreq-sum(self.lst_nbf[1:]),0))
             self.lst_nbf.append(step)
+            
+        if self.lst_nbf[-1]==0:
+            self.nf2=int(np.floor(self.nfreq*1.0/(nbw)))
     
+            self.lst_nbf=[self.nfreq]
+            for i in range(nbw-1):
+                self.lst_nbf.append(self.nf2)
+                
+            self.lst_nbf.append(self.nfreq-sum(self.lst_nbf[1:]))
+            
         nbsum=0
         self.sendcounts=[0,]
         self.displacements=[0,]
