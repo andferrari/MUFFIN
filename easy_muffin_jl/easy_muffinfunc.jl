@@ -43,7 +43,7 @@ function easy_muffin_dwt(params)
   nb = length(spatialwlt)
   nfreq = size(dirty,3)
   nxy = size(dirty,1)
-  psfadj = flipdim(flipdim(psf,2),1)
+  psfadj = circshift(flipdim(flipdim(psf,2),1), (1, 1))
 
   # initialize
 
@@ -179,7 +179,7 @@ end
 function parameters_init()
 
     parameters = Dict(
-    "folder" => joinpath(pwd(),"../data256"),
+    "folder" => joinpath(pwd(),"/Users/ferrari/Desktop/Rita_Magellan/data/m31/data/"),
     "file_in" => "M31_3d_conv_256_10db",
     "freq_pl" => :,
     "initialization" => "",
