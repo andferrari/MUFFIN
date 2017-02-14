@@ -14,6 +14,7 @@ import numpy as np
 from astropy.io import fits
 import pylab as pl
 import sys
+from deconv3d_tools import conv
 
 from mpi4py import MPI 
 
@@ -47,6 +48,9 @@ sky = checkdim(fits.getdata(skyname, ext=0))
 sky = np.transpose(sky)[:,:,0:5]
 sky2 = np.sum(sky*sky)
 
+Noise = CubeDirty - conv(CubePSF,sky)
+var = np.sum(Noise**2)/Noise.size
+
 #%% ===========================================================================
 # MPI 
 # =============================================================================
@@ -55,12 +59,12 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-from deconv3d_mpi import EasyMuffin_mpi
+from deconv3d_mpi import EasyMuffinSURE_mpi
 
-from deconv3d import EasyMuffin
+from deconv3d import EasyMuffinSURE, EasyMuffin 
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 2
+nitermax = 20
 mu_s = 0.5
 mu_l = 0.5
 
@@ -71,21 +75,36 @@ if rank==0:
     print('----------------------------------------------------------')
     print('')
     tm.tic()
-    EM0= EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
-    EM0.loop(nitermax)
+    EM00= EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+    EM00.loop(nitermax)
     tm.toc()
     
     print('')
     print('----------------------------------------------------------')
-    print('                   MPI : Easy MUFFIN')
+    print('                       Easy MUFFIN SURE')
     print('----------------------------------------------------------')
     print('')
+    tm.tic()
+    EM0= EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+    EM0.loop(nitermax)
+    tm.toc()
 
+    print('')
+    print('----------------------------------------------------------')
+    print('                      MPI: Easy MUFFIN SURE')
+    print('----------------------------------------------------------')
+    print('')
+    
 # every processor creates EM -- inside each one will do its one part of the job 
 tm.tic()
-EM= EasyMuffin_mpi(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
+EM= EasyMuffinSURE_mpi(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
 EM.loop(nitermax)
 
+
+#%% ===========================================================================
+# Validating results  
+# =============================================================================
+    
 # Once job done - display results ... 
 if rank == 0: # I look at the results in EM created by master node even though others also created EM instance
     tm.toc()
@@ -95,7 +114,9 @@ if rank == 0: # I look at the results in EM created by master node even though o
     print('                    Compare results')
     print('----------------------------------------------------------')
     print('')
-    
+
+    print('')
+
     print('local size:',EM.lst_nbf)
     print('Starting point:',EM.displacements)
     print('Nbr of elts:',EM.sendcounts)
@@ -104,6 +125,7 @@ if rank == 0: # I look at the results in EM created by master node even though o
     
     print('snrm: ',EM.snrlist)
     print('snr0: ',EM0.snrlist)
+    print('snr00: ',EM00.snrlist)
     
     print('')
     
@@ -119,15 +141,32 @@ if rank == 0: # I look at the results in EM created by master node even though o
     
     print('wmsem: ',EM.wmselist)
     print('wmse0: ',EM0.wmselist)
+
+    print('')
+    
+    print('wmsesurem: ', EM.wmselistsure)
+    print('wmsesure0: ',EM0.wmselistsure)
+       
+    print('')
+    
+    print('psnrsurem: ', EM.psnrlistsure)
+    print('psnrsure0: ',EM0.psnrlistsure)
     
     print('')
     
     print('delta: ',np.linalg.norm(EM.deltaf))
     print('delta0: ',np.linalg.norm(EM0.x-2*EM0.xt))
     
-        
+    print('')
+    
+    print('Jdelta: ',np.linalg.norm(EM.Jdeltaf))
+    print('Jdelta0: ',np.linalg.norm(EM0.Jx-2*EM0.Jxt))
+    
     print('')    
     print('v-v0: ',np.linalg.norm(EM.v-EM0.v))
+    
+    print('')    
+    print('Jv-Jv0: ',np.linalg.norm(EM.Jv-EM0.Jv))
     
     print('')    
     print('vtt-vtt0: ',np.linalg.norm(EM.vtt-EM0.vtt))
@@ -149,36 +188,3 @@ if rank ==0:
     print('Error with Muffin: ',(np.linalg.norm(EM.xf -EM0.x)))
     print('')
     
-if rank ==0 and visu:
-    pl.figure(3)
-    pl.imshow(EM.xf[:,:,1])
-    pl.title('xf')
-    
-    pl.figure(4)
-    pl.imshow(EM0.x[:,:,1]) 
-    pl.title('x0')
-    
-    pl.figure(5)
-    pl.imshow(EM0.xtt[:,:,1])
-    pl.title('xtt0')
-    
-    pl.figure(8)
-    pl.imshow(EM.tf[:,:,1])
-    pl.title('tf')
-
-if rank ==1 and visu:
-    pl.figure(6)
-    pl.imshow(EM.xtt[:,:,1])
-    pl.title('xtt')
-    
-    pl.figure(7)
-    pl.imshow(EM.x[:,:,1])
-    pl.title('x')
-    
-    pl.figure(9)
-    pl.imshow(EM.t[:,:,1])
-    pl.title('t')
-    
-if visu:
-    pl.show()
-

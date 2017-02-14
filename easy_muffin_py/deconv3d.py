@@ -76,7 +76,6 @@ class EasyMuffin():
 
         self.psfadj = defadj(self.psf)
 
-        print('')
         print('psf size ', self.psf.shape)
         print('drt size ', self.dirty.shape)
 

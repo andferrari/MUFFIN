@@ -82,7 +82,7 @@ class EasyMuffin_mpi():
         if nbw > self.nfreq:
             if rank ==0:
                 print('----------------------------------------------------------------')
-                print('   mpi:    !!!! You cannot more workers than bands !!!! ')
+                print('   mpi: !!!! You cannot have more workers than bands !!!! ')
                 print('----------------------------------------------------------------')
                 sys.exit()
             else:
@@ -145,7 +145,7 @@ class EasyMuffin_mpi():
                 self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp) 
             
             print('tau = ', self.tau)
-            self.tau = [self.tau for i in range(size)]
+            # self.tau = [self.tau for i in range(size)]
         else:
             
             self.nfreq = self.lst_nbf[rank]
@@ -207,7 +207,7 @@ class EasyMuffin_mpi():
             for freq in range(self.nfreq):
                 self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy), order='F') , self.nbw_decomp)
 
-        self.tau = comm.scatter(self.tau,root=0)
+        self.tau = comm.bcast(self.tau,root=0)
         
         self.nitertot = 0
 
@@ -417,13 +417,7 @@ class EasyMuffin_mpi():
 
         if rank ==0:
             # Iteration
-            print('')
-            print('------------------------------------------------')
-            print('')
             print("MPI iterate ...")
-            print('')
-            print('------------------------------------------------')
-            print('')
 
         for niter in range(nitermax):
             
@@ -496,6 +490,8 @@ class EasyMuffinSURE_mpi(EasyMuffin_mpi):
                  dirty,
                  truesky,
                  psf)
+        
+        # add 
 
 
     def init_algo(self):
@@ -525,10 +521,6 @@ class EasyMuffinSURE_mpi(EasyMuffin_mpi):
                 # init Jacobians
                 self.Jt = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
                 self.Jtf = np.zeros((0))
-                
-                print('----------------------- rank',rank,'shape',np.shape(self.n))
-                print('idw :',idw,' - nf2 :',self.nf2,'nfreq :',self.nfreq)
-                print('int :',idw*self.nf2,'-',idw*self.nf2+self.nfreq)
                 
                 self.Jx = np.asfortranarray(init_dirty_wiener(self.n, self.psf, self.psfadj, 5e1))
                 self.Jxt = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
