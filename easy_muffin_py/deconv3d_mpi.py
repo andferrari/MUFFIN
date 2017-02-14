@@ -23,7 +23,7 @@ rank = comm.Get_rank()
 nbw = size - 1
 idw = rank - 1
 
-class EasyMuffin_mpi():
+class EasyMuffin():
     def __init__(self,
                  mu_s=0.5,
                  mu_l=0.0,
@@ -465,7 +465,7 @@ class EasyMuffin_mpi():
 #        return (a+b)/2
 
 
-class EasyMuffinSURE_mpi(EasyMuffin_mpi):
+class EasyMuffinSURE(EasyMuffin):
 
     def __init__(self,
                  mu_s=0.5,
@@ -479,7 +479,7 @@ class EasyMuffinSURE_mpi(EasyMuffin_mpi):
                  truesky=[],
                  psf=[]):
 
-        super(EasyMuffinSURE_mpi,self).__init__(
+        super(EasyMuffinSURE,self).__init__(
                  mu_s,
                  mu_l,
                  nb,
@@ -496,7 +496,7 @@ class EasyMuffinSURE_mpi(EasyMuffin_mpi):
 
     def init_algo(self):
 
-            super(EasyMuffinSURE_mpi,self).init_algo()
+            super(EasyMuffinSURE,self).init_algo()
             
             if rank==0:
                 self.psfadj = defadj(self.psf)
@@ -661,16 +661,29 @@ class EasyMuffinSURE_mpi(EasyMuffin_mpi):
         for niter in range(nitermax):
             self.mu_slist.append(self.mu_s)
             self.mu_llist.append(self.mu_l)
-            super(EasyMuffinSURE_mpi,self).update(change)
+            super(EasyMuffinSURE,self).update(change)
             self.update_Jacobians(change)
             print('iteration: ',niter)
             self.nitertot+=1
 
 
-#    def loop_mu_s(self,nitermax=10):
-#        """ main loop """
-#
-#
+    def loop_mu_s(self,nitermax=10):
+        """ main loop """
+
+        if nitermax < 1:
+            print('nitermax must be a positive integer, nitermax=10')
+            nitermax=10
+
+        for niter in range(nitermax):
+            self.mu_s = self.golds_search_mu_s(a=0, b=1, absolutePrecision=1e-2,maxiter=100)
+            super(EasyMuffinSURE,self).update()
+            self.update_Jacobians()
+
+            self.mu_slist.append(self.mu_s)
+            self.mu_llist.append(self.mu_l)
+            print('iteration: ',niter)
+            self.nitertot+=1
+
 #        if nitermax < 1:
 #            print('nitermax must be a positive integer, nitermax=10')
 #            nitermax=10

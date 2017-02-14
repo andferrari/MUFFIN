@@ -55,9 +55,9 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-from deconv3d_mpi import EasyMuffin_mpi
+import deconv3d_mpi as dcvMpi
 
-from deconv3d import EasyMuffin
+import deconv3d as dcv
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 nitermax = 2
@@ -71,7 +71,7 @@ if rank==0:
     print('----------------------------------------------------------')
     print('')
     tm.tic()
-    EM0= EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
+    EM0= dcv.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
     EM0.loop(nitermax)
     tm.toc()
     
@@ -83,7 +83,7 @@ if rank==0:
 
 # every processor creates EM -- inside each one will do its one part of the job 
 tm.tic()
-EM= EasyMuffin_mpi(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
+EM= dcvMpi.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
 EM.loop(nitermax)
 
 # Once job done - display results ... 
