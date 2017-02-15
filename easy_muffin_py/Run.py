@@ -32,16 +32,16 @@ def checkdim(x):
         x = x.transpose((2, 1, 0))
     return x
 
-folder = 'data'
-file_in = 'm31_3d_conv_10db'
+folder = 'data256'
+file_in = 'M31_3d_conv_256_10db'
 
 folder = os.path.join(os.getcwd(), folder)
 genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:5]
-CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:5]
+CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:128]
+CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:128]
 
 skyname = genname+'_sky.fits'
 sky = checkdim(fits.getdata(skyname, ext=0))
@@ -61,25 +61,12 @@ rank = comm.Get_rank()
 
 import deconv3d_mpi as dcvMpi
 
-import deconv3d as dcv
-
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 nitermax = 5
 mu_s = 0.
 mu_l = 0.
 
 if rank==0:    
-    print('')
-    print('----------------------------------------------------------')
-    print('                       Easy MUFFIN SURE')
-    print('----------------------------------------------------------')
-    print('')
-    tm.tic()
-    EM0= dcv.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
-    EM0.loop_mu_s(nitermax)
-    EM0.loop_mu_l(nitermax)
-    tm.toc()
-
     print('')
     print('----------------------------------------------------------')
     print('                      MPI: Easy MUFFIN SURE')
@@ -96,40 +83,12 @@ EM.loop_mu_l(nitermax)
 # Validating results  
 # =============================================================================
     
-# Once job done - display results ... 
-if rank == 0: # I look at the results in EM created by master node even though others also created EM instance
-    tm.toc()
-    
-    print('')
-    print('----------------------------------------------------------')
-    print('                    Compare results')
-    print('----------------------------------------------------------')
-    print('')
-    
-    print('')
-    
-    print('snr: ',np.linalg.norm(np.asarray(EM.snrlist)-np.asarray(EM0.snrlist),np.inf))
-    
-    print('')
-    
-    print('cost: ',np.linalg.norm(np.asarray(EM.costlist)-np.asarray(EM0.costlist),np.inf))
-    
-    print('')
-    
-    print('psnr: ',np.linalg.norm(np.asarray(EM.psnrlist)-np.asarray(EM0.psnrlist),np.inf))
-    
-    print('')
-    
-    print('wmsem: ',np.linalg.norm(np.asarray(EM.wmselist)-np.asarray(EM0.wmselist),np.inf))
-    
-    print('')
-    
-    print('v-v0: ',np.linalg.norm(EM.v-EM0.v))
-    
-    print('')    
-    print('vtt-vtt0: ',np.linalg.norm(EM.vtt-EM0.vtt))
-    
-    print('')
-    print('Error with Muffin: ',(np.linalg.norm(EM.xf -EM0.x)))
-    print('')    
+np.save('x0.npy',EM.x)
+np.save('wmse.npy',EM.wmselist)
+np.save('wmses.npy',EM.wmselistsure)
+np.save('snr.npy',EM.snrlist)
+np.save('mu_s.npy',EM.mu_slist)
+np.save('mu_l.npy',EM.mu_llist)
+
+
 

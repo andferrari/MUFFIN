@@ -407,6 +407,11 @@ class EasyMuffinSURE(EasyMuffin):
             # mu_l list
             self.mu_llist = []
             self.mu_llist.append(self.mu_l)
+            
+            self.mu_s_min = 0
+            self.mu_s_max = 1
+            self.mu_l_min = 0
+            self.mu_l_max = 2
 
     def wmsesure(self,change=True):
 
@@ -509,13 +514,20 @@ class EasyMuffinSURE(EasyMuffin):
 
     def loop_mu_s(self,nitermax=10):
         """ main loop """
+        
+        if self.nitertot==0:
+            self.tau = compute_tau_DWT(self.psf,self.mu_s_max,self.mu_l_max,self.sigma,self.nbw_decomp)
+            print('')
+            print('setting tau to smallest (safest): ',self.tau)
+            print('')
+
 
         if nitermax < 1:
             print('nitermax must be a positive integer, nitermax=10')
             nitermax=10
 
         for niter in range(nitermax):
-            self.mu_s = self.golds_search_mu_s(a=0, b=1, absolutePrecision=1e-2,maxiter=100)
+            self.mu_s = self.golds_search_mu_s(a=self.mu_s_min, b=self.mu_s_max, absolutePrecision=1e-1,maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
 
@@ -574,7 +586,7 @@ class EasyMuffinSURE(EasyMuffin):
             nitermax=10
 
         for niter in range(nitermax):
-            self.mu_l = self.golds_search_mu_l(a=0, b=2, absolutePrecision=1e-1,maxiter=100)
+            self.mu_l = self.golds_search_mu_l(a=self.mu_l_min, b=self.mu_l_max, absolutePrecision=1e-1,maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
 
