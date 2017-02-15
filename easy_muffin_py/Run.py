@@ -40,12 +40,14 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:128]
-CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:128]
+L = 10
+
+CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
+CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
 
 skyname = genname+'_sky.fits'
 sky = checkdim(fits.getdata(skyname, ext=0))
-sky = np.transpose(sky)[:,:,0:128]
+sky = np.transpose(sky)[:,:,0:L]
 sky2 = np.sum(sky*sky)
 
 Noise = CubeDirty - conv(CubePSF,sky)
