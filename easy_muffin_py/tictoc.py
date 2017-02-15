@@ -17,6 +17,7 @@ def tic():
 def toc(message='Elapsed time : {} s'):
     """ Python implementation of Matlab toc() function """
     t=time.time()
+    print('')
     print(message.format(t-__time_tic_toc))
     return t-__time_tic_toc
 
