@@ -40,7 +40,7 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-L = 10
+L = 128
 
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
 CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
@@ -64,7 +64,7 @@ rank = comm.Get_rank()
 import deconv3d_mpi as dcvMpi
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 100
+nitermax = 300
 mu_s = 0.
 mu_l = 0.
 
