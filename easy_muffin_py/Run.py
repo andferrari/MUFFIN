@@ -47,7 +47,7 @@ CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
 
 skyname = genname+'_sky.fits'
 sky = checkdim(fits.getdata(skyname, ext=0))
-sky = np.transpose(sky)[:,:,0:L]
+sky = sky[:,:,0:L]
 sky2 = np.sum(sky*sky)
 
 Noise = CubeDirty - conv(CubePSF,sky)
