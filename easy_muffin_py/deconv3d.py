@@ -96,6 +96,11 @@ class EasyMuffin():
         print('psf size ', self.psf.shape)
         print('drt size ', self.dirty.shape)
 
+        # precomputations
+        print('')
+        print("precomputations...")
+        
+        
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
 
@@ -105,10 +110,6 @@ class EasyMuffin():
         else:
             self.x = init_dirty_wiener(self.dirty, self.psf, self.psfadj, 5e1)
 
-
-        # precomputations
-        print('')
-        print("precomputations...")
 
         self.hth_fft = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.complex)
         self.fty = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)

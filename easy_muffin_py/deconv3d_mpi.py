@@ -97,16 +97,7 @@ class EasyMuffin():
 
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
-        
-        if nbw > self.nfreq:
-            if rank ==0:
-                print('----------------------------------------------------------------')
-                print('   mpi: !!!! You cannot have more workers than bands !!!! ')
-                print('----------------------------------------------------------------')
-                sys.exit()
-            else:
-                sys.exit()
-        
+
         # max step possible
         self.nf2=int(np.ceil(self.nfreq*1.0/nbw))
     
@@ -132,6 +123,23 @@ class EasyMuffin():
             taille=self.nxy*self.nxy*self.lst_nbf[i+1]
             self.sendcounts.append(taille)
             nbsum+=taille
+        
+        if rank ==0:
+            print('')
+            print('local size:',self.lst_nbf)
+            print('Starting point:',self.displacements)
+            print('Nbr of elts:',self.sendcounts)
+            print('')
+
+        if nbw > self.nfreq:
+            if rank ==0:
+                print('----------------------------------------------------------------')
+                print('   mpi: !!!! You cannot have more workers than bands !!!! ')
+                print('----------------------------------------------------------------')
+                sys.exit()
+            else:
+                sys.exit()
+
 
         np.random.seed(1)
         self.n = np.random.binomial(1,0.5,(self.nxy,self.nxy,self.nfreq))
@@ -141,8 +149,17 @@ class EasyMuffin():
 
     def init_algo(self):
         """Initialization of te algorithm (all intermediate variables)"""
+        
 
         if rank == 0:
+            
+            print('psf size ', self.psf.shape)
+            print('drt size ', self.dirty.shape)
+    
+            # precomputations
+            print('')
+            print("precomputations...")
+        
             self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             

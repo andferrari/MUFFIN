@@ -105,67 +105,31 @@ if rank == 0: # I look at the results in EM created by master node even though o
     print('                    Compare results')
     print('----------------------------------------------------------')
     print('')
-
-    print('')
-
-    print('local size:',EM.lst_nbf)
-    print('Starting point:',EM.displacements)
-    print('Nbr of elts:',EM.sendcounts)
     
     print('')
     
-    print('snrm: ',EM.snrlist)
-    print('snr0: ',EM0.snrlist)
+    print('snr: ',np.linalg.norm(np.asarray(EM.snrlist)-np.asarray(EM0.snrlist),np.inf))
     
     print('')
     
-    print('costm: ',EM.costlist)
-    print('cost0: ',EM0.costlist)
+    print('cost: ',np.linalg.norm(np.asarray(EM.costlist)-np.asarray(EM0.costlist),np.inf))
     
     print('')
     
-    print('psnrm: ',EM.psnrlist)
-    print('psnr0: ',EM0.psnrlist)
+    print('psnr: ',np.linalg.norm(np.asarray(EM.psnrlist)-np.asarray(EM0.psnrlist),np.inf))
     
     print('')
     
-    print('wmsem: ',EM.wmselist)
-    print('wmse0: ',EM0.wmselist)
-
+    print('wmsem: ',np.linalg.norm(np.asarray(EM.wmselist)-np.asarray(EM0.wmselist),np.inf))
+    
     print('')
     
-    print('wmsesurem: ', EM.wmselistsure)
-    print('wmsesure0: ',EM0.wmselistsure)
-       
-    print('')
-    
-    print('psnrsurem: ', EM.psnrlistsure)
-    print('psnrsure0: ',EM0.psnrlistsure)
-        
-    print('')    
     print('v-v0: ',np.linalg.norm(EM.v-EM0.v))
-    
-    print('')    
-    print('Jv-Jv0: ',np.linalg.norm(EM.Jv-EM0.Jv))
     
     print('')    
     print('vtt-vtt0: ',np.linalg.norm(EM.vtt-EM0.vtt))
     
-
-mse = EM.mse()
-
-if rank ==0:
-    print('')
-    print('msem: ',EM0.mse())
-    print('mse0: ',mse)
-
-    print('')
-    print('normxm: ',(np.linalg.norm(EM.xf)))
-    print('normx0: ',(np.linalg.norm(EM0.x)))
-    print('')
-    
     print('')
     print('Error with Muffin: ',(np.linalg.norm(EM.xf -EM0.x)))
-    print('')
-    
+    print('')    
 

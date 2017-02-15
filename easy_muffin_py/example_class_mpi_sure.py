@@ -116,75 +116,28 @@ if rank == 0: # I look at the results in EM created by master node even though o
     print('')
 
     print('')
-
-    print('local size:',EM.lst_nbf)
-    print('Starting point:',EM.displacements)
-    print('Nbr of elts:',EM.sendcounts)
+    
+    print('snr: ',np.linalg.norm(np.asarray(EM.snrlist)-np.asarray(EM0.snrlist),np.inf))
     
     print('')
     
-    print('snrm: ',EM.snrlist)
-    print('snr0: ',EM0.snrlist)
-    print('snr00: ',EM00.snrlist)
+    print('cost: ',np.linalg.norm(np.asarray(EM.costlist)-np.asarray(EM0.costlist),np.inf))
     
     print('')
     
-    print('costm: ',EM.costlist)
-    print('cost0: ',EM0.costlist)
+    print('psnr: ',np.linalg.norm(np.asarray(EM.psnrlist)-np.asarray(EM0.psnrlist),np.inf))
     
     print('')
     
-    print('psnrm: ',EM.psnrlist)
-    print('psnr0: ',EM0.psnrlist)
+    print('wmsem: ',np.linalg.norm(np.asarray(EM.wmselist)-np.asarray(EM0.wmselist),np.inf))
     
     print('')
     
-    print('wmsem: ',EM.wmselist)
-    print('wmse0: ',EM0.wmselist)
-
-    print('')
-    
-    print('wmsesurem: ', EM.wmselistsure)
-    print('wmsesure0: ',EM0.wmselistsure)
-       
-    print('')
-    
-    print('psnrsurem: ', EM.psnrlistsure)
-    print('psnrsure0: ',EM0.psnrlistsure)
-    
-    print('')
-    
-    print('delta: ',np.linalg.norm(EM.deltaf))
-    print('delta0: ',np.linalg.norm(EM0.x-2*EM0.xt))
-    
-    print('')
-    
-    print('Jdelta: ',np.linalg.norm(EM.Jdeltaf))
-    print('Jdelta0: ',np.linalg.norm(EM0.Jx-2*EM0.Jxt))
-    
-    print('')    
     print('v-v0: ',np.linalg.norm(EM.v-EM0.v))
-    
-    print('')    
-    print('Jv-Jv0: ',np.linalg.norm(EM.Jv-EM0.Jv))
     
     print('')    
     print('vtt-vtt0: ',np.linalg.norm(EM.vtt-EM0.vtt))
     
-
-mse = EM.mse()
-
-if rank ==0:
-    print('')
-    print('msem: ',EM0.mse())
-    print('mse0: ',mse)
-
-    print('')
-    print('normxm: ',(np.linalg.norm(EM.xf)))
-    print('normx0: ',(np.linalg.norm(EM0.x)))
-    print('')
-    
     print('')
     print('Error with Muffin: ',(np.linalg.norm(EM.xf -EM0.x)))
-    print('')
-    
+    print('')    
