@@ -64,7 +64,7 @@ rank = comm.Get_rank()
 import deconv3d_mpi as dcvMpi
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 5
+nitermax = 100
 mu_s = 0.
 mu_l = 0.
 
