@@ -64,7 +64,7 @@ rank = comm.Get_rank()
 import deconv3d_mpi as dcvMpi
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 300
+nitermax = 200
 mu_s = 0.
 mu_l = 0.
 
@@ -85,12 +85,13 @@ EM.loop_mu_l(nitermax)
 # Validating results  
 # =============================================================================
     
-np.save('x0.npy',EM.x)
-np.save('wmse.npy',EM.wmselist)
-np.save('wmses.npy',EM.wmselistsure)
-np.save('snr.npy',EM.snrlist)
-np.save('mu_s.npy',EM.mu_slist)
-np.save('mu_l.npy',EM.mu_llist)
+if rank==0:
+    np.save('x0.npy',EM.x)
+    np.save('wmse.npy',EM.wmselist)
+    np.save('wmses.npy',EM.wmselistsure)
+    np.save('snr.npy',EM.snrlist)
+    np.save('mu_s.npy',EM.mu_slist)
+    np.save('mu_l.npy',EM.mu_llist)
 
 
 
