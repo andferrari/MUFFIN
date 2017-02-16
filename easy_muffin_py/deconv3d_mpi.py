@@ -482,8 +482,43 @@ class EasyMuffin():
                         
                     print(str_cost.format(niter,self.costlist[-1]))
 
-#    def gs_mu_s(self,nitermax=10,a=0,b=2,absolutePrecision=1e-1,maxiter=100):
-#
+    def gs_mu_s(self,nitermax=10,a=0,b=2,absolutePrecision=1e-1,maxiter=100):
+
+        gr = (1+np.sqrt(5))/2
+        c = b - (b - a)/gr
+        d = a + (b - a)/gr
+        niter = 0
+
+        self.mu_s_lst = []
+        self.mse_lst = []
+
+        while abs(a - b) > absolutePrecision and niter < maxiter:
+
+            self.mu_s = c
+            self.mu_s_lst.append(c)
+            self.loop(nitermax)
+            res1 = self.wmse() 
+            res1 = comm.bcast(res1,root=0)
+            self.mse_lst.append(res1)
+
+            self.mu_s = d
+            self.mu_s_lst.append(d)
+            self.loop(nitermax)
+            res2 = self.wmse()
+            res2 = comm.bcast(res2,root=0)
+            self.mse_lst.append(res2)
+
+            if res1 < res2:
+                b = d
+            else:
+                a = c
+
+            c = b - (b - a)/gr
+            d = a + (b - a)/gr
+            niter+=1
+
+        return (a+b)/2
+
 #        gr = (1+np.sqrt(5))/2
 #        c = b - (b - a)/gr
 #        d = a + (b - a)/gr

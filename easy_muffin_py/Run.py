@@ -86,7 +86,7 @@ EM.loop_mu_l(nitermax)
 # =============================================================================
     
 if rank==0:
-    np.save('x0.npy',EM.x)
+    np.save('x0.npy',EM.xf)
     np.save('wmse.npy',EM.wmselist)
     np.save('wmses.npy',EM.wmselistsure)
     np.save('snr.npy',EM.snrlist)
