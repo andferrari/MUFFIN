@@ -16,7 +16,7 @@ import pylab as pl
 import sys
 from deconv3d_tools import conv
 
-from mpi4py import MPI 
+from mpi4py import MPI
 
 import tictoc as tm
 
@@ -40,7 +40,7 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-L = 128
+L = 50
 
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
 CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
@@ -54,7 +54,7 @@ Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
 
 #%% ===========================================================================
-# MPI 
+# MPI
 # =============================================================================
 
 comm = MPI.COMM_WORLD
@@ -68,23 +68,23 @@ nitermax = 200
 mu_s = 0.
 mu_l = 0.
 
-if rank==0:    
+if rank==0:
     print('')
     print('----------------------------------------------------------')
     print('                      MPI: Easy MUFFIN SURE')
     print('----------------------------------------------------------')
     print('')
-    
-# every processor creates EM -- inside each one will do its one part of the job 
+
+# every processor creates EM -- inside each one will do its one part of the job
 tm.tic()
 EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
 EM.loop_mu_s(nitermax)
 EM.loop_mu_l(nitermax)
 
 #%% ===========================================================================
-# Validating results  
+# Validating results
 # =============================================================================
-    
+
 if rank==0:
     np.save('x0.npy',EM.xf)
     np.save('wmse.npy',EM.wmselist)
@@ -92,6 +92,3 @@ if rank==0:
     np.save('snr.npy',EM.snrlist)
     np.save('mu_s.npy',EM.mu_slist)
     np.save('mu_l.npy',EM.mu_llist)
-
-
-
