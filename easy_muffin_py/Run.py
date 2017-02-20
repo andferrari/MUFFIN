@@ -40,7 +40,7 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-L = 50
+L = 3
 
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
 CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
@@ -64,7 +64,7 @@ rank = comm.Get_rank()
 import deconv3d_mpi as dcvMpi
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 200
+nitermax = 3
 mu_s = 0.
 mu_l = 0.
 
@@ -79,13 +79,17 @@ if rank==0:
 tm.tic()
 EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
 EM.loop_mu_s(nitermax)
+EM.set_mean_mu(set_mu_s=True)
 EM.loop_mu_l(nitermax)
+EM.set_mean_mu(set_mu_l=True)
+EM.loop(nitermax)
 
 #%% ===========================================================================
 # Validating results
 # =============================================================================
 
 if rank==0:
+    tm.toc()
     np.save('x0.npy',EM.xf)
     np.save('wmse.npy',EM.wmselist)
     np.save('wmses.npy',EM.wmselistsure)

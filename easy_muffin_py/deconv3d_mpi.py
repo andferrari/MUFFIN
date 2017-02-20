@@ -94,6 +94,12 @@ class EasyMuffin():
         self.psf = psf
         self.dirty=dirty
         self.var = var
+        
+        self.mu_s_min = 0
+        self.mu_s_max = 1
+        self.mu_l_min = 0
+        self.mu_l_max = 3
+        self.absolutePrecision = 1e-1
 
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
@@ -482,15 +488,18 @@ class EasyMuffin():
                         
                     print(str_cost.format(niter,self.costlist[-1]))
 
-    def gs_mu_s(self,nitermax=10,a=0,b=2,absolutePrecision=1e-1,maxiter=100):
+    def gs_mu_s(self,nitermax=10,maxiter=100):
 
+        absolutePrecision = self.absolutePrecision
+        a = self.mu_s_min
+        b = self.mu_s_max
         gr = (1+np.sqrt(5))/2
         c = b - (b - a)/gr
         d = a + (b - a)/gr
         niter = 0
 
         self.mu_s_lst = []
-        self.mse_lst = []
+        self.mse_mu_s_lst = []
 
         while abs(a - b) > absolutePrecision and niter < maxiter:
 
@@ -499,14 +508,14 @@ class EasyMuffin():
             self.loop(nitermax)
             res1 = self.wmse() 
             res1 = comm.bcast(res1,root=0)
-            self.mse_lst.append(res1)
+            self.mse_mu_s_lst.append(res1)
 
             self.mu_s = d
             self.mu_s_lst.append(d)
             self.loop(nitermax)
             res2 = self.wmse()
             res2 = comm.bcast(res2,root=0)
-            self.mse_lst.append(res2)
+            self.mse_mu_s_lst.append(res2)
 
             if res1 < res2:
                 b = d
@@ -519,41 +528,46 @@ class EasyMuffin():
 
         return (a+b)/2
 
-#        gr = (1+np.sqrt(5))/2
-#        c = b - (b - a)/gr
-#        d = a + (b - a)/gr
-#        niter = 0
-#
-#        self.mu_s_lst = []
-#        self.mse_lst = []
-#
-#        while abs(a - b) > absolutePrecision and niter < maxiter:
-#
-#            self.mu_s = c
-#            # self.init_algo()
-#            self.mu_s_lst.append(c)
-#            self.loop(nitermax)
-#            res1 = self.wmse()
-#            self.mse_lst.append(res1)
-#
-#            self.mu_s = d
-#            # self.init_algo()
-#            self.mu_s_lst.append(d)
-#            self.loop(nitermax)
-#            res2 = self.wmse()
-#            self.mse_lst.append(res2)
-#
-#            # if f( *((c,) + args) ) < f( *((d,) + args) ):
-#            if res1 < res2:
-#                b = d
-#            else:
-#                a = c
-#
-#            c = b - (b - a)/gr
-#            d = a + (b - a)/gr
-#            niter+=1
-#
-#        return (a+b)/2
+    def gs_mu_l(self,nitermax=10,maxiter=100):
+
+        absolutePrecision = self.absolutePrecision
+        a = self.mu_l_min
+        b = self.mu_l_max
+        gr = (1+np.sqrt(5))/2
+        c = b - (b - a)/gr
+        d = a + (b - a)/gr
+        niter = 0
+
+        self.mu_l_lst = []
+        self.mse_mu_l_lst = []
+
+        while abs(a - b) > absolutePrecision and niter < maxiter:
+
+            self.mu_l = c
+            self.mu_l_lst.append(c)
+            self.loop(nitermax)
+            res1 = self.wmse() 
+            res1 = comm.bcast(res1,root=0)
+            self.mse_mu_l_lst.append(res1)
+
+            self.mu_l = d
+            self.mu_l_lst.append(d)
+            self.loop(nitermax)
+            res2 = self.wmse()
+            res2 = comm.bcast(res2,root=0)
+            self.mse_mu_l_lst.append(res2)
+
+            if res1 < res2:
+                b = d
+            else:
+                a = c
+
+            c = b - (b - a)/gr
+            d = a + (b - a)/gr
+            niter+=1
+
+        return (a+b)/2
+
 
 
 class EasyMuffinSURE(EasyMuffin):
@@ -639,11 +653,6 @@ class EasyMuffinSURE(EasyMuffin):
             # mu_l list
             self.mu_llist = []
             self.mu_llist.append(self.mu_l)
-            
-            self.mu_s_min = 0
-            self.mu_s_max = 1
-            self.mu_l_min = 0
-            self.mu_l_max = 3
             
     def wmsesure(self,change=True):
 
@@ -774,15 +783,25 @@ class EasyMuffinSURE(EasyMuffin):
             self.update_Jacobians(change)
             self.nitertot+=1
 
+#            if rank==0:                
+#                if self.truesky.any():
+#                    if (niter % 20) ==0:
+#                        print(str_cst_snr_wmse_wmsesure_title.format('It.','Cost','SNR','WMSE','WMSES'))                    
+#                    print(str_cst_snr_wmse_wmsesure.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1]))
+#                else:
+#                    if (niter % 20) ==0:
+#                        print(str_cost_wmsesure_title.format('It.','Cost','WMSES'))                    
+#                    print(str_cost_wmsesure.format(niter,self.costlist[-1],self.wmselistsure[-1]))
+
             if rank==0:                
                 if self.truesky.any():
                     if (niter % 20) ==0:
-                        print(str_cst_snr_wmse_wmsesure_title.format('It.','Cost','SNR','WMSE','WMSES'))                    
-                    print(str_cst_snr_wmse_wmsesure.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1]))
+                        print(str_cst_snr_wmse_wmsesure_mu_title.format('It.','Cost','SNR','WMSE','WMSES','mu_s','mu_l'))                    
+                    print(str_cst_snr_wmse_wmsesure_mu.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
                 else:
                     if (niter % 20) ==0:
-                        print(str_cost_wmsesure_title.format('It.','Cost','WMSES'))                    
-                    print(str_cost_wmsesure.format(niter,self.costlist[-1],self.wmselistsure[-1]))
+                        print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))                    
+                    print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
                 
 
     def loop_mu_s(self,nitermax=10):
@@ -801,8 +820,12 @@ class EasyMuffinSURE(EasyMuffin):
             print('nitermax must be a positive integer, nitermax=10')
             nitermax=10
 
-        for niter in range(nitermax):
-            self.mu_s = self.golds_search_mu_s(a=self.mu_s_min, b=self.mu_s_max, absolutePrecision=1e-1,maxiter=100)
+        std = 1000 # stopping criteria std of wmsesure
+        niter = 0
+        thresh = 0.5*1e-3
+        
+        while (niter < nitermax) and (std>thresh):
+            self.mu_s = self.golds_search_mu_s(a=self.mu_s_min, b=self.mu_s_max, maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
 
@@ -819,10 +842,18 @@ class EasyMuffinSURE(EasyMuffin):
                     if (niter % 20) ==0:
                         print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))                    
                     print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
+                    
+            if rank==0 and niter>100:
+                std = np.var(self.wmselistsure[niter-100::])
+                
+            comm.bcast(std,root=0)
+            
+            niter+=1
 
 
-    def golds_search_mu_s(self,a, b, absolutePrecision=1e-1,maxiter=100):
+    def golds_search_mu_s(self,a, b, maxiter=100):
 
+        absolutePrecision = self.absolutePrecision
         gr = (1+np.sqrt(5))/2
         c = b - (b - a)/gr
         d = a + (b - a)/gr
@@ -864,8 +895,12 @@ class EasyMuffinSURE(EasyMuffin):
             print('nitermax must be a positive integer, nitermax=10')
             nitermax=10
 
-        for niter in range(nitermax):
-            self.mu_l = self.golds_search_mu_l(a=self.mu_l_min, b=self.mu_l_max, absolutePrecision=1e-1,maxiter=100)
+        std = 1000 # stopping criteria std of wmsesure
+        niter = 0
+        thresh = 0.5*1e-3
+        
+        while (niter < nitermax) and (std>thresh):
+            self.mu_l = self.golds_search_mu_l(a=self.mu_l_min, b=self.mu_l_max, maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
 
@@ -882,11 +917,20 @@ class EasyMuffinSURE(EasyMuffin):
                     if (niter % 20) ==0:
                         print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))                    
                     print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
+                    
+            if rank==0 and niter>100:
+                std = np.var(self.wmselistsure[niter-100::])
+                
+            comm.bcast(std,root=0)
+            
+            niter+=1
 
 
 
-    def golds_search_mu_l(self,a, b, absolutePrecision=1e-1,maxiter=100):
 
+    def golds_search_mu_l(self,a, b, maxiter=100):
+
+        absolutePrecision = self.absolutePrecision
         gr = (1+np.sqrt(5))/2
         c = b - (b - a)/gr
         d = a + (b - a)/gr
@@ -920,3 +964,13 @@ class EasyMuffinSURE(EasyMuffin):
         
         self.mu_l = mu_l_0
         return res
+
+    def set_mean_mu(self,set_mu_l=False,set_mu_s=False,niter=100):
+
+        if set_mu_l==True :
+            print(self.mu_llist[max(1,self.nitertot-niter)::])
+            self.mu_l = np.mean(self.mu_llist[max(1,self.nitertot-niter)::])
+            
+        if set_mu_s==True:
+            self.mu_s = np.mean(self.mu_slist[max(1,self.nitertot-niter)::])
+            
