@@ -824,7 +824,7 @@ class EasyMuffinSURE(EasyMuffin):
         niter = 0
         thresh = 0.5*1e-3
         
-        while (niter < nitermax) and (std>thresh):
+        while (niter<nitermax) and (std>thresh):
             self.mu_s = self.golds_search_mu_s(a=self.mu_s_min, b=self.mu_s_max, maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
@@ -843,10 +843,10 @@ class EasyMuffinSURE(EasyMuffin):
                         print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))                    
                     print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
                     
-            if rank==0 and niter>100:
-                std = np.var(self.wmselistsure[niter-100::])
+            if rank==0 and niter>50:
+                std = np.var(self.wmselistsure[niter-50::])
                 
-            comm.bcast(std,root=0)
+            std = comm.bcast(std,root=0)
             
             niter+=1
 
@@ -918,10 +918,10 @@ class EasyMuffinSURE(EasyMuffin):
                         print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))                    
                     print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
                     
-            if rank==0 and niter>100:
-                std = np.var(self.wmselistsure[niter-100::])
+            if rank==0 and niter>50:
+                std = np.var(self.wmselistsure[niter-50::])
                 
-            comm.bcast(std,root=0)
+            std = comm.bcast(std,root=0)
             
             niter+=1
 

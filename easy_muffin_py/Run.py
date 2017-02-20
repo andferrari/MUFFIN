@@ -40,7 +40,7 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-L = 120
+L = 50
 
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
 CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
@@ -78,6 +78,12 @@ if rank==0:
 # every processor creates EM -- inside each one will do its one part of the job
 tm.tic()
 EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+
+EM.mu_s_max = 0.5
+EM.mu_s_min = 0
+EM.mu_l_min = 1
+EM.mu_l_max = 4
+
 EM.loop_mu_s(nitermax)
 EM.set_mean_mu(set_mu_s=True)
 EM.loop_mu_l(nitermax)
