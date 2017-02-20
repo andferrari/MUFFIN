@@ -968,7 +968,6 @@ class EasyMuffinSURE(EasyMuffin):
     def set_mean_mu(self,set_mu_l=False,set_mu_s=False,niter=100):
 
         if set_mu_l==True :
-            print(self.mu_llist[max(1,self.nitertot-niter)::])
             self.mu_l = np.mean(self.mu_llist[max(1,self.nitertot-niter)::])
             
         if set_mu_s==True:
