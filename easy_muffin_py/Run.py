@@ -40,7 +40,7 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-L = 128
+L = 120
 
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
 CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
