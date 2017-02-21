@@ -85,7 +85,7 @@ EM.mu_s_min = 0
 EM.mu_l_min = 1
 EM.mu_l_max = 2.5
 # gs precision
-EM.absolutePrecision = 0.05
+EM.absolutePrecision = 0.01
 # threshold wmsesure (stopping criteria) 
 EM.thresh = 1e-4
 
