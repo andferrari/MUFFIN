@@ -93,7 +93,7 @@ EM.loop_mu_s(nitermax)
 EM.set_mean_mu(set_mu_s=True,niter=20)
 EM.loop_mu_l(nitermax)
 EM.set_mean_mu(set_mu_l=True,niter=20)
-EM.loop(nitermax)
+EM.loop(600)
 
 #%% ===========================================================================
 # Validating results
