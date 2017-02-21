@@ -638,6 +638,8 @@ class EasyMuffinSURE(EasyMuffin):
                 self.Jdeltaf = np.zeros((0))
 
             
+            # stopping criteria for loop_mu_s/_mu_l
+            self.thresh = 0.5*1e-3
             # psnr, and wmse estimated using psure
             self.wmselistsure = []
             self.wmselistsure.append(self.wmsesure())
@@ -783,16 +785,6 @@ class EasyMuffinSURE(EasyMuffin):
             self.update_Jacobians(change)
             self.nitertot+=1
 
-#            if rank==0:                
-#                if self.truesky.any():
-#                    if (niter % 20) ==0:
-#                        print(str_cst_snr_wmse_wmsesure_title.format('It.','Cost','SNR','WMSE','WMSES'))                    
-#                    print(str_cst_snr_wmse_wmsesure.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1]))
-#                else:
-#                    if (niter % 20) ==0:
-#                        print(str_cost_wmsesure_title.format('It.','Cost','WMSES'))                    
-#                    print(str_cost_wmsesure.format(niter,self.costlist[-1],self.wmselistsure[-1]))
-
             if rank==0:                
                 if self.truesky.any():
                     if (niter % 20) ==0:
@@ -822,9 +814,8 @@ class EasyMuffinSURE(EasyMuffin):
 
         std = 1000 # stopping criteria std of wmsesure
         niter = 0
-        thresh = 0.5*1e-3
         
-        while (niter<nitermax) and (std>thresh):
+        while (niter<nitermax) and (std>self.thresh):
             self.mu_s = self.golds_search_mu_s(a=self.mu_s_min, b=self.mu_s_max, maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
@@ -897,9 +888,8 @@ class EasyMuffinSURE(EasyMuffin):
 
         std = 1000 # stopping criteria std of wmsesure
         niter = 0
-        thresh = 0.5*1e-3
         
-        while (niter < nitermax) and (std>thresh):
+        while (niter < nitermax) and (std>self.thresh):
             self.mu_l = self.golds_search_mu_l(a=self.mu_l_min, b=self.mu_l_max, maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
