@@ -18,7 +18,6 @@ import utils_dist as ud
 
 from numpy.fft import fft2, ifft2, ifftshift
 from scipy.fftpack import dct,idct
-import time
 
 from mpi4py import MPI
 
@@ -412,7 +411,6 @@ mu_l=0.
 nb=8
 tau = 1e-4
 sigma = 1
-
 
 if rank==0:
     ud.tic()

@@ -7,7 +7,6 @@ Created on Fri Oct 28 10:07:31 2016
 """
 import numpy as np
 from scipy.fftpack import dct,idct
-
 from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heavy, Rect
 from deconv3d_tools import myfft2, myifft2, myifftshift, conv
 from deconv3d_tools import iuwt_decomp, iuwt_recomp, dwt_decomp, dwt_recomp
@@ -18,22 +17,16 @@ from mpi4py import MPI
 
 str_cost="| {:5d} | {:6.6e} |"
 str_cost_title="-"*24+"\n"+"| {:5s} | {:12s} |\n"+"-"*24
-
 str_cst_snr="| {:5d} | {:6.6e} | {:6.6e} |"
 str_cst_snr_title="-"*39+"\n"+"| {:5s} | {:12s} | {:12s} |\n"+"-"*39
-
 str_cost_wmsesure = "| {:5d} | {:6.6e} | {:6.6e} |"
 str_cost_wmsesure_title = "-"*39+"\n"+"| {:5s} | {:12s} | {:12s} |\n"+"-"*39
-
 str_cst_snr_wmse_wmsesure = "| {:5d} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} |"
-str_cst_snr_wmse_wmsesure_title="-"*69+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {:12s} |\n"+"-"*69
-                                   
+str_cst_snr_wmse_wmsesure_title="-"*69+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {:12s} |\n"+"-"*69                               
 str_cost_wmsesure_mu = "| {:5d} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} |"
 str_cost_wmsesure_mu_title = "-"*69+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {:12s} |\n"+"-"*69
-
 str_cst_snr_wmse_wmsesure_mu = "| {:5d} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} |"
 str_cst_snr_wmse_wmsesure_mu_title="-"*99+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {:12s} | {:12s} | {:12s} |\n"+"-"*99
-
                                       
 # Global variable - 
 comm = MPI.COMM_WORLD
@@ -54,8 +47,12 @@ class EasyMuffin():
                  dirtyinit=[],
                  dirty=[],
                  truesky=[],
-                 psf=[]):
-        
+                 psf=[],
+                 mu_s_min=0,
+                 mu_s_max=1,
+                 mu_l_min=0,
+                 mu_l_max=3,
+                 absolutePrecision=0.1):
 
         if type(nb) is not tuple:
             print('nb must be a tuple of wavelets for dwt ')
@@ -95,11 +92,11 @@ class EasyMuffin():
         self.dirty=dirty
         self.var = var
         
-        self.mu_s_min = 0
-        self.mu_s_max = 1
-        self.mu_l_min = 0
-        self.mu_l_max = 3
-        self.absolutePrecision = 1e-1
+        self.mu_s_min = mu_s_min
+        self.mu_s_max = mu_s_max
+        self.mu_l_min = mu_l_min
+        self.mu_l_max = mu_l_max
+        self.absolutePrecision = absolutePrecision
 
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
@@ -195,8 +192,6 @@ class EasyMuffin():
                 print('DWT: tau = ', self.tau)
                 print('')
             
-            
-            # self.tau = [self.tau for i in range(size)]
         else:
             
             self.nfreq = self.lst_nbf[rank]
@@ -488,87 +483,6 @@ class EasyMuffin():
                         
                     print(str_cost.format(niter,self.costlist[-1]))
 
-    def gs_mu_s(self,nitermax=10,maxiter=100):
-
-        absolutePrecision = self.absolutePrecision
-        a = self.mu_s_min
-        b = self.mu_s_max
-        gr = (1+np.sqrt(5))/2
-        c = b - (b - a)/gr
-        d = a + (b - a)/gr
-        niter = 0
-
-        self.mu_s_lst = []
-        self.mse_mu_s_lst = []
-
-        while abs(a - b) > absolutePrecision and niter < maxiter:
-
-            self.mu_s = c
-            self.mu_s_lst.append(c)
-            self.loop(nitermax)
-            res1 = self.wmse() 
-            res1 = comm.bcast(res1,root=0)
-            self.mse_mu_s_lst.append(res1)
-
-            self.mu_s = d
-            self.mu_s_lst.append(d)
-            self.loop(nitermax)
-            res2 = self.wmse()
-            res2 = comm.bcast(res2,root=0)
-            self.mse_mu_s_lst.append(res2)
-
-            if res1 < res2:
-                b = d
-            else:
-                a = c
-
-            c = b - (b - a)/gr
-            d = a + (b - a)/gr
-            niter+=1
-
-        return (a+b)/2
-
-    def gs_mu_l(self,nitermax=10,maxiter=100):
-
-        absolutePrecision = self.absolutePrecision
-        a = self.mu_l_min
-        b = self.mu_l_max
-        gr = (1+np.sqrt(5))/2
-        c = b - (b - a)/gr
-        d = a + (b - a)/gr
-        niter = 0
-
-        self.mu_l_lst = []
-        self.mse_mu_l_lst = []
-
-        while abs(a - b) > absolutePrecision and niter < maxiter:
-
-            self.mu_l = c
-            self.mu_l_lst.append(c)
-            self.loop(nitermax)
-            res1 = self.wmse() 
-            res1 = comm.bcast(res1,root=0)
-            self.mse_mu_l_lst.append(res1)
-
-            self.mu_l = d
-            self.mu_l_lst.append(d)
-            self.loop(nitermax)
-            res2 = self.wmse()
-            res2 = comm.bcast(res2,root=0)
-            self.mse_mu_l_lst.append(res2)
-
-            if res1 < res2:
-                b = d
-            else:
-                a = c
-
-            c = b - (b - a)/gr
-            d = a + (b - a)/gr
-            niter+=1
-
-        return (a+b)/2
-
-
 
 class EasyMuffinSURE(EasyMuffin):
 
@@ -582,7 +496,16 @@ class EasyMuffinSURE(EasyMuffin):
                  dirtyinit=[],
                  dirty=[],
                  truesky=[],
-                 psf=[]):
+                 psf=[],
+                 mu_s_min=0,
+                 mu_s_max=1,
+                 mu_l_min=0,
+                 mu_l_max=3,
+                 absolutePrecision=0.1,
+                 thresh=1e-4):
+        
+        # stopping criteria for loop_mu_s/_mu_l
+        self.thresh = thresh
 
         super(EasyMuffinSURE,self).__init__(
                  mu_s,
@@ -594,10 +517,12 @@ class EasyMuffinSURE(EasyMuffin):
                  dirtyinit,
                  dirty,
                  truesky,
-                 psf)
-        
-        # add 
-
+                 psf,
+                 mu_s_min,
+                 mu_s_max,
+                 mu_l_min,
+                 mu_l_max,
+                 absolutePrecision)      
 
     def init_algo(self):
 
@@ -637,9 +562,6 @@ class EasyMuffinSURE(EasyMuffin):
                 self.Jdelta = np.zeros((self.nxy,self.nxy,self.nfreq), order='F')
                 self.Jdeltaf = np.zeros((0))
 
-            
-            # stopping criteria for loop_mu_s/_mu_l
-            self.thresh = 0.5*1e-3
             # psnr, and wmse estimated using psure
             self.wmselistsure = []
             self.wmselistsure.append(self.wmsesure())
@@ -796,7 +718,7 @@ class EasyMuffinSURE(EasyMuffin):
                     print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
                 
 
-    def loop_mu_s(self,nitermax=10):
+    def loop_mu_s(self,nitermax=10,maxiter=100):
         """ main loop """
         
         if self.nitertot==0:
@@ -816,7 +738,7 @@ class EasyMuffinSURE(EasyMuffin):
         niter = 0
         
         while (niter<nitermax) and (std>self.thresh):
-            self.mu_s = self.golds_search_mu_s(a=self.mu_s_min, b=self.mu_s_max, maxiter=100)
+            self.mu_s = self.golds_search_mu_s(a=self.mu_s_min, b=self.mu_s_max, maxiter=maxiter)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
 
@@ -834,11 +756,10 @@ class EasyMuffinSURE(EasyMuffin):
                         print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))                    
                     print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
                     
-            if rank==0 and niter>50:
+            if rank==0 and niter>100:
                 std = np.var(self.wmselistsure[niter-50::])
                 
             std = comm.bcast(std,root=0)
-            
             niter+=1
 
 
@@ -851,8 +772,7 @@ class EasyMuffinSURE(EasyMuffin):
         niter = 0
 
         while abs(a - b) > absolutePrecision and niter < maxiter:
-            #print('(a,f(a))=(',a,',',self.f_gs_mu_s(a),') - (b,f(b))=(',b,',',self.f_gs_mu_s(b),') - (c,f(c))=(',c,',',self.f_gs_mu_s(c),') - (d,f(d))=(',d,',',self.f_gs_mu_s(d),') ')
-            #print('')
+
             if self.f_gs_mu_s(c) < self.f_gs_mu_s(d):
                 b = d
             else:
@@ -862,24 +782,23 @@ class EasyMuffinSURE(EasyMuffin):
             d = a + (b - a)/gr
             niter+=1
 
-        #print('quit gs')
+
         return (a + b)/2
 
 
     def f_gs_mu_s(self,a):
+
         mu_s_0 = self.mu_s
         self.mu_s = a
         super(EasyMuffinSURE,self).update(change=False)
         res = self.update_Jacobians(change=False)
-        
-        # mpi 
-        res = comm.bcast(res,root=0)
-        
+        res = comm.bcast(res,root=0)        
         self.mu_s = mu_s_0
+
         return res
 
 
-    def loop_mu_l(self,nitermax=10):
+    def loop_mu_l(self,nitermax=10,maxiter=100):
         """ main loop """
 
         if nitermax < 1:
@@ -890,7 +809,7 @@ class EasyMuffinSURE(EasyMuffin):
         niter = 0
         
         while (niter < nitermax) and (std>self.thresh):
-            self.mu_l = self.golds_search_mu_l(a=self.mu_l_min, b=self.mu_l_max, maxiter=100)
+            self.mu_l = self.golds_search_mu_l(a=self.mu_l_min, b=self.mu_l_max, maxiter=maxiter)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
 
@@ -908,14 +827,11 @@ class EasyMuffinSURE(EasyMuffin):
                         print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))                    
                     print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
                     
-            if rank==0 and niter>50:
+            if rank==0 and niter>100:
                 std = np.var(self.wmselistsure[niter-50::])
                 
-            std = comm.bcast(std,root=0)
-            
+            std = comm.bcast(std,root=0)            
             niter+=1
-
-
 
 
     def golds_search_mu_l(self,a, b, maxiter=100):
@@ -927,32 +843,28 @@ class EasyMuffinSURE(EasyMuffin):
         niter = 0
 
         while abs(a - b) > absolutePrecision and niter < maxiter:
-            #print('(a,f(a))=(',a,',',self.f_gs_mu_l(a),') - (b,f(b))=(',b,',',self.f_gs_mu_l(b),') - (c,f(c))=(',c,',',self.f_gs_mu_l(c),') - (d,f(d))=(',d,',',self.f_gs_mu_l(d),') ')
-            #print('')
+            
             if self.f_gs_mu_l(c) < self.f_gs_mu_l(d):
                 b = d
             else:
                 a = c
-
+                
             c = b - (b - a)/gr
             d = a + (b - a)/gr
             niter+=1
-
-        #print('quit gs')
 
         return (a + b)/2
 
 
     def f_gs_mu_l(self,a):
+        
         mu_l_0 = self.mu_l
         self.mu_l = a
         super(EasyMuffinSURE,self).update(change=False)
         res = self.update_Jacobians(change=False)
-        
-        # mpi 
-        res = comm.bcast(res,root=0)
-        
+        res = comm.bcast(res,root=0)        
         self.mu_l = mu_l_0
+        
         return res
 
     def set_mean_mu(self,set_mu_l=False,set_mu_s=False,niter=100):
@@ -962,4 +874,3 @@ class EasyMuffinSURE(EasyMuffin):
             
         if set_mu_s==True:
             self.mu_s = np.mean(self.mu_slist[max(1,self.nitertot-niter)::])
-            

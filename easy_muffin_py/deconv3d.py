@@ -411,7 +411,7 @@ class EasyMuffinSURE(EasyMuffin):
             self.mu_s_min = 0
             self.mu_s_max = 1
             self.mu_l_min = 0
-            self.mu_l_max = 2
+            self.mu_l_max = 3
 
     def wmsesure(self,change=True):
 
