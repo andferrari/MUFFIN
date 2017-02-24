@@ -10,7 +10,7 @@ import pylab as pl
 import numpy as np 
 import os
 
-folder = 'Res'
+folder = 'Res2'
 folder = os.path.join(os.getcwd(), folder)
 
 mu_l_name = os.path.join(folder,'mu_l.npy')

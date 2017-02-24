@@ -148,6 +148,7 @@ if rank==0:
 args = {'mu_s':mu_s_max,'mu_l':mu_l_max,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,
         'mu_s_max':mu_s_max,'mu_s_min':mu_s_min,'mu_l_min':mu_l_min,'mu_l_max':mu_l_max,
         'absolutePrecision':absolutePrecision,'thresh':thresh}
+tic()
 EM= dcvMpi.EasyMuffinSURE(**args)
 if rank==0:
     print('using tau: ',EM.tau)
@@ -172,5 +173,6 @@ if rank==0:
     np.save('snr_gs.npy',EM.snrlist)
     np.save('mu_s_gs.npy',mu_s_gs)
     np.save('mu_l_gs.npy',mu_l_gs)
+    toc()
     
     
