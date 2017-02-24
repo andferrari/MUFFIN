@@ -16,6 +16,7 @@ from deconv3d_tools import conv
 from mpi4py import MPI
 import deconv3d_mpi as dcvMpi
 from gs_mpi import gs_mu_s, gs_mu_l
+from tictoc import tic, toc
 
 
 #%% ===========================================================================
@@ -126,15 +127,19 @@ args = {'mu_s':mu_s,'mu_l':mu_l,'nb':nb,'sky':sky,'CubePSF':CubePSF,'CubeDirty':
 # Find optimal parameters
 # =============================================================================
 # find mu_s
+tic()
 mu_s_gs = gs_mu_s(nitermax=nitermax,comm=comm,rank=rank,maxiter=maxiter,**args)
 if rank==0:
     print('')
     print('mu_s_gs: ',mu_s_gs)
+    toc()
 # find mu_l
+tic()
 mu_l_gs = gs_mu_l(nitermax=nitermax,comm=comm,rank=rank,maxiter=maxiter,**args,mu_s_gs=mu_s_gs)
 if rank==0:
     print('')
     print('mu_l_gs: ',mu_l_gs)
+    toc()
 
 
 #%% ===========================================================================
