@@ -10,7 +10,7 @@ import pylab as pl
 import numpy as np 
 import os
 
-folder = 'Res2'
+folder = 'ResClaude'
 folder = os.path.join(os.getcwd(), folder)
 
 mu_l_name = os.path.join(folder,'mu_l.npy')
@@ -98,7 +98,7 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-L = 6
+L = 100
 
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
 CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
