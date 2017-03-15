@@ -47,12 +47,14 @@ pl.figure()
 pl.plot(snr)
 pl.xlabel('It.')
 pl.ylabel('SNR')
+pl.title('SNR variation w.r.t. the nbr. of iterations')
 
 pl.figure()
-pl.plot(10*np.log10(wmse),label='wmse')
-pl.plot(10*np.log10(wmses),'+',label='wmse sure')
+pl.plot(10*np.log10(wmse),label='wmse (opt.)')
+pl.plot(10*np.log10(wmses),'+',label='wmse (greedy)')
 pl.legend(loc='best')
 pl.xlabel('It.')
+pl.title('wmse (dB): with opt. parameters & greedy approach')
 
 #%% 
 
@@ -64,23 +66,40 @@ mu_l_gs_name = os.path.join(folder,'mu_l_gs.npy')
 mu_l_gs = np.load(mu_l_gs_name) 
 
 pl.figure()
-pl.plot(snr,label='snr greedy gs')
-pl.plot(snr_gs,label='snr gs')
+pl.plot(snr_gs,label='snr (opt.)')
+pl.plot(snr,label='snr (greedy)')
 pl.legend(loc='best')
+pl.title('snr (dB): with opt. parameters & greedy approach')
 
 mu_s_gs_ = np.tile(mu_s_gs,(len(mu_s)))
 mu_l_gs_ = np.tile(mu_l_gs,(len(mu_s)))
 pl.figure()
-pl.plot(mu_s,label=r'$\mu_s$ greedy')
-pl.plot(mu_l,label=r'$\mu_l$ greedy')
-pl.plot(mu_s_gs_,label=r'$\mu_s$ gs')
-pl.plot(mu_l_gs_,label=r'$\mu_l$ gs')
+pl.plot(mu_s,label=r'$\mu_s$ (greedy)')
+pl.plot(mu_s_gs_,label=r'$\mu_s$ (opt.)')
+pl.plot(mu_l,label=r'$\mu_l$ (greedy)')
+pl.plot(mu_l_gs_,label=r'$\mu_l$ (opt.)')
 pl.legend(loc='best')
 pl.xlabel('It.')
+pl.title('Optimal & greedy regularization parameter values')
 
 print('')
-print('gs: (mu_s,mu_l)=(',mu_s[-1],',',mu_l[-1],')')
-print('greedy gs: (mu_s,mu_l)=(',mu_s_gs,',',mu_l_gs,')')
+print('greedy gs: (mu_s,mu_l)=(',mu_s[-1],',',mu_l[-1],')')
+print('gs: (mu_s,mu_l)=(',mu_s_gs,',',mu_l_gs,')')
+
+#%%
+
+snr_tst_name = os.path.join(folder,'snr_tst.npy')
+snr_tst = np.load(snr_tst_name) 
+
+snr_tst2_name = os.path.join(folder,'snr_tst2.npy')
+snr_tst2 = np.load(snr_tst2_name) 
+
+pl.figure()
+pl.plot(snr,label='snr greedy gs')
+pl.plot(snr_gs,label='snr gs')
+pl.plot(snr_tst,label='snr tst')
+pl.plot(snr_tst2,label='snr tst2')
+pl.legend(loc='best')
 
 #%% 
 from astropy.io import fits
@@ -126,3 +145,7 @@ pl.plot(x0[x,y,:],'+',label='Reconstructed spectrum')
 pl.legend(loc='best')
 
         
+
+
+
+

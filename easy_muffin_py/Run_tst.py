@@ -15,7 +15,6 @@ import sys
 from deconv3d_tools import conv
 from mpi4py import MPI
 import deconv3d_mpi as dcvMpi
-from gs_mpi import gs_mu_s, gs_mu_l
 from tictoc import tic, toc
 
 
