@@ -87,7 +87,8 @@ def checkdim(x):
 folder = 'data256'
 file_in = 'M31_3d_conv_256_10db'
 folder = os.path.join(os.getcwd(), folder)
-genname = os.path.join(folder, file_in)
+# genname = os.path.join(folder, file_in)
+genname = '/home/rammanouil/easy_muffin/easy_muffin_py/data256/M31_3d_conv_256_10db' 
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
@@ -103,7 +104,7 @@ var = np.sum(Noise**2)/Noise.size
 #%% ===========================================================================
 # Run
 # =============================================================================
-# DWT parameters    
+# DWT parameters
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 
 args = {'mu_s':mu_s_max,'mu_l':mu_l_max,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,
@@ -119,7 +120,7 @@ EM.mu_s = mu_s
 EM.loop(nitermax1)
 # loop with mu_l
 EM.mu_l = mu_l
-EM.loop(nitermax2) 
+EM.loop(nitermax2)
 
 
 #%% ===========================================================================
@@ -133,5 +134,3 @@ if rank==0:
     np.save('mu_s_tst.npy',mu_s)
     np.save('mu_l_tst.npy',mu_l)
     toc()
-    
-    
