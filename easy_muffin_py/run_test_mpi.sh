@@ -1,7 +1,7 @@
 #!/bin/sh
-#OAR -l core=4,walltime=00:20:00
-#OAR -O /home/rammanouil/SCRATCH/test_mpi_2nodes.%jobid%.output
-#OAR -E /home/rammanouil/SCRATCH/test_mpi_2nodes.%jobid%.error
+#OAR -l core=9,walltime=12:20:00
+#OAR -O output/%jobid%.output.txt
+#OAR -E output/%jobid%.error.txt
 #OAR -p host='smp01'
 #OAR -t smp
 
@@ -9,15 +9,14 @@ module purge
 module load Python/3.5.1
 module load openmpi/1.6.2
 
-TMPDIR=$SCRATCHDIR/$OAR_JOB_ID
-mkdir -p $TMPDIR
-cd $TMPDIR
+mkdir -p output/$OAR_JOB_ID
+
 
 echo $OAR_NODEFILE :
 cat $OAR_NODEFILE
 echo
 
-MAINPY=$OAR_WORKDIR/Run_tst.py"  10 10 10 10 2 10 2"
+MAINPY=$OAR_WORKDIR/Run_tst.py"  32 1 800 10 2 10 2 data"
 
 cd $TMPDIR
 
