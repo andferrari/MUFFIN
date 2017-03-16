@@ -1,0 +1,202 @@
+Traceback (most recent call last):
+  File "/home/rammanouil/easy_muffin/easy_muffin_py/Run_tst.py", line 102, in <module>
+    CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 201, in getdata
+    hdulist, extidx = _getext(filename, mode, *args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 889, in _getext
+    hdulist = fitsopen(filename, mode=mode, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 166, in fitsopen
+    lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 404, in fromfile
+    lazy_load_hdus=lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 1015, in _readfrom
+    fileobj = _File(fileobj, mode=mode, memmap=memmap, cache=cache)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/utils/decorators.py", line 493, in wrapper
+    return function(*args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 144, in __init__
+    self._open_filename(fileobj, mode, overwrite)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 499, in _open_filename
+    self._file = fileobj_open(self.name, IO_FITS_MODES[mode])
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/util.py", line 407, in fileobj_open
+    return open(filename, mode, buffering=0)
+FileNotFoundError: [Errno 2] No such file or directory: '/home/rammanouil/easy_muffin/easy_muffin_py/data256/data_psf.fits'
+Traceback (most recent call last):
+  File "/home/rammanouil/easy_muffin/easy_muffin_py/Run_tst.py", line 102, in <module>
+    CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 201, in getdata
+    hdulist, extidx = _getext(filename, mode, *args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 889, in _getext
+    hdulist = fitsopen(filename, mode=mode, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 166, in fitsopen
+    lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 404, in fromfile
+    lazy_load_hdus=lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 1015, in _readfrom
+    fileobj = _File(fileobj, mode=mode, memmap=memmap, cache=cache)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/utils/decorators.py", line 493, in wrapper
+    return function(*args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 144, in __init__
+    self._open_filename(fileobj, mode, overwrite)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 499, in _open_filename
+    self._file = fileobj_open(self.name, IO_FITS_MODES[mode])
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/util.py", line 407, in fileobj_open
+    return open(filename, mode, buffering=0)
+FileNotFoundError: [Errno 2] No such file or directory: '/home/rammanouil/easy_muffin/easy_muffin_py/data256/data_psf.fits'
+Traceback (most recent call last):
+  File "/home/rammanouil/easy_muffin/easy_muffin_py/Run_tst.py", line 102, in <module>
+    CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 201, in getdata
+    hdulist, extidx = _getext(filename, mode, *args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 889, in _getext
+    hdulist = fitsopen(filename, mode=mode, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 166, in fitsopen
+    lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 404, in fromfile
+    lazy_load_hdus=lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 1015, in _readfrom
+    fileobj = _File(fileobj, mode=mode, memmap=memmap, cache=cache)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/utils/decorators.py", line 493, in wrapper
+    return function(*args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 144, in __init__
+    self._open_filename(fileobj, mode, overwrite)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 499, in _open_filename
+    self._file = fileobj_open(self.name, IO_FITS_MODES[mode])
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/util.py", line 407, in fileobj_open
+    return open(filename, mode, buffering=0)
+FileNotFoundError: [Errno 2] No such file or directory: '/home/rammanouil/easy_muffin/easy_muffin_py/data256/data_psf.fits'
+Traceback (most recent call last):
+  File "/home/rammanouil/easy_muffin/easy_muffin_py/Run_tst.py", line 102, in <module>
+    CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 201, in getdata
+    hdulist, extidx = _getext(filename, mode, *args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 889, in _getext
+    hdulist = fitsopen(filename, mode=mode, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 166, in fitsopen
+    lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 404, in fromfile
+    lazy_load_hdus=lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 1015, in _readfrom
+    fileobj = _File(fileobj, mode=mode, memmap=memmap, cache=cache)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/utils/decorators.py", line 493, in wrapper
+    return function(*args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 144, in __init__
+    self._open_filename(fileobj, mode, overwrite)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 499, in _open_filename
+    self._file = fileobj_open(self.name, IO_FITS_MODES[mode])
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/util.py", line 407, in fileobj_open
+    return open(filename, mode, buffering=0)
+FileNotFoundError: [Errno 2] No such file or directory: '/home/rammanouil/easy_muffin/easy_muffin_py/data256/data_psf.fits'
+Traceback (most recent call last):
+  File "/home/rammanouil/easy_muffin/easy_muffin_py/Run_tst.py", line 102, in <module>
+    CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 201, in getdata
+    hdulist, extidx = _getext(filename, mode, *args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 889, in _getext
+    hdulist = fitsopen(filename, mode=mode, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 166, in fitsopen
+    lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 404, in fromfile
+    lazy_load_hdus=lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 1015, in _readfrom
+    fileobj = _File(fileobj, mode=mode, memmap=memmap, cache=cache)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/utils/decorators.py", line 493, in wrapper
+    return function(*args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 144, in __init__
+    self._open_filename(fileobj, mode, overwrite)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 499, in _open_filename
+    self._file = fileobj_open(self.name, IO_FITS_MODES[mode])
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/util.py", line 407, in fileobj_open
+    return open(filename, mode, buffering=0)
+FileNotFoundError: [Errno 2] No such file or directory: '/home/rammanouil/easy_muffin/easy_muffin_py/data256/data_psf.fits'
+Traceback (most recent call last):
+  File "/home/rammanouil/easy_muffin/easy_muffin_py/Run_tst.py", line 102, in <module>
+    CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 201, in getdata
+    hdulist, extidx = _getext(filename, mode, *args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 889, in _getext
+    hdulist = fitsopen(filename, mode=mode, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 166, in fitsopen
+    lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 404, in fromfile
+    lazy_load_hdus=lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 1015, in _readfrom
+    fileobj = _File(fileobj, mode=mode, memmap=memmap, cache=cache)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/utils/decorators.py", line 493, in wrapper
+    return function(*args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 144, in __init__
+    self._open_filename(fileobj, mode, overwrite)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 499, in _open_filename
+    self._file = fileobj_open(self.name, IO_FITS_MODES[mode])
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/util.py", line 407, in fileobj_open
+    return open(filename, mode, buffering=0)
+FileNotFoundError: [Errno 2] No such file or directory: '/home/rammanouil/easy_muffin/easy_muffin_py/data256/data_psf.fits'
+Traceback (most recent call last):
+  File "/home/rammanouil/easy_muffin/easy_muffin_py/Run_tst.py", line 102, in <module>
+    CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 201, in getdata
+    hdulist, extidx = _getext(filename, mode, *args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 889, in _getext
+    hdulist = fitsopen(filename, mode=mode, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 166, in fitsopen
+    lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 404, in fromfile
+    lazy_load_hdus=lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 1015, in _readfrom
+    fileobj = _File(fileobj, mode=mode, memmap=memmap, cache=cache)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/utils/decorators.py", line 493, in wrapper
+    return function(*args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 144, in __init__
+    self._open_filename(fileobj, mode, overwrite)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 499, in _open_filename
+    self._file = fileobj_open(self.name, IO_FITS_MODES[mode])
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/util.py", line 407, in fileobj_open
+    return open(filename, mode, buffering=0)
+FileNotFoundError: [Errno 2] No such file or directory: '/home/rammanouil/easy_muffin/easy_muffin_py/data256/data_psf.fits'
+Traceback (most recent call last):
+  File "/home/rammanouil/easy_muffin/easy_muffin_py/Run_tst.py", line 102, in <module>
+    CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 201, in getdata
+    hdulist, extidx = _getext(filename, mode, *args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 889, in _getext
+    hdulist = fitsopen(filename, mode=mode, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 166, in fitsopen
+    lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 404, in fromfile
+    lazy_load_hdus=lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 1015, in _readfrom
+    fileobj = _File(fileobj, mode=mode, memmap=memmap, cache=cache)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/utils/decorators.py", line 493, in wrapper
+    return function(*args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 144, in __init__
+    self._open_filename(fileobj, mode, overwrite)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 499, in _open_filename
+    self._file = fileobj_open(self.name, IO_FITS_MODES[mode])
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/util.py", line 407, in fileobj_open
+    return open(filename, mode, buffering=0)
+FileNotFoundError: [Errno 2] No such file or directory: '/home/rammanouil/easy_muffin/easy_muffin_py/data256/data_psf.fits'
+Traceback (most recent call last):
+  File "/home/rammanouil/easy_muffin/easy_muffin_py/Run_tst.py", line 102, in <module>
+    CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 201, in getdata
+    hdulist, extidx = _getext(filename, mode, *args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/convenience.py", line 889, in _getext
+    hdulist = fitsopen(filename, mode=mode, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 166, in fitsopen
+    lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 404, in fromfile
+    lazy_load_hdus=lazy_load_hdus, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/hdu/hdulist.py", line 1015, in _readfrom
+    fileobj = _File(fileobj, mode=mode, memmap=memmap, cache=cache)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/utils/decorators.py", line 493, in wrapper
+    return function(*args, **kwargs)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 144, in __init__
+    self._open_filename(fileobj, mode, overwrite)
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/file.py", line 499, in _open_filename
+    self._file = fileobj_open(self.name, IO_FITS_MODES[mode])
+  File "/home/rammanouil/.local/lib/python3.5/site-packages/astropy/io/fits/util.py", line 407, in fileobj_open
+    return open(filename, mode, buffering=0)
+FileNotFoundError: [Errno 2] No such file or directory: '/home/rammanouil/easy_muffin/easy_muffin_py/data256/data_psf.fits'
+--------------------------------------------------------------------------
+mpirun noticed that the job aborted, but has no info as to the process
+that caused that situation.
+--------------------------------------------------------------------------
