@@ -47,6 +47,7 @@ elif len(sys.argv)==1:
     mu_l_max = 2.2
     mu_s = 0.2
     mu_l = 2.2
+    data_suffix = 'M31_3d_conv_256_10db'
 else:
     if rank==0:
         print('')
@@ -75,6 +76,7 @@ if rank==0:
     print('mu_l_max: ',mu_l_max)
     print('mu_s: ',mu_s)
     print('mu_l: ',mu_l)
+    print('data_suffix',data_suffix)
 
 
 # =============================================================================
@@ -94,19 +96,34 @@ if os.getenv('OAR_JOB_ID') is not None:
 else:
     folder = os.path.join(os.getcwd(), folder)
 
-print(os.getcwd())
+# CAUTIONNNNNNNNNN TEMPORARY SOLUTION
+folder = '/home/rammanouil/easy_muffin/easy_muffin_py/data256'
+
 genname = os.path.join(folder, file_in)
-#genname = '/home/rammanouil/easy_muffin/easy_muffin_py/data256/M31_3d_conv_256_10db'
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
 CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
 skyname = genname+'_sky.fits'
-sky = checkdim(fits.getdata(skyname, ext=0))
-sky = sky[:,:,0:L]
-sky2 = np.sum(sky*sky)
-Noise = CubeDirty - conv(CubePSF,sky)
-var = np.sum(Noise**2)/Noise.size
+
+if os.path.isfile(skyname):
+    if rank==0:
+        print('')
+        print('estimating variance')
+    sky = checkdim(fits.getdata(skyname, ext=0))
+    sky = sky[:,:,0:L]
+    sky2 = np.sum(sky*sky)
+    Noise = CubeDirty - conv(CubePSF,sky)
+    var = np.sum(Noise**2)/Noise.size
+    if rank==0:
+        print('')
+        print('setting var to ', var)
+else:
+    var = 0.0
+    sky = None
+    if rank==0:
+        print('')
+        print('setting var to ', var)
 
 
 #%% ===========================================================================
@@ -118,6 +135,7 @@ nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 args = {'mu_s':mu_s_max,'mu_l':mu_l_max,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,
         'mu_s_max':mu_s_max,'mu_s_min':0,'mu_l_min':0,'mu_l_max':mu_l_max}
 tic()
+
 EM= dcvMpi.EasyMuffinSURE(**args)
 if rank==0:
     print('using tau: ',EM.tau)
@@ -135,17 +153,24 @@ EM.loop(nitermax2)
 # Save results
 # =============================================================================
 if rank==0:
+
+    toc()
+
     if os.getenv('OAR_JOB_ID') is not None:
         #os.mkdir(os.getenv('OAR_JOB_ID'))
         os.chdir(os.path.join(os.getenv('OAR_WORKDIR'), 'output/'+os.getenv('OAR_JOB_ID')))
     else:
         os.chdir(os.path.join(os.getcwd(), 'output'))
 
-    np.save('x0_tst.npy',EM.xf)
-    np.save('wmse_tst.npy',EM.wmselist)
-    np.save('wmses_tst.npy',EM.wmselistsure)
-    np.save('snr_tst.npy',EM.snrlist)
-    np.save('mu_s_tst.npy',mu_s)
-    np.save('mu_l_tst.npy',mu_l)
-
-    toc()
+    if sky is not None:
+        np.save('x0_tst.npy',EM.xf)
+        np.save('wmse_tst.npy',EM.wmselist)
+        np.save('wmses_tst.npy',EM.wmselistsure)
+        np.save('snr_tst.npy',EM.snrlist)
+        np.save('mu_s_tst.npy',mu_s)
+        np.save('mu_l_tst.npy',mu_l)
+    else:
+        np.save('x0_tst.npy',EM.xf)
+        np.save('wmses_tst.npy',EM.wmselistsure)
+        np.save('mu_s_tst.npy',mu_s)
+        np.save('mu_l_tst.npy',mu_l)
