@@ -40,6 +40,7 @@ class EasyMuffin():
     def __init__(self,
                  mu_s=0.5,
                  mu_l=0.0,
+                 mu_eps=0.0,
                  nb=(8,0),
                  tau = 1e-4,
                  sigma = 10,
@@ -70,6 +71,10 @@ class EasyMuffin():
             print('mu_l must be non negative, mu_l=0.')
             mu_s=0.0
 
+        if mu_eps< 0 :
+            print('mu_eps must be non negative, mu_eps=0.')
+            mu_eps=0.0
+
         if tau< 0 :
             print('tau must be non negative, tau=1e-4')
             tau=1e-4
@@ -86,6 +91,7 @@ class EasyMuffin():
         self.nb = nb
         self.mu_s = mu_s
         self.mu_l = mu_l
+        self.mu_eps = mu_eps
         self.sigma = sigma
         self.tau = tau
         self.dirtyinit = dirtyinit
@@ -216,7 +222,6 @@ class EasyMuffin():
 
         else:
 
-
             self.nfreq = self.lst_nbf[rank]
             self.psf = np.asfortranarray(self.psf[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq])
             self.dirty = np.asfortranarray(self.dirty[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq])
@@ -229,7 +234,10 @@ class EasyMuffin():
             if self.dirtyinit:
                 self.x = np.asfortranarray(self.dirtyinit) ####################
             else:
-                self.x =  np.asfortranarray(init_dirty_wiener(self.dirty, self.psf, self.psfadj, 5e1))
+                if self.mu_eps ==0:
+                    self.x =  np.asfortranarray(init_dirty_wiener(self.dirty, self.psf, self.psfadj, 5e1))
+                else:
+                    self.x =  np.asfortranarray(init_dirty_wiener(self.dirty, self.psf, self.psfadj, 5e1))
 
 
             self.hth_fft = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.complex, order='F')
@@ -302,12 +310,15 @@ class EasyMuffin():
             self.snrlist.append(self.snr())
             self.psnrlist.append(self.psnr())
             self.wmselist.append(self.wmse())
+            if rank==0:
+                print('The snr of the initialisation is ',self.snrlist[0])
+                print('')
 
 
     def cost(self):
         if not rank==0:
             tmp = self.dirty - myifftshift(myifft2(myfft2(self.x)*myfft2(self.psf)))
-            LS_cst = 0.5*(np.linalg.norm(tmp)**2)
+            LS_cst = 0.5*(np.linalg.norm(tmp)**2) + 0.5*self.mu_eps*(np.linalg.norm(self.x)**2)
             tmp = 0.
             for freq in range(self.nfreq):
                 tmp1 = self.Decomp(self.x[:,:,freq],self.nbw_decomp)
@@ -421,7 +432,7 @@ class EasyMuffin():
         if not rank ==0:
             # compute gradient
             tmp = myifftshift( myifft2( myfft2(x_) *self.hth_fft ) )
-            Delta_freq = tmp.real- self.fty
+            Delta_freq = tmp.real- self.fty + self.mu_eps*x_
 
             for freq in range(self.nfreq):
                 # compute iuwt adjoint
@@ -486,8 +497,9 @@ class EasyMuffin():
     def loop(self,nitermax=10):
         """ main loop """
 
-        if nitermax< 1:
-            print('nitermax must be a positive integer, nitermax=10')
+        if nitermax< 0:
+            if rank==0:
+                print('nitermax must be a positive integer, nitermax=10')
             nitermax=10
 
         for niter in range(nitermax):
@@ -512,6 +524,7 @@ class EasyMuffinSURE(EasyMuffin):
     def __init__(self,
                  mu_s=0.5,
                  mu_l=0.0,
+                 mu_eps=0.0,
                  nb=(8,0),
                  tau = 1e-4,
                  sigma = 10,
@@ -534,6 +547,7 @@ class EasyMuffinSURE(EasyMuffin):
         super(EasyMuffinSURE,self).__init__(
                  mu_s,
                  mu_l,
+                 mu_eps,
                  nb,
                  tau,
                  sigma,
@@ -670,7 +684,7 @@ class EasyMuffinSURE(EasyMuffin):
         if not rank ==0:
             # compute gradient
             tmp = myifftshift( myifft2( myfft2(Jx_) * self.hth_fft ) )
-            JDelta_freq = tmp.real- self.Hn
+            JDelta_freq = tmp.real- self.Hn + self.mu_eps*Jx_
 
             for freq in range(self.nfreq):
 
@@ -720,8 +734,9 @@ class EasyMuffinSURE(EasyMuffin):
     def loop(self,nitermax=10,change=True):
         """ main loop """
 
-        if nitermax < 1:
-            print('nitermax must be a positive integer, nitermax=10')
+        if nitermax < 0:
+            if rank==0:
+                print('nitermax must be a positive integer, nitermax=10')
             nitermax=10
 
         for niter in range(nitermax):

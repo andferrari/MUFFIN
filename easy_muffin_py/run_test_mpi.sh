@@ -17,7 +17,7 @@ echo $OAR_NODEFILE :
 cat $OAR_NODEFILE
 echo
 
-MAINPY=$OAR_WORKDIR/Run_tst.py"  32 3 100 1e-3 1e-3 1e-3 1e-3 Celine"
+MAINPY=$OAR_WORKDIR/Run_tst.py"  32 0 500 10 2 10 2 10 Celine_4var"
 
 cd $TMPDIR
 
