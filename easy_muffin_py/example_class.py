@@ -47,7 +47,7 @@ from SuperNiceSpectraDeconv import SNSD
 from deconv3d import EasyMuffin, EasyMuffinSURE
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 50
+nitermax = 10
 
 DM = SNSD(mu_s=0.7, mu_l = 5.2, nb=nb,nitermax=nitermax,truesky=sky)
 DM.parameters()
@@ -82,7 +82,7 @@ pl.plot(snr3,'*',label='snr3')
 pl.legend(loc='best')
 
 pl.figure()
-pl.plot(cost,label='cost1')
+pl.plot(cost/(EM.nxy*EM.nxy*EM.nfreq),label='cost1')
 pl.plot(cost2,label='cost2')
 pl.plot(cost3,'*',label='cost3')
 pl.legend(loc='best')

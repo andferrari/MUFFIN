@@ -13,9 +13,27 @@ from deconv3d_tools import myfft2, myifft2, myifftshift, conv
 from deconv3d_tools import iuwt_decomp, iuwt_recomp, dwt_decomp, dwt_recomp
 import copy
 
-# import copy
 
+str_cost="| {:5d} | {:6.6e} |"
+str_cost_title="| {:5s} | {:12s} |\n"+"-"*24
 
+str_cst_snr="| {:5d} | {:6.6e} | {:6.6e} |"
+str_cst_snr_title="-"*39+"\n"+"| {:5s} | {:12s} | {:12s} |\n"+"-"*39
+
+str_cost_wmsesure = "| {:5d} | {:6.6e} | {:6.6e} |"
+str_cost_wmsesure_title = "-"*39+"\n"+"| {:5s} | {:12s} | {:12s} |\n"+"-"*39
+
+str_cst_snr_wmse_wmsesure = "| {:5d} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} |"
+str_cst_snr_wmse_wmsesure_title="-"*69+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {:12s} |\n"+"-"*69
+                  
+str_cost_wmsesure_mu = "| {:5d} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} |"
+str_cost_wmsesure_mu_title = "-"*69+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {:12s} |\n"+"-"*69
+
+str_cst_snr_wmse_wmsesure_mu = "| {:5d} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} |"
+str_cst_snr_wmse_wmsesure_mu_title="-"*99+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {:12s} | {:12s} | {:12s} |\n"+"-"*99
+
+                                      
+                                      
 class EasyMuffin():
     def __init__(self,
                  mu_s=0.5,
@@ -29,7 +47,6 @@ class EasyMuffin():
                  truesky=[],
                  psf=[]):
 
-        print('')
 
         if type(nb) is not tuple:
             print('nb must be a tuple of wavelets for dwt ')
@@ -76,10 +93,14 @@ class EasyMuffin():
 
         self.psfadj = defadj(self.psf)
 
-        print('')
         print('psf size ', self.psf.shape)
         print('drt size ', self.dirty.shape)
 
+        # precomputations
+        print('')
+        print("precomputations...")
+        
+        
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
 
@@ -89,10 +110,6 @@ class EasyMuffin():
         else:
             self.x = init_dirty_wiener(self.dirty, self.psf, self.psfadj, 5e1)
 
-
-        # precomputations
-        print('')
-        print("precomputations...")
 
         self.hth_fft = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.complex)
         self.fty = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
@@ -117,6 +134,7 @@ class EasyMuffin():
 
             print('')
             print('IUWT: tau = ', self.tau)
+            print('')
 
         else:
             self.Decomp = dwt_decomp
@@ -127,13 +145,14 @@ class EasyMuffin():
             self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
             print('')
             print('DWT: tau = ', self.tau)
+            print('')
 
 
-        self.utt = {}   
+        self.utt = {}
         for freq in range(self.nfreq):
             self.utt[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
 
-        self.u = {}   
+        self.u = {}
         for freq in range(self.nfreq):
             self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
 
@@ -172,7 +191,7 @@ class EasyMuffin():
                 tmp = tmp + np.sum(np.abs(tmp1[b]))
         Spt_cst = self.mu_s*tmp
         Spc_cst = self.mu_l*np.sum(np.abs(dct(self.x,axis=2,norm='ortho')))
-        return LS_cst + Spt_cst + Spc_cst
+        return (LS_cst + Spt_cst + Spc_cst)/(self.nxy*self.nxy*self.nfreq)
 
 
     def snr(self,change=True):
@@ -198,18 +217,17 @@ class EasyMuffin():
         return (np.linalg.norm(self.truesky-self.x)**2)/(self.nxy*self.nxy*self.nfreq)
 
     def update(self,change=True):
-
+        
         if change:
-            xt_ = self.xt # xt_ is a pointer 
+            xt_ = self.xt # xt_ is a pointer
             u_ = self.u
             x_ = self.x
             v_ = self.v
         else:
-            xt_ = self.xt.copy() # xt is a new local matrix 
+            xt_ = self.xt.copy() # xt is a new local matrix
             u_  = copy.deepcopy(self.u)
             x_  = self.x.copy()
             v_  = self.v.copy()
-
 
         t = idct(v_, axis=2, norm='ortho') # to check
 
@@ -272,14 +290,22 @@ class EasyMuffin():
             nitermax=10
 
         # Iteration
-        print('')
-        print("iterate...")
 
         for niter in range(nitermax):
 
             self.update()
+            
+            if self.truesky.any():
+                if (niter % 20) ==0:
+                    print(str_cst_snr_title.format('It.','Cost','SNR'))
+                    
+                print(str_cst_snr.format(niter,self.costlist[-1],self.snrlist[-1]))
+            else:
+                if (niter % 20) ==0:
+                    print(str_cost_title.format('It.','Cost'))
+                    
+                print(str_cost.format(niter,self.costlist[-1]))
 
-            print('iteration: ',niter)
 
     def gs_mu_s(self,nitermax=10,a=0,b=2,absolutePrecision=1e-1,maxiter=100):
 
@@ -381,6 +407,11 @@ class EasyMuffinSURE(EasyMuffin):
             # mu_l list
             self.mu_llist = []
             self.mu_llist.append(self.mu_l)
+            
+            self.mu_s_min = 0
+            self.mu_s_max = 1
+            self.mu_l_min = 0
+            self.mu_l_max = 3
 
     def wmsesure(self,change=True):
 
@@ -405,12 +436,12 @@ class EasyMuffinSURE(EasyMuffin):
     def update_Jacobians(self,change=True):
 
         if change:
-            Jxt_ = self.Jxt # pointer 
+            Jxt_ = self.Jxt # pointer
             Ju_ = self.Ju
             Jx_ = self.Jx
             Jv_ = self.Jv
         else:
-            Jxt_ = self.Jxt.copy() # new matrix 
+            Jxt_ = self.Jxt.copy() # new matrix
             Ju_  = copy.deepcopy(self.Ju)
             Jx_  = self.Jx.copy()
             Jv_  = self.Jv.copy()
@@ -468,12 +499,27 @@ class EasyMuffinSURE(EasyMuffin):
             self.mu_llist.append(self.mu_l)
             super(EasyMuffinSURE,self).update(change)
             self.update_Jacobians(change)
-            print('iteration: ',niter)
             self.nitertot+=1
+
+            if self.truesky.any():
+                if (niter % 20) ==0:
+                    print(str_cst_snr_wmse_wmsesure_title.format('It.','Cost','SNR','WMSE','WMSES'))                    
+                print(str_cst_snr_wmse_wmsesure.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1]))
+            else:
+                if (niter % 20) ==0:
+                    print(str_cost_wmsesure_title.format('It.','Cost','WMSES'))                    
+                print(str_cost_wmsesure.format(niter,self.costlist[-1],self.wmselistsure[-1]))
+                
 
 
     def loop_mu_s(self,nitermax=10):
         """ main loop """
+        
+        if self.nitertot==0:
+            self.tau = compute_tau_DWT(self.psf,self.mu_s_max,self.mu_l_max,self.sigma,self.nbw_decomp)
+            print('')
+            print('setting tau to smallest (safest): ',self.tau)
+            print('')
 
 
         if nitermax < 1:
@@ -481,14 +527,22 @@ class EasyMuffinSURE(EasyMuffin):
             nitermax=10
 
         for niter in range(nitermax):
-            self.mu_s = self.golds_search_mu_s(a=0, b=1, absolutePrecision=1e-2,maxiter=100)
+            self.mu_s = self.golds_search_mu_s(a=self.mu_s_min, b=self.mu_s_max, absolutePrecision=1e-1,maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
 
             self.mu_slist.append(self.mu_s)
             self.mu_llist.append(self.mu_l)
-            print('iteration: ',niter)
             self.nitertot+=1
+            
+            if self.truesky.any():
+                if (niter % 20) ==0:
+                    print(str_cst_snr_wmse_wmsesure_mu_title.format('It.','Cost','SNR','WMSE','WMSES','mu_s','mu_l'))                    
+                print(str_cst_snr_wmse_wmsesure_mu.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
+            else:
+                if (niter % 20) ==0:
+                    print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))                    
+                print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
 
 
     def golds_search_mu_s(self,a, b, absolutePrecision=1e-1,maxiter=100):
@@ -532,15 +586,23 @@ class EasyMuffinSURE(EasyMuffin):
             nitermax=10
 
         for niter in range(nitermax):
-            self.mu_l = self.golds_search_mu_l(a=0, b=2, absolutePrecision=1e-1,maxiter=100)
+            self.mu_l = self.golds_search_mu_l(a=self.mu_l_min, b=self.mu_l_max, absolutePrecision=1e-1,maxiter=100)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
 
             self.mu_llist.append(self.mu_l)
             self.mu_slist.append(self.mu_s)
-            print('iteration: ',niter)
             self.nitertot+=1
 
+            if self.truesky.any():
+                if (niter % 20) ==0:
+                    print(str_cst_snr_wmse_wmsesure_mu_title.format('It.','Cost','SNR','WMSE','WMSES','mu_s','mu_l'))                    
+                print(str_cst_snr_wmse_wmsesure_mu.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
+            else:
+                if (niter % 20) ==0:
+                    print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))                    
+                print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
+                
 
     def golds_search_mu_l(self,a, b, absolutePrecision=1e-1,maxiter=100):
 
@@ -560,7 +622,7 @@ class EasyMuffinSURE(EasyMuffin):
             c = b - (b - a)/gr
             d = a + (b - a)/gr
             niter+=1
-            
+
         #print('quit gs')
 
         return (a + b)/2
