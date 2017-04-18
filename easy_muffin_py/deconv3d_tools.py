@@ -15,13 +15,18 @@ import pywt
 #==============================================================================
 def compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp):
     
-    beta = np.max(abs2(myfft2(psf)))
-    
-    #print('nbw_decomp=',len(nbw_decomp))    
-
+    beta = np.max(abs2(myfft2(psf)))    
     tau = 0.9/(beta/2  + sigma*(mu_s**2)*len(nbw_decomp) + sigma*(mu_l**2))
     tau = tau
     return tau
+
+def compute_tau_2D(psf,mu_s,sigma,nbw_decomp):
+    
+    beta = np.max(abs2(myfft2(psf)))
+    tau = 0.9/(beta/2  + sigma*(mu_s**2)*len(nbw_decomp))
+    tau = tau
+    return tau
+
 #==============================================================================
 # tools for Jacobians comp. 
 #==============================================================================
@@ -35,7 +40,10 @@ def Rect(x):
 # TOOLS        
 #==============================================================================
 def defadj(x):
-    return np.roll(np.roll(x[::-1,::-1,:],1,axis=0),1,axis=1) 
+    if x.ndim==3:
+        return np.roll(np.roll(x[::-1,::-1,:],1,axis=0),1,axis=1)
+    else:
+        return np.roll(np.roll(x[::-1,::-1],1,axis=0),1,axis=1)
 
 def sat(x):
     """ Soft thresholding on array x"""

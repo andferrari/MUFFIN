@@ -6,11 +6,11 @@ Created on Fri Feb 24 18:29:59 2017
 @author: rammanouil
 """
 
-import pylab as pl 
-import numpy as np 
+import pylab as pl
+import numpy as np
 import os
 
-folder = 'ResClaude'
+folder = 'ResEUSIPCO2017'
 folder = os.path.join(os.getcwd(), folder)
 
 mu_l_name = os.path.join(folder,'mu_l.npy')
@@ -20,7 +20,7 @@ wmse_name = os.path.join(folder,'wmse.npy')
 wmses_name = os.path.join(folder,'wmses.npy')
 x0_name = os.path.join(folder,'x0.npy')
 
-mu_l = np.load(mu_l_name) 
+mu_l = np.load(mu_l_name)
 mu_s = np.load(mu_s_name)
 snr = np.load(snr_name)
 wmse = np.load(wmse_name)
@@ -56,14 +56,14 @@ pl.legend(loc='best')
 pl.xlabel('It.')
 pl.title('wmse (dB): with opt. parameters & greedy approach')
 
-#%% 
+#%%
 
 snr_gs_name = os.path.join(folder,'snr_gs.npy')
-snr_gs = np.load(snr_gs_name) 
+snr_gs = np.load(snr_gs_name)
 mu_s_gs_name = os.path.join(folder,'mu_s_gs.npy')
-mu_s_gs = np.load(mu_s_gs_name) 
+mu_s_gs = np.load(mu_s_gs_name)
 mu_l_gs_name = os.path.join(folder,'mu_l_gs.npy')
-mu_l_gs = np.load(mu_l_gs_name) 
+mu_l_gs = np.load(mu_l_gs_name)
 
 pl.figure()
 pl.plot(snr_gs,label='snr (opt.)')
@@ -89,10 +89,10 @@ print('gs: (mu_s,mu_l)=(',mu_s_gs,',',mu_l_gs,')')
 #%%
 
 snr_tst_name = os.path.join(folder,'snr_tst.npy')
-snr_tst = np.load(snr_tst_name) 
+snr_tst = np.load(snr_tst_name)
 
 snr_tst2_name = os.path.join(folder,'snr_tst2.npy')
-snr_tst2 = np.load(snr_tst2_name) 
+snr_tst2 = np.load(snr_tst2_name)
 
 pl.figure()
 pl.plot(snr,label='snr greedy gs')
@@ -101,7 +101,7 @@ pl.plot(snr_tst,label='snr tst')
 pl.plot(snr_tst2,label='snr tst2')
 pl.legend(loc='best')
 
-#%% 
+#%%
 from astropy.io import fits
 
 def checkdim(x):
@@ -143,9 +143,3 @@ pl.plot(sky[x,y,:],label='Sky spectrum')
 pl.plot(CubeDirty[x,y,:],label='Dirty spectrum')
 pl.plot(x0[x,y,:],'+',label='Reconstructed spectrum')
 pl.legend(loc='best')
-
-        
-
-
-
-
