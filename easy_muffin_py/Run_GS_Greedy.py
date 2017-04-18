@@ -28,7 +28,7 @@ rank = comm.Get_rank()
 # =============================================================================
 # Input
 # =============================================================================
-if len(sys.argv)==11:
+if len(sys.argv)==12:
     L = int(sys.argv[1])
     nitermax = int(sys.argv[2])
     mu_s_min = float(sys.argv[3])
@@ -39,6 +39,7 @@ if len(sys.argv)==11:
     thresh = float(sys.argv[8])
     maxiter = int(sys.argv[9])
     nitermean = int(sys.argv[10])
+    data_suffix = sys.argv[11]
 elif len(sys.argv)==1:
     L = 6
     nitermax = 10
@@ -50,11 +51,12 @@ elif len(sys.argv)==1:
     thresh = 1e-4
     nitermean = 5
     maxiter = 10
+    data_suffix = 'M31_3d_conv_256_10db'
 else:
     if rank==0:
         print('')
         print('-'*100)
-        print('You should input: L nitermax mu_s_min mu_s_max mu_l_min mu_l_max absolutePrecision thresh maxiter nitermean where')
+        print('You should input: L nitermax mu_s_min mu_s_max mu_l_min mu_l_max absolutePrecision thresh maxiter nitermean data_suffix where')
         print('')
         print('L: number of bands to be considered')
         print('nitermax: maximum number of iterations in a MUFFIN loop')
@@ -66,8 +68,9 @@ else:
         print('thresh: minimum allowed variance for wmsesure (if niter>100)')
         print('maxiter: maximum number of iterations allowed in gs search')
         print('nitermean: number of iterations to compute mean mu from after greedy gs')
+        print('data_suffix: name suffix of data in folder data256')
         print('')
-        print('            **** ex: mpirun -np 4 python3 Run.py 6 10 0 2 0 4 0.1 1e-4 10 10                 ')
+        print('            **** ex: mpirun -np 4 python3 Run.py 6 10 0 2 0 4 0.1 1e-4 10 10   M31_3d_conv_256_10db              ')
         print('')
         print('-'*100)
         print('')
@@ -85,6 +88,7 @@ if rank==0:
     print('thresh: ',thresh)
     print('nitermean: ',nitermean)
     print('maxiter: ',maxiter)
+    print('data_suffix',data_suffix)
 
 
 # =============================================================================
@@ -97,26 +101,42 @@ def checkdim(x):
     return x
 
 folder = 'data256'
-file_in = 'M31_3d_conv_256_10db'
-folder = os.path.join(os.getcwd(), folder)
+file_in = data_suffix
+
+if os.getenv('OAR_JOB_ID') is not None:
+    folder = os.path.join(os.getenv('OAR_WORKDIR'), folder)
+else:
+    folder = os.path.join(os.getcwd(), folder)
+
+# CAUTIONNNNNNNNNN TEMPORARY SOLUTION
+folder = '/home/rammanouil/easy_muffin/easy_muffin_py/data256'
+
 genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
 CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
 skyname = genname+'_sky.fits'
-sky = checkdim(fits.getdata(skyname, ext=0))
-sky = sky[:,:,0:L]
-sky2 = np.sum(sky*sky)
-Noise = CubeDirty - conv(CubePSF,sky)
-var = np.sum(Noise**2)/Noise.size
 
-            
+if os.path.isfile(skyname):
+    sky = checkdim(fits.getdata(skyname, ext=0))
+    sky = sky[:,:,0:L]
+    sky2 = np.sum(sky*sky)
+    Noise = CubeDirty - conv(CubePSF,sky)
+    var = np.sum(Noise**2)/Noise.size
+else:
+    var = 0
+    sky = None
+
+if rank==0:
+    print('')
+    print('Estimated variance: ',var)
+
 #%% ===========================================================================
 # Set parameters
 # =============================================================================
-# DWT parameters    
-nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+# DWT parameters
+nb = ('db1','db2','db3','db4','db5','db6','db7','db8')
 mu_s = 0.
 mu_l = 0.
 # create class instance
@@ -141,12 +161,24 @@ EM.loop(nitermax)
 # Save results
 # =============================================================================
 if rank==0:
+
     tm.toc()
-    np.save('x0.npy',EM.xf)
-    np.save('wmse.npy',EM.wmselist)
-    np.save('wmses.npy',EM.wmselistsure)
-    np.save('snr.npy',EM.snrlist)
-    np.save('mu_s.npy',EM.mu_slist)
-    np.save('mu_l.npy',EM.mu_llist)
-    
-    
+
+    if os.getenv('OAR_JOB_ID') is not None:
+        #os.mkdir(os.getenv('OAR_JOB_ID'))
+        os.chdir(os.path.join(os.getenv('OAR_WORKDIR'), 'output/'+os.getenv('OAR_JOB_ID')))
+    else:
+        os.chdir(os.path.join(os.getcwd(), 'output'))
+
+    if sky is not None:
+        np.save('x0.npy',EM.xf)
+        np.save('wmse.npy',EM.wmselist)
+        np.save('wmses.npy',EM.wmselistsure)
+        np.save('snr.npy',EM.snrlist)
+        np.save('mu_s.npy',EM.mu_slist)
+        np.save('mu_l.npy',EM.mu_llist)
+    else:
+        np.save('x0.npy',EM.xf)
+        np.save('wmses.npy',EM.wmselistsure)
+        np.save('mu_s.npy',EM.mu_slist)
+        np.save('mu_l.npy',EM.mu_llist)

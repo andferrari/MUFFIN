@@ -54,7 +54,7 @@ from deconv2d import EasyMuffin, EasyMuffinSURE
 #%% ===========================================================================
 # Set parameters
 # =============================================================================
-   
+
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 mu_s = 0.7
 sigma=10
@@ -119,16 +119,15 @@ dirty=CubeDirty
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
 nitermax = 50
-mu_s_max = 5 
-mu_s_min = 0 
-absolutePrecision = 0.01 
+mu_s_max = 5
+mu_s_min = 0
+absolutePrecision = 0.01
 thresh = 1e-20
 
 args = {'mu_s':mu_s,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,
         'mu_s_max':mu_s_max,'mu_s_min':mu_s_min,'absolutePrecision':absolutePrecision,'thresh':thresh}
 
 EM= EasyMuffinSURE(**args)
-
 
 #%% ===========================================================================
 # MPI loop
@@ -145,4 +144,3 @@ pl.plot(EM.mu_slist)
 
 pl.figure()
 pl.plot(EM.snrlist)
-
