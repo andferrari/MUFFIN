@@ -1,6 +1,7 @@
 output/*
 data/*
 data256/*
+data256Eusipco/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
