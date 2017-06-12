@@ -10,7 +10,7 @@ from scipy.fftpack import dct,idct
 
 from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heavy, Rect
 from deconv3d_tools import myfft2, myifft2, myifftshift, conv
-from deconv3d_tools import iuwt_decomp, iuwt_recomp, dwt_decomp, dwt_recomp
+from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp
 import copy
 
 
@@ -128,10 +128,11 @@ class EasyMuffin():
 
         if type(self.nb[0]) == int:
             self.Decomp = iuwt_decomp
-            self.Recomp = iuwt_recomp
+            self.Recomp = iuwt_decomp_adj ### adjoint pas recomp 
             self.nbw_decomp = [f for f in range(self.nb[0])]
             self.nbw_recomp = self.nb[-1]
 
+            self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
             print('')
             print('IUWT: tau = ', self.tau)
             print('')
@@ -189,6 +190,11 @@ class EasyMuffin():
             tmp1 = self.Decomp(self.x[:,:,freq],self.nbw_decomp)
             for b in self.nbw_decomp:
                 tmp = tmp + np.sum(np.abs(tmp1[b]))
+#            tmp2 = [item for sublist in tmp1 for subsublist in sublist for item in subsublist]
+#            tmp3 = [np.sum(np.abs(item)) for item in tmp2]
+#            tmp += np.sum(tmp3)
+            
+
         Spt_cst = self.mu_s*tmp
         Spc_cst = self.mu_l*np.sum(np.abs(dct(self.x,axis=2,norm='ortho')))
         return (LS_cst + Spt_cst + Spc_cst)/(self.nxy*self.nxy*self.nfreq)
@@ -250,6 +256,14 @@ class EasyMuffin():
                 self.utt[freq][b] = u_[freq][b] + self.sigma*self.mu_s*tmp_spat_scal[b]
                 u_[freq][b] = sat(self.utt[freq][b])
 
+            
+#            for i, sublist in enumerate(tmp_spat_scal):
+#                for j, subsublist in enumerate(sublist):
+#                    for k, subsubsublist in enumerate(subsublist):
+#                        for l, item in enumerate(subsubsublist):
+#                            self.utt[freq][i][j][k][l] = u_[freq][i][j][k][l] + self.sigma*self.mu_s*tmp_spat_scal[i][j][k][l]
+#                            u_[freq][i][j][k][l] = sat(self.utt[freq][i][j][k][l])
+                
         # update v
         self.vtt = v_ + self.sigma*self.mu_l*dct(2*xt_ - x_, axis=2, norm='ortho')
         v_ = sat(self.vtt)
@@ -466,6 +480,14 @@ class EasyMuffinSURE(EasyMuffin):
             for b in self.nbw_decomp:
                 Jutt = Ju_[freq][b] + self.sigma*self.mu_s*tmp_spat_scal_J[b]
                 Ju_[freq][b] = Rect( self.utt[freq][b] )*Jutt
+
+#            for i, sublist in enumerate(tmp_spat_scal_J):
+#                for j, subsublist in enumerate(sublist):
+#                    for k, subsubsublist in enumerate(subsublist):
+#                        for l, item in enumerate(subsubsublist):
+#                            Jutt = Ju_[freq][i][j][k][l] + self.sigma*self.mu_s*tmp_spat_scal_J[i][j][k][l]
+#                            Ju_[freq][i][j][k][l] = Rect( self.utt[freq][i][j][k][l] )*Jutt
+
 
         # update v
         Jvtt = Jv_ + self.sigma*self.mu_l*dct(2*Jxt_ - Jx_, axis=2, norm='ortho')

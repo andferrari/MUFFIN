@@ -99,6 +99,37 @@ def dwt_recomp(x_in, nbw, c0=False):
         out += pywt.idwt2( (a,(b,c,d)), base )
     return out
 
+#def dwt_decomp(x, list_wavelet, store_im=False):
+#    out = {} # Dictionary of coef for each wavelet 
+#    coefs = [] # List of all wavelet coeficients 
+#    
+#    for base in list_wavelet:
+#        coef = pywt.wavedec2(x,base,mode='periodization')
+#        coefs.append(coef)
+#        
+#        tmp = []
+#        for i,coefscale in enumerate(coef):
+#            if i==0:
+#                tmp = coef[0]
+#            else:
+#                (LH, HL, HH) = coef[i]
+#                tmp = np.vstack( ( np.hstack((tmp,LH)) , np.hstack((HL,HH)) ) )
+#        out[base] = tmp
+#    
+#    if store_im:
+#        return coefs, out
+#    else:
+#        return coefs
+#
+#
+#def dwt_recomp(x_in, list_wavelet):
+#    out = 0
+#    for n,base in enumerate(list_wavelet):
+#        x = x_in[n] # coef a,b,c,d at db1 for ex
+#        out +=pywt.waverec2(x, base, mode='periodization')
+#        
+#    return out
+
 #==============================================================================
 # IUWT from IUWT.jl from PyMoresane
 #==============================================================================
@@ -123,13 +154,13 @@ def iuwt_decomp(x, scale, store_c0=False):
         return coeff
 
 
-def iuwt_recomp(x, scale, c0=False):
+def iuwt_recomp(x, scale, c0=[]):
 
 #    filter = (1./16,4./16,6./16,4./16,1./16)
 
     max_scale = len(x) + scale
 
-    if c0 != False:
+    if c0.any():
         recomp = c0
     else:
         recomp = np.zeros((x[0].shape[0],x[0].shape[1]), dtype=np.float)
@@ -147,10 +178,13 @@ def iuwt_recomp(x, scale, c0=False):
 
 
 def iuwt_decomp_adj(u,scale):
-    htu = iuwt_decomp(u[:,:,0],1)[:,:,0]
-    for k in range(1,scale):
-        htu += iuwt_decomp(u[:,:,k],k)[:,:,k]
+    htu = iuwt_decomp(u[0],[0])[0]
+    scale = len(u)
+    for k in range(1,scale): #  1 à 7
+        scale_decomp = [i for i in range(k+1)]
+        htu += iuwt_decomp(u[k],scale_decomp)[k]
     return htu
+
 
 def a_trous(C0, scale):
     """

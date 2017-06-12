@@ -63,7 +63,7 @@ psf=CubePSF
 dirty=CubeDirty
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
-nitermax = 5
+nitermax = 50
 
 args = {'mu_s':mu_s,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var}
 

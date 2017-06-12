@@ -22,8 +22,8 @@ def checkdim(x):
     return x
 
 
-folder = 'data'
-file_in = 'm31_3d_conv_10db'
+folder = 'data256Eusipco'
+file_in = 'M31_3d_conv_256_10db'
 
 folder = os.path.join(os.getcwd(), folder)
 genname = os.path.join(folder, file_in)
@@ -33,11 +33,18 @@ drtname = genname+'_dirty.fits'
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:5]
 CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:5]
 
-
 skyname = genname+'_sky.fits'
 sky = checkdim(fits.getdata(skyname, ext=0))
-sky = np.transpose(sky)[:,:,0:5]
+sky = sky[:,:,0:5]
 sky2 = np.sum(sky*sky)
+
+fig = pl.figure()
+ax = fig.add_subplot(1,3,1)
+ax.imshow(CubePSF[:,:,1])
+ax = fig.add_subplot(1,3,2)
+ax.imshow(sky[:,:,1])
+ax = fig.add_subplot(1,3,3)
+ax.imshow(CubeDirty[:,:,1])
 
 #%% ==============================================================================
 #
@@ -46,16 +53,20 @@ sky2 = np.sum(sky*sky)
 from SuperNiceSpectraDeconv import SNSD
 from deconv3d import EasyMuffin, EasyMuffinSURE
 
-nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+#nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+nb = (7,0)
 nitermax = 10
 
-DM = SNSD(mu_s=0.7, mu_l = 5.2, nb=nb,nitermax=nitermax,truesky=sky)
+mu_s = 0.5
+mu_l = 2
+
+DM = SNSD(mu_s=mu_s, mu_l = mu_l, nb=nb,nitermax=nitermax,truesky=sky)
 DM.parameters()
 DM.setSpectralPSF(CubePSF)
 DM.setSpectralDirty(CubeDirty)
 (SpectralSkyModel , cost, snr, psnr) = DM.main()
 
-EM= EasyMuffin(mu_s=0.7, mu_l = 5.2, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
+EM= EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
 EM.loop(nitermax)
 SpectralSkyModel2 = EM.xt
 cost2 = EM.costlist
@@ -65,7 +76,7 @@ wmse2 = EM.wmselist
 
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
-EMs= EasyMuffinSURE(mu_s=0.7, mu_l = 5.2, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+EMs= EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
 EMs.loop(nitermax)
 SpectralSkyModel3 = EMs.xt
 cost3 = EMs.costlist

@@ -59,7 +59,8 @@ import deconv3d_mpi as dcvMpi
 
 import deconv3d as dcv
 
-nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+#nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+nb = (7,0)
 nitermax = 10
 mu_s = 0.5
 mu_l = 0.5

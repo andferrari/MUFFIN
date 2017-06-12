@@ -9,7 +9,7 @@ import numpy as np
 from scipy.fftpack import dct,idct
 from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heavy, Rect
 from deconv3d_tools import myfft2, myifft2, myifftshift, conv, optimal_split
-from deconv3d_tools import iuwt_decomp, iuwt_recomp, dwt_decomp, dwt_recomp
+from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp
 import copy
 import sys
 from mpi4py import MPI
@@ -267,7 +267,7 @@ class EasyMuffin():
 
             if type(self.nb[0]) == int:
                 self.Decomp = iuwt_decomp
-                self.Recomp = iuwt_recomp
+                self.Recomp = iuwt_decomp_adj
                 self.nbw_decomp = [f for f in range(self.nb[0])]
                 self.nbw_recomp = self.nb[-1]
 
