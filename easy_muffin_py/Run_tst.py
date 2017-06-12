@@ -133,7 +133,8 @@ else:
 # Run
 # =============================================================================
 # DWT parameters
-nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+#nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+nb = (7,0)
 
 args = {'mu_s':mu_s_max,'mu_l':mu_l_max,'mu_eps':mu_eps,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,
         'mu_s_max':mu_s_max,'mu_s_min':0,'mu_l_min':0,'mu_l_max':mu_l_max}

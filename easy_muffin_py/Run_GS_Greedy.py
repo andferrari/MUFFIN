@@ -136,7 +136,9 @@ if rank==0:
 # Set parameters
 # =============================================================================
 # DWT parameters
-nb = ('db1','db2','db3','db4','db5','db6','db7','db8')
+# nb = ('db1','db2','db3','db4','db5','db6','db7','db8')
+nb = (7,0)
+
 mu_s = 0.
 mu_l = 0.
 # create class instance
