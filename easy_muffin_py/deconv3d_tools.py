@@ -72,32 +72,118 @@ def conv(x,y):
 #==============================================================================
 # DWT from adapted to same style as IUWT.jl from PyMoresane
 #==============================================================================
-def dwt_decomp(x, list_wavelet, store_c0=False):
-    out = {}
-    coef = []
-    for base in list_wavelet:
-        a,(b,c,d) = pywt.dwt2(x, base)
-        coef.append((a,(b,c,d)))
-        out[base] = np.vstack( ( np.hstack((a,b)) , np.hstack((c,d)) ) )
-    if store_c0:
-        return out,coef
-    else:
-        return out
+#def dwt_decomp(x, list_wavelet, store_c0=False):
+#    out = {}
+#    coef = []
+#    for base in list_wavelet:
+#        a,(b,c,d) = pywt.dwt2(x, base)
+#        coef.append((a,(b,c,d)))
+#        out[base] = np.vstack( ( np.hstack((a,b)) , np.hstack((c,d)) ) )
+#    if store_c0:
+#        return out,coef
+#    else:
+#        return out
+#
+#def dwt_recomp(x_in, nbw, c0=False):
+#    list_wavelet = nbw[0:-1]
+#    out = 0
+#    for n,base in enumerate(list_wavelet):
+#        x = x_in[base]
+#        ny,nx = x.shape
+#        y2 = int(ny/2)
+#        x2 = int(nx/2)
+#        a = x[:y2,:x2]
+#        b = x[:y2,x2:]
+#        c = x[y2:,:x2]
+#        d = x[y2:,x2:]
+#        out += pywt.idwt2( (a,(b,c,d)), base )
+#    return out
 
-def dwt_recomp(x_in, nbw, c0=False):
-    list_wavelet = nbw[0:-1]
-    out = 0
-    for n,base in enumerate(list_wavelet):
-        x = x_in[base]
-        ny,nx = x.shape
-        y2 = int(ny/2)
-        x2 = int(nx/2)
-        a = x[:y2,:x2]
-        b = x[:y2,x2:]
-        c = x[y2:,:x2]
-        d = x[y2:,x2:]
-        out += pywt.idwt2( (a,(b,c,d)), base )
-    return out
+def dwt_recomp(wt_coeffs, DWT_list, level = 1.):
+	"""This function computes the inverse disctrete wavelet transform on a union of wavelet basis.
+		wt_coeff : matrix of decompostion coefficients (approximation and details in two columns).
+		signal_length = length of the original signal we want retrieve. 
+		DWT_list : list of the used wavelet's name."""
+	N2 =  wt_coeffs[DWT_list[0]].shape[0] #image is supposed to be square
+	res = np.zeros((N2,N2))
+    
+	for i in DWT_list:
+		ima_dec = wt_coeffs[i]
+		level = pywt.dwt_max_level(N2, pywt.Wavelet(i)) ## modif 04-04-17
+		wt_coeffs_2D = organize_dwt_coeff(ima_dec, level)
+		ima_rec = pywt.waverec2(wt_coeffs_2D, i, 'per')
+		res = res + ima_rec
+
+	return res
+
+def dwt_decomp(x_im, DWT_list, level = 1.):
+	"""This function computes the disctrete wavelet transform on a union of wavelet basis.
+		x = signal to be decomposed.
+		DWT_list : list of the used wavelet's name."""
+	res = {}
+	(N1, N2) = np.shape(x_im) 
+	
+	for i in DWT_list:
+		coeffs = pywt.wavedec2(x_im, i, 'per', level = None)## modif 04-04-17
+		level = pywt.dwt_max_level(N2, pywt.Wavelet(i)) ## modif 04-04-17
+		ima_dec = lecture_dwt_coeff(coeffs, level, N2, N2)
+		res[i] = ima_dec
+	
+	return res
+
+
+def lecture_dwt_coeff(coeff, level, LI, COL) :
+	""" This function reorganizes as an image the DWT coefficients with the following structure : [cAn, (cHn, cVn, cDn), ..., (cH1, cV1, cD1)] which is compatible with the pywt functions."""
+	im = np.zeros((LI, COL))
+	
+	ind_li = 0
+	ind_col = 0
+
+	for i in range(len(coeff)):
+		
+		if i == 0:
+			ind_li = int(LI/(2**(int(level) -i)))
+			ind_col = int(COL/(2**(int(level) -i)))
+			im[:ind_li, :ind_col] = coeff[i]
+
+		else:
+			a,b = coeff[i][0].shape
+			im[:ind_li, ind_col:ind_col + b] = coeff[i][0]
+			
+			im[ind_li:ind_li+a,:ind_col] = coeff[i][1]
+			
+			im[ind_li:ind_li+a,ind_col:ind_col+b] = coeff[i][2]
+			ind_li = ind_li + b
+			ind_col = ind_col + a
+	return 	im
+
+
+def organize_dwt_coeff(im, level) :
+	""" This function reorganizes an image as the DWT coefficients with the following structure : [cAn, (cHn, cVn, cDn), ..., (cH1, cV1, cD1)] which is compatible with the pywt functions."""
+	coeff = []
+	LI, COL = im.shape
+	ind_li = 0
+	ind_col = 0
+
+	for i in range(level+1):
+		
+		if i == 0:
+			ind_li = int(LI/(2**(int(level) -i)))
+			ind_col = int(COL/(2**(int(level) -i)))
+			coeff_tab = im[:ind_li, :ind_col]
+			coeff.append(coeff_tab)
+
+		else:
+			a = int(LI/(2**(level+1 -i)))
+			b = int(COL/(2**(level+1 -i)))
+			coeff_tab0 = im[:ind_li, ind_col:ind_col + b]
+			coeff_tab1 = im[ind_li:ind_li+a,:ind_col]
+			coeff_tab2 = im[ind_li:ind_li+a,ind_col:ind_col+b]
+			ind_li = ind_li + b
+			ind_col = ind_col + a
+			coeff.append( ( coeff_tab0, coeff_tab1, coeff_tab2))
+	return 	coeff
+
 
 #def dwt_decomp(x, list_wavelet, store_im=False):
 #    out = {} # Dictionary of coef for each wavelet 

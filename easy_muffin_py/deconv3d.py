@@ -408,8 +408,14 @@ class EasyMuffinSURE(EasyMuffin):
 
             # psnr, and wmse estimated using psure
             self.wmselistsure = []
+            self.wmselistsuresub1 = []
+            self.wmselistsuresub2 = []
+            self.wmselistsuresub3 = []
             self.wmselistsure.append(self.wmsesure())
-
+            self.wmselistsuresub1.append(self.sub1)
+            self.wmselistsuresub2.append(self.sub2)
+            self.wmselistsuresub3.append(self.sub3)
+            
             if self.truesky.any():
                 self.psnrlistsure = []
                 self.psnrlistsure.append(self.psnrsure())
@@ -431,16 +437,22 @@ class EasyMuffinSURE(EasyMuffin):
 
         if change:
             tmp = self.dirty - conv(self.x,self.psf)
-            LS_cst = np.linalg.norm(tmp)**2
+            LS_cst = np.linalg.norm(tmp)**2/(self.nxy*self.nxy*self.nfreq)
             tmp = self.n*conv(self.Jx,self.psf)
-
-            return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
+            tmp = 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
+            
+            self.sub1 = (LS_cst)
+            self.sub2 = (tmp)
+            self.sub3 = (- self.var)
+            
+            return LS_cst - self.var + tmp
         else:
             tmp = self.dirty - conv(self.x2_,self.psf)
-            LS_cst = np.linalg.norm(tmp)**2
+            LS_cst = np.linalg.norm(tmp)**2/(self.nxy*self.nxy*self.nfreq)
             tmp = self.n*conv(self.Jx2_,self.psf)
+            tmp = 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
 
-            return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
+            return LS_cst - self.var + tmp
 
     def psnrsure(self):
 
@@ -499,6 +511,9 @@ class EasyMuffinSURE(EasyMuffin):
 
             # wmsesure
             self.wmselistsure.append(self.wmsesure())
+            self.wmselistsuresub1.append(self.sub1)
+            self.wmselistsuresub2.append(self.sub2)
+            self.wmselistsuresub3.append(self.sub3)
 
             # psnrsure
             if self.truesky.any():
