@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Created on Fri Jun 23 17:50:30 2017
+
+@author: rammanouil
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
 Created on Fri Oct 28 10:08:49 2016
 
 @author: antonyschutz
@@ -50,29 +58,14 @@ ax.imshow(CubeDirty[:,:,1])
 #
 # ==============================================================================
 
-from SuperNiceSpectraDeconv import SNSD
-from deconv3d import EasyMuffin, EasyMuffinSURE
+from deconv3d import EasyMuffinSURE
 
-nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-#nb = (7,0)
-nitermax = 20
+#nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+nb = (7,0)
+nitermax = 100
 
 mu_s = 0.5
 mu_l = 2
-
-DM = SNSD(mu_s=mu_s, mu_l = mu_l, nb=nb,nitermax=nitermax,truesky=sky)
-DM.parameters()
-DM.setSpectralPSF(CubePSF)
-DM.setSpectralDirty(CubeDirty)
-(SpectralSkyModel , cost, snr, psnr) = DM.main()
-
-EM= EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
-EM.loop(nitermax)
-SpectralSkyModel2 = EM.xt
-cost2 = EM.costlist
-snr2 = EM.snrlist
-psnr2 = EM.psnrlist
-wmse2 = EM.wmselist
 
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
@@ -85,41 +78,17 @@ psnr3 = EMs.psnrlist
 psnrsure3 = EMs.psnrlistsure
 wmse3 = EMs.wmselist
 wmsesure3 = EMs.wmselistsure
+sub1 = EMs.wmselistsuresub1
+sub2 = EMs.wmselistsuresub2
+sub3 = EMs.wmselistsuresub3
+somme = [sub1[i]+sub2[i]+sub3[i] for i,elt in enumerate(sub1)]
 
 pl.figure()
-pl.plot(snr,label='snr1')
-pl.plot(snr2,label='snr2')
-pl.plot(snr3,'*',label='snr3')
+pl.plot(wmsesure3,label='wmse (sure)')
+pl.plot(sub1,label='LS')
+pl.plot(sub2,label='Jac.')
+pl.plot(sub3,label='var')
+pl.plot(somme,'*',label='tst')
 pl.legend(loc='best')
 
-pl.figure()
-pl.plot(cost/(EM.nxy*EM.nxy*EM.nfreq),label='cost1')
-pl.plot(cost2,label='cost2')
-pl.plot(cost3,'*',label='cost3')
-pl.legend(loc='best')
-
-pl.figure()
-pl.plot(psnr,label='psnr1')
-pl.plot(psnr2,label='psnr2')
-pl.plot(psnr3,'*',label='psnr3')
-pl.plot(psnrsure3,'*',label='psnrsure3')
-pl.legend(loc='best')
-
-pl.figure()
-pl.plot(wmse2,label='wmse2')
-pl.plot(wmse3,label='wmse3')
-pl.plot(wmsesure3,'*',label='wmsesure3')
-pl.legend(loc='best')
-
-#sub1 = EMs.wmselistsuresub1
-#sub2 = EMs.wmselistsuresub2
-#sub3 = EMs.wmselistsuresub3
-#somme = [sub1[i]+sub2[i]+sub3[i] for i,elt in enumerate(sub1)]
-#pl.figure()
-#pl.plot(wmsesure3,label='wmse (sure)')
-#pl.plot(sub1,label='LS')
-#pl.plot(sub2,label='Jac.')
-#pl.plot(sub3,label='var')
-#pl.plot(somme,'*',label='tst')
-#pl.legend(loc='best')
 
