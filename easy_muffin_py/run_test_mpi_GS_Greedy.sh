@@ -16,7 +16,8 @@ echo $OAR_NODEFILE :
 cat $OAR_NODEFILE
 echo
 
-MAINPY=$OAR_WORKDIR/Run_GS_Greedy.py"  32 100 0 1 0 1 1e-1 1e-20 30 20 Celine"
+MAINPY=$OAR_WORKDIR/Run_GS.py"  100 100 0 1 2 5 0.1 1e-4  10 M31_3d_conv_256_10db"
+#MAINPY=$OAR_WORKDIR/Run_GS_Greedy.py"  100 100 0 1 2 5 0.1 1e-4 10 10 M31_3d_conv_256_10db"
 
 cd $TMPDIR
 

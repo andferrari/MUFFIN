@@ -156,7 +156,7 @@ EM.loop_mu_s(nitermax,maxiter)
 EM.set_mean_mu(set_mu_s=True,niter=nitermean)
 EM.loop_mu_l(nitermax,maxiter)
 EM.set_mean_mu(set_mu_l=True,niter=nitermean)
-EM.loop(nitermax)
+EM.loop(nitermax+400)
 
 
 #%% ===========================================================================

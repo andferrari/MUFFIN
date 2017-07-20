@@ -15,7 +15,9 @@ import pywt
 #==============================================================================
 def compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp):
 
+    print('1')
     beta = np.max(abs2(myfft2(psf)))
+    print('2')
 
     #print('nbw_decomp=',len(nbw_decomp))
 
@@ -100,13 +102,13 @@ def dwt_recomp(x_in, nbw, c0=False):
     return out
 
 #def dwt_decomp(x, list_wavelet, store_im=False):
-#    out = {} # Dictionary of coef for each wavelet 
-#    coefs = [] # List of all wavelet coeficients 
-#    
+#    out = {} # Dictionary of coef for each wavelet
+#    coefs = [] # List of all wavelet coeficients
+#
 #    for base in list_wavelet:
 #        coef = pywt.wavedec2(x,base,mode='periodization')
 #        coefs.append(coef)
-#        
+#
 #        tmp = []
 #        for i,coefscale in enumerate(coef):
 #            if i==0:
@@ -115,7 +117,7 @@ def dwt_recomp(x_in, nbw, c0=False):
 #                (LH, HL, HH) = coef[i]
 #                tmp = np.vstack( ( np.hstack((tmp,LH)) , np.hstack((HL,HH)) ) )
 #        out[base] = tmp
-#    
+#
 #    if store_im:
 #        return coefs, out
 #    else:
@@ -127,7 +129,7 @@ def dwt_recomp(x_in, nbw, c0=False):
 #    for n,base in enumerate(list_wavelet):
 #        x = x_in[n] # coef a,b,c,d at db1 for ex
 #        out +=pywt.waverec2(x, base, mode='periodization')
-#        
+#
 #    return out
 
 #==============================================================================

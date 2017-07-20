@@ -30,7 +30,7 @@ rank = comm.Get_rank()
 # =============================================================================
 # Input
 # =============================================================================
-if len(sys.argv)==10:
+if len(sys.argv)==11:
     L = int(sys.argv[1])
     nitermax = int(sys.argv[2])
     mu_s_min = float(sys.argv[3])
@@ -40,6 +40,7 @@ if len(sys.argv)==10:
     absolutePrecision = float(sys.argv[7])
     thresh = float(sys.argv[8])
     maxiter = int(sys.argv[9])
+    data_suffix = sys.argv[10]
 elif len(sys.argv)==1:
     L = 6
     nitermax = 50
@@ -50,11 +51,12 @@ elif len(sys.argv)==1:
     absolutePrecision = 0.1
     thresh = 1e-4
     maxiter = 10
+    data_suffix = 'M31_3d_conv_256_10db'
 else:
     if rank==0:
         print('')
         print('-'*100)
-        print('You should input: L nitermax mu_s_max mu_s_min mu_l_min mu_l_max absolutePrecision thresh maxiter')
+        print('You should input: L nitermax mu_s_max mu_s_min mu_l_max mu_l_min absolutePrecision thresh maxiter data_suffix')
         print('')
         print('L: number of bands to be considered')
         print('nitermax: maximum number of iterations in a MUFFIN loop')
@@ -65,8 +67,9 @@ else:
         print('absolutePrecision: minimum absolute difference between a and b in gs')
         print('thresh: minimum allowed variance for wmsesure (if niter>100)')
         print('maxiter: maximum number of iterations allowed in gs search')
+        print('data_suffix: name suffix of data in folder data256')
         print('')
-        print('            **** ex: mpirun -np 4 python3 Run_GS.py 6 50 0 2 0 4 0.1 1e-4  10                 ')
+        print('            **** ex: mpirun -np 4 python3 Run_GS.py 6 50 0 2 0 4 0.1 1e-4  10  M31_3d_conv_256_10db               ')
         print('')
         print('-'*100)
         print('')
@@ -83,6 +86,7 @@ if rank==0:
     print('absolutePrecision: ',absolutePrecision)
     print('thresh: ',thresh)
     print('maxiter: ',maxiter)
+    print('data_suffix',data_suffix)
 
 
 # =============================================================================
@@ -95,26 +99,49 @@ def checkdim(x):
     return x
 
 folder = 'data256'
-file_in = 'M31_3d_conv_256_10db'
-folder = os.path.join(os.getcwd(), folder)
+file_in = data_suffix
+
+if os.getenv('OAR_JOB_ID') is not None:
+    folder = os.path.join(os.getenv('OAR_WORKDIR'), folder)
+else:
+    folder = os.path.join(os.getcwd(), folder)
+
+# CAUTIONNNNNNNNNN TEMPORARY SOLUTION
+folder = '/home/rammanouil/easy_muffin/easy_muffin_py/data256'
+
 genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:L]
 CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
 skyname = genname+'_sky.fits'
-sky = checkdim(fits.getdata(skyname, ext=0))
-sky = sky[:,:,0:L]
-sky2 = np.sum(sky*sky)
-Noise = CubeDirty - conv(CubePSF,sky)
-var = np.sum(Noise**2)/Noise.size
+
+if os.path.isfile(skyname):
+    if rank==0:
+        print('')
+        print('estimating variance')
+    sky = checkdim(fits.getdata(skyname, ext=0))
+    sky = sky[:,:,0:L]
+    sky2 = np.sum(sky*sky)
+    Noise = CubeDirty - conv(CubePSF,sky)
+    var = np.sum(Noise**2)/Noise.size
+    if rank==0:
+        print('')
+        print('setting var to ', var)
+else:
+    var = 0.0
+    sky = None
+    if rank==0:
+        print('')
+        print('setting var to ', var)
 
 
 #%% ===========================================================================
 # Set parameters
 # =============================================================================
-# DWT parameters    
-nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+# DWT parameters
+#nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+nb=(7,0)
 mu_s = 0.
 mu_l = 0.
 # create class instance
@@ -159,8 +186,7 @@ EM.mu_s = mu_s_gs
 EM.loop(nitermax)
 # loop with mu_l
 EM.mu_l = mu_l_gs
-EM.loop(nitermax) 
-EM.loop(nitermax) 
+EM.loop(nitermax*6)
 
 
 #%% ===========================================================================
@@ -174,5 +200,3 @@ if rank==0:
     np.save('mu_s_gs.npy',mu_s_gs)
     np.save('mu_l_gs.npy',mu_l_gs)
     toc()
-    
-    
