@@ -35,7 +35,7 @@ str_cst_snr_wmse_wmsesure_mu_title="-"*84+"\n"+"| {:5s} | {:12s} | {:12s} | {:12
                                       
 class EasyMuffin():
     def __init__(self,
-                 mu_s=0.5,
+                 mu_s=[0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5],
                  nb=(8,0),
                  tau = 1e-4,
                  sigma = 10,
@@ -56,10 +56,6 @@ class EasyMuffin():
             print('first integer is the scale of decomposition (default:8)')
             print('second integer the scale or recomposition (default:0)')
             nb = (8,0)
-
-        if mu_s< 0 :
-            print('mu_s must be non negative, mu_s=.5')
-            mu_s=0.5
 
         if tau< 0 :
             print('tau must be non negative, tau=1e-4')
@@ -127,8 +123,8 @@ class EasyMuffin():
             self.Recomp = iuwt_decomp_adj
             self.nbw_decomp = [f for f in range(self.nb[0])]
             self.nbw_recomp = self.nb[-1]
-            
-            self.tau = compute_tau_2D(self.psf,self.mu_s,self.sigma,self.nbw_decomp)
+
+            self.tau = compute_tau_2D(self.psf,np.max(self.mu_s),self.sigma,self.nbw_decomp) ######
             print('')
             print('IUWT: tau = ', self.tau)
             print('')
@@ -139,7 +135,7 @@ class EasyMuffin():
             self.nbw_decomp =self.nb
             self.nbw_recomp = self.nb
 
-            self.tau = compute_tau_2D(self.psf,self.mu_s,self.sigma,self.nbw_decomp)
+            self.tau = compute_tau_2D(self.psf,np.max(self.mu_s),self.sigma,self.nbw_decomp) ######
             print('')
             print('DWT: tau = ', self.tau)
             print('')
@@ -150,6 +146,8 @@ class EasyMuffin():
 
         self.u = {}
         self.u = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
+        self.tmp = {}
+        self.tmp = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
 
         self.nitertot = 0
 
@@ -177,12 +175,10 @@ class EasyMuffin():
         tmp = self.dirty - myifftshift(myifft2(myfft2(self.x)*myfft2(self.psf)))
         LS_cst = 0.5*(np.linalg.norm(tmp)**2)
         
-        tmp = 0.
+        Spt_cst = 0.
         tmp1 = self.Decomp(self.x[:,:],self.nbw_decomp)
-        for b in self.nbw_decomp:
-            tmp = tmp + np.sum(np.abs(tmp1[b]))
-            
-        Spt_cst = self.mu_s*tmp
+        for counter,b in enumerate(self.nbw_decomp):
+            Spt_cst = Spt_cst + self.mu_s[counter]*np.sum(np.abs(tmp1[b]))
         
         return (LS_cst + Spt_cst)/(self.nxy*self.nxy)
 
@@ -225,18 +221,21 @@ class EasyMuffin():
         Delta_freq = tmp.real- self.fty
 
         # compute iuwt adjoint
-        wstu = self.Recomp(u_, self.nbw_recomp)
+        for counter,b in enumerate(self.nbw_decomp):
+            self.tmp[b] = self.mu_s[counter]*u_[b]
+            
+        wstu = self.Recomp(self.tmp, self.nbw_recomp)
   
         # compute xt
-        self.xtt = x_ - self.tau*(Delta_freq + self.mu_s*wstu )
+        self.xtt = x_ - self.tau*(Delta_freq + wstu )
         xt_ = np.maximum(self.xtt, 0.0 )
         #print('x',np.linalg.norm(xt_))
         
         # update u
         tmp_spat_scal = self.Decomp(2*xt_ - x_ , self.nbw_decomp)
 
-        for b in self.nbw_decomp:
-            self.utt[b] = u_[b] + self.sigma*self.mu_s*tmp_spat_scal[b]
+        for counter,b in enumerate(self.nbw_decomp):
+            self.utt[b] = u_[b] + self.sigma*self.mu_s[counter]*tmp_spat_scal[b]
             u_[b] = sat(self.utt[b])
 
         if change:
@@ -281,49 +280,10 @@ class EasyMuffin():
                 print(str_cost.format(niter,self.costlist[-1]))
 
 
-    def gs_mu_s(self,nitermax=10,a=0,b=2,absolutePrecision=1e-1,maxiter=100):
-
-        gr = (1+np.sqrt(5))/2
-        c = b - (b - a)/gr
-        d = a + (b - a)/gr
-        niter = 0
-
-        self.mu_s_lst = []
-        self.mse_lst = []
-
-        while abs(a - b) > absolutePrecision and niter < maxiter:
-
-            self.mu_s = c
-            self.init_algo()
-            self.mu_s_lst.append(c)
-            self.loop(nitermax)
-            res1 = self.wmse()
-            self.mse_lst.append(res1)
-
-            self.mu_s = d
-            self.init_algo()
-            self.mu_s_lst.append(d)
-            self.loop(nitermax)
-            res2 = self.wmse()
-            self.mse_lst.append(res2)
-
-            # if f( *((c,) + args) ) < f( *((d,) + args) ):
-            if res1 < res2:
-                b = d
-            else:
-                a = c
-
-            c = b - (b - a)/gr
-            d = a + (b - a)/gr
-            niter+=1
-
-        return (a+b)/2
-
-
 class EasyMuffinSURE(EasyMuffin):
 
     def __init__(self,
-                 mu_s=0.5,
+                 mu_s=[0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5],
                  nb=(8,0),
                  tau = 1e-4,
                  sigma = 10,
@@ -384,8 +344,10 @@ class EasyMuffinSURE(EasyMuffin):
                 self.psnrlistsure.append(self.psnrsure())
 
             # mu_s list
-            self.mu_slist = []
-            self.mu_slist.append(self.mu_s)
+            self.mu_slist = {}
+            for counter, b in enumerate(self.nbw_decomp):
+                self.mu_slist[counter] = []
+                self.mu_slist[counter].append(self.mu_s[counter])
             
             ## build delta eps and wmsesureFDMC list 
             np.random.seed(1)
@@ -410,17 +372,26 @@ class EasyMuffinSURE(EasyMuffin):
             self.u2 = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
             
             #self.dx_s self.du_s self.dxt_s
-            self.dx_s = np.zeros((self.nxy,self.nxy))
-            self.dxt_s = np.zeros((self.nxy,self.nxy))
-            self.du_s = self.Decomp(np.zeros((self.nxy,self.nxy)),self.nbw_decomp)
+            self.dx_s = {}
+            self.dxt_s = {}
+            self.du_s = {}
+            self.dx2_s = {}
+            self.dxt2_s = {}
+            self.du2_s = {}
+            self.sugarfdmclist = {}
+            for b in self.nbw_decomp:
+                self.dx_s[b] = np.zeros((self.nxy,self.nxy))
+                self.dxt_s[b] = np.zeros((self.nxy,self.nxy))
+                self.du_s[b] = self.Decomp(np.zeros((self.nxy,self.nxy)),self.nbw_decomp)
 
-            #self.dx_s self.du_s self.dxt_s
-            self.dx2_s = np.zeros((self.nxy,self.nxy))
-            self.dxt2_s = np.zeros((self.nxy,self.nxy))
-            self.du2_s = self.Decomp(np.zeros((self.nxy,self.nxy)),self.nbw_decomp)
+                #self.dx_s self.du_s self.dxt_s
+                self.dx2_s[b] = np.zeros((self.nxy,self.nxy))
+                self.dxt2_s[b] = np.zeros((self.nxy,self.nxy))
+                self.du2_s[b] = self.Decomp(np.zeros((self.nxy,self.nxy)),self.nbw_decomp)
             
-            self.sugarfdmclist = []
-            self.sugarfdmclist.append(self.sugarfdmc())
+                self.sugarfdmclist[b] = []
+            
+            self.sugarfdmc()
             
     def wmsesure(self,change=True):
 
@@ -465,7 +436,6 @@ class EasyMuffinSURE(EasyMuffin):
             Jxt_ = self.Jxt # pointer
             Ju_ = self.Ju
             Jx_ = self.Jx
-            
         else:
             Jxt_ = self.Jxt.copy() # new matrix
             Ju_  = copy.deepcopy(self.Ju)
@@ -477,16 +447,19 @@ class EasyMuffinSURE(EasyMuffin):
         JDelta_freq = tmp.real- self.Hn
 
         # compute iuwt adjoint
-        Js_l = self.Recomp(Ju_, self.nbw_recomp)
+        # compute iuwt adjoint
+        for counter,b in enumerate(self.nbw_decomp):
+            self.tmp[b] = self.mu_s[counter]*Ju_[b]
+        Js_l = self.Recomp(self.tmp, self.nbw_recomp)
 
         # compute xt
-        Jxtt = Jx_ - self.tau*(JDelta_freq + self.mu_s*Js_l)
+        Jxtt = Jx_ - self.tau*(JDelta_freq + Js_l)
         Jxt_ = Heavy(self.xtt)*Jxtt
 
         # update u
         tmp_spat_scal_J = self.Decomp(2*Jxt_[:,:] - Jx_[:,:] , self.nbw_decomp)
-        for b in self.nbw_decomp:
-            Jutt = Ju_[b] + self.sigma*self.mu_s*tmp_spat_scal_J[b]
+        for counter,b in enumerate(self.nbw_decomp):
+            Jutt = Ju_[b] + self.sigma*self.mu_s[counter]*tmp_spat_scal_J[b]
             Ju_[b] = Rect( self.utt[b] )*Jutt
 
         if change:
@@ -512,7 +485,8 @@ class EasyMuffinSURE(EasyMuffin):
             nitermax=10
 
         for niter in range(nitermax):
-            self.mu_slist.append(self.mu_s)
+            for counter,b in enumerate(self.nbw_decomp):
+                self.mu_slist[counter].append(self.mu_s[counter])
             super(EasyMuffinSURE,self).update(change)
             self.update_Jacobians(change)
             self.nitertot+=1
@@ -544,18 +518,20 @@ class EasyMuffinSURE(EasyMuffin):
         Delta_freq = tmp.real- self.fty2
 
         # compute iuwt adjoint
+        for counter,b in enumerate(self.nbw_decomp):
+            self.tmp[b] = self.mu_s[counter]*u_[b]
         wstu = self.Recomp(u_, self.nbw_recomp)
   
         # compute xt
-        self.xtt2 = x_ - self.tau*(Delta_freq + self.mu_s*wstu )
+        self.xtt2 = x_ - self.tau*(Delta_freq + wstu )
         xt_ = np.maximum(self.xtt2, 0.0 )
         #print('x',np.linalg.norm(xt_))
         
         # update u
         tmp_spat_scal = self.Decomp(2*xt_ - x_ , self.nbw_decomp)
 
-        for b in self.nbw_decomp:
-            self.utt2[b] = u_[b] + self.sigma*self.mu_s*tmp_spat_scal[b]
+        for counter,b in enumerate(self.nbw_decomp):
+            self.utt2[b] = u_[b] + self.sigma*self.mu_s[counter]*tmp_spat_scal[b]
             u_[b] = sat(self.utt2[b])
 
         if change:
@@ -568,64 +544,86 @@ class EasyMuffinSURE(EasyMuffin):
         
     def dx_mu_s(self):
         
-        # self.dx_s self.du_s self.dxt_s 
-        # compute gradient
-        tmp = myifftshift( myifft2( myfft2(self.dx_s) *self.hth_fft ) )
-        Delta_freq = tmp.real 
+        for bb in self.nbw_decomp:
+            # self.dx_s self.du_s self.dxt_s 
+            # compute gradient
+            tmp = myifftshift( myifft2( myfft2(self.dx_s[bb]) *self.hth_fft ) )
+            Delta_freq = tmp.real 
 
-        # compute iuwt adjoint
-        wstu = self.Recomp(self.u, self.nbw_recomp) + self.mu_s*self.Recomp(self.du_s, self.nbw_recomp)
+            for counter, b in enumerate(self.nbw_decomp):
+                self.tmp[b] = self.mu_s[counter]*self.du_s[bb][b]
+                
+            wstu = self.Recomp(self.tmp, self.nbw_recomp)
 
-        # compute xt
-        dxtt_s = self.dx_s - self.tau*(Delta_freq + wstu )
-        self.dxt_s = Heavy(self.xtt)*dxtt_s
+            for counter, b in enumerate(self.nbw_decomp):
+                self.tmp[b] = np.zeros(np.shape(self.u[b]))
+                if b==bb:
+                    self.tmp[b] = self.mu_s[counter]*self.u[b]
 
-        # update u
-        tmp_spat_scal = self.Decomp((2*self.xt - self.x) + self.mu_s*(2*self.dxt_s - self.dx_s), self.nbw_decomp)
+            wstu += self.Recomp(self.tmp, self.nbw_recomp)
+            
+            # compute xt
+            dxtt_s = self.dx_s[bb] - self.tau*(Delta_freq + wstu )
+            self.dxt_s[bb] = Heavy(self.xtt)*dxtt_s
 
-        for b in self.nbw_decomp:
-            dutt_s = self.du_s[b] + self.sigma*tmp_spat_scal[b]
-            self.du_s[b] = Rect(self.utt[b])*dutt_s
-                     
-        self.dx_s = self.dxt_s.copy()
+            # update u
+            tmp_spat_scal1 = self.Decomp((2*self.xt - self.x) , self.nbw_decomp)
+            tmp_spat_scal2 = self.Decomp((2*self.dxt_s[bb] - self.dx_s[bb]), self.nbw_decomp)
+            
+            for counter,b in enumerate(self.nbw_decomp):
+                dutt_s = self.du_s[bb][b] + self.sigma*tmp_spat_scal1[b] + self.mu_s[counter]*self.sigma*tmp_spat_scal2[b] 
+                self.du_s[bb][b] = Rect(self.utt[b])*dutt_s
+                         
+            self.dx_s[bb] = self.dxt_s[bb].copy() # keep in mind might need a deepcopy
         
         return self.dx_s
     
     def dx2_mu_s(self):
         
-        # self.dx_s self.du_s self.dxt_s 
-        # compute gradient
-        tmp = myifftshift( myifft2( myfft2(self.dx2_s) *self.hth_fft ) )
-        Delta_freq = tmp.real 
+        for bb in self.nbw_decomp:
+            
+            # self.dx_s self.du_s self.dxt_s 
+            # compute gradient
+            tmp = myifftshift( myifft2( myfft2(self.dx2_s[bb]) *self.hth_fft ) )
+            Delta_freq = tmp.real 
+            
+            for counter, b in enumerate(self.nbw_decomp):
+                self.tmp[b] = self.mu_s[counter]*self.du2_s[bb][b]
+                
+            wstu = self.Recomp(self.tmp, self.nbw_recomp)
 
-        # compute iuwt adjoint
-        wstu = self.Recomp(self.u2, self.nbw_recomp) + self.mu_s*self.Recomp(self.du2_s, self.nbw_recomp)
+            for counter, b in enumerate(self.nbw_decomp):
+                self.tmp[b] = 0*self.u2[b]
+                if b==bb:
+                    self.tmp[b] = self.mu_s[counter]*self.u2[b]
 
-        # compute xt
-        dxtt_s = self.dx2_s - self.tau*(Delta_freq + wstu )
-        self.dxt2_s = Heavy(self.xtt2 )*dxtt_s
-
-        # update u
-        tmp_spat_scal = self.Decomp((2*self.xt2 - self.x2) + self.mu_s*(2*self.dxt2_s - self.dx2_s), self.nbw_decomp)
-
-        for b in self.nbw_decomp:
-            dutt_s = self.du2_s[b] + self.sigma*tmp_spat_scal[b]
-            self.du2_s[b] = Rect(self.utt2[b])*dutt_s
-                     
-        self.dx2_s = self.dxt2_s.copy()
-        
-        self.sugarfdmclist.append(self.sugarfdmc())
+            wstu += self.Recomp(self.tmp, self.nbw_recomp)
+            
+            # compute xt
+            dxtt_s = self.dx2_s[bb] - self.tau*(Delta_freq + wstu )
+            self.dxt2_s[bb] = Heavy(self.xtt2 )*dxtt_s
+             
+            # update u
+            tmp_spat_scal1 = self.Decomp((2*self.xt2 - self.x2) , self.nbw_decomp)
+            tmp_spat_scal2 = self.Decomp((2*self.dxt2_s[bb] - self.dx2_s[bb]), self.nbw_decomp)
+            
+            for counter,b in enumerate(self.nbw_decomp):
+                dutt_s = self.du2_s[bb][b] + self.sigma*tmp_spat_scal1[b] + self.mu_s[counter]*self.sigma*tmp_spat_scal2[b] 
+                self.du2_s[bb][b] = Rect(self.utt2[b])*dutt_s
+                          
+            self.dx2_s[bb] = self.dxt2_s[bb].copy()
+                          
+            #self.sugarfdmclist[bb].append(self.sugarfdmc())
         
         return self.dx2_s
     
     
     def sugarfdmc(self):
         
-        sugarfdmc = 2*conv(self.psf,self.dx_s)*(conv(self.psf,self.x)-self.dirty) + 2*self.var*conv(self.psf,self.dx2_s-self.dx_s)*self.delta/self.eps
-        #sugarfdmc =  2*self.var*conv(self.psf,self.dx2_s-self.dx_s)*self.delta/self.eps
-        
-        return np.sum(sugarfdmc)/(self.nxy*self.nxy)
-    
+        for b in self.nbw_decomp:
+            tmp = 2*conv(self.psf,self.dx_s[b])*(conv(self.psf,self.x)-self.dirty) + 2*self.var*conv(self.psf,self.dx2_s[b]-self.dx_s[b])*self.delta/self.eps
+            self.sugarfdmclist[b].append(np.sum(tmp)/(self.nxy*self.nxy))
+        #sugarfdmc =  2*self.var*conv(self.psf,self.dx2_s-self.dx_s)*self.delta/self.eps    
     
     ## loop and compute sure and surefdmc
     def loop_fdmc(self,nitermax=10,change=True):
@@ -636,233 +634,35 @@ class EasyMuffinSURE(EasyMuffin):
             nitermax=10
 
         for niter in range(nitermax):
-            self.mu_slist.append(self.mu_s)
+            for counter,b in enumerate(self.nbw_decomp):
+                self.mu_slist[counter].append(self.mu_s[counter])
             super(EasyMuffinSURE,self).update(change)
             self.update_Jacobians(change)
             
             self.update2(change)
             self.dx_mu_s()
             self.dx2_mu_s()
+            self.sugarfdmc()
             
-            if (niter>1) and (niter % 10) ==0:
+            if (niter>1) and (niter>50) and (niter % 20) ==0:
                 self.GradDesc_mus(self.step_mus)
                 
             self.nitertot+=1
 
             if self.truesky.any():
+                tmp = [self.mu_slist[i][-1] for i,ii in enumerate(self.nbw_decomp)]
                 if (niter % 20) ==0:
-                    print(str_cst_snr_wmse_wmsesure_mu_title.format('It.','Cost','SNR','WMSE','WMSES','mu_s'))                    
-                print(str_cst_snr_wmse_wmsesure_mu.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1],self.mu_slist[-1]))
+                    print(str_cst_snr_wmse_wmsesure_mu_title.format('It.','Cost','SNR','WMSE','WMSES','mu_s'))            
+                    print(tmp)
+                print(str_cst_snr_wmse_wmsesure_mu.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1],tmp[0])) 
+                
             else:
                 if (niter % 20) ==0:
                     print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s'))                    
                 print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1]))
                 
 
-    def GradDesc_mus(self,step=1e-3):        
-        self.mu_s = np.maximum(self.mu_s - step*self.sugarfdmclist[-1],0)         
+    def GradDesc_mus(self,step=1e-3):
+        for counter, b in enumerate(self.nbw_decomp):
+            self.mu_s[counter] = np.maximum(self.mu_s[counter] - step*self.sugarfdmclist[b][-1],0)         
 
-    def loop_mu_s(self,nitermax=10,maxiter=100):
-        """ main loop """
-        
-        if self.nitertot==0:
-            self.tau = compute_tau_2D(self.psf,self.mu_s_max,self.sigma,self.nbw_decomp)
-            print('')
-            print('setting tau to smallest (safest): ',self.tau)
-            print('')
-
-        if nitermax < 1:
-            print('nitermax must be a positive integer, nitermax=10')
-            nitermax=10
-
-        std = 1000 # stopping criteria std of wmsesure
-        niter = 0
-        
-        while (niter<nitermax) and (std>self.thresh):
-            self.mu_s = self.golds_search_mu_s(a=self.mu_s_min, b=self.mu_s_max, maxiter=maxiter)
-            super(EasyMuffinSURE,self).update()
-            self.update_Jacobians()
-
-            self.mu_slist.append(self.mu_s)
-            self.nitertot+=1
-              
-            if self.truesky.any():
-                if (niter % 20) ==0:
-                    print(str_cst_snr_wmse_wmsesure_mu_title.format('It.','Cost','SNR','WMSE','WMSES','mu_s'))                    
-                print(str_cst_snr_wmse_wmsesure_mu.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1],self.mu_slist[-1]))
-            else:
-                if (niter % 20) ==0:
-                    print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))                    
-                print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1],self.mu_llist[-1]))
-                    
-            std = np.var(self.wmselistsure[niter-50::])
-                
-            niter+=1
-
-
-    def golds_search_mu_s(self,a, b, maxiter=100):
-
-        absolutePrecision = self.absolutePrecision
-        gr = (1+np.sqrt(5))/2
-        c = b - (b - a)/gr
-        d = a + (b - a)/gr
-        niter = 0
-
-        while abs(a - b) > absolutePrecision and niter < maxiter:
-            #print('(a,f(a))=(',a,',',self.f_gs_mu_s(a),') - (b,f(b))=(',b,',',self.f_gs_mu_s(b),') - (c,f(c))=(',c,',',self.f_gs_mu_s(c),') - (d,f(d))=(',d,',',self.f_gs_mu_s(d),') ')
-            #print('')
-            if self.f_gs_mu_s(c) < self.f_gs_mu_s(d):
-                b = d
-            else:
-                a = c
-
-            c = b - (b - a)/gr
-            d = a + (b - a)/gr
-            niter+=1
-
-        #print('quit gs')
-        return (a + b)/2
-
-
-    def f_gs_mu_s(self,a):
-        mu_s_0 = self.mu_s
-        self.mu_s = a
-        super(EasyMuffinSURE,self).update(change=False)
-        res = self.update_Jacobians(change=False)
-        self.mu_s = mu_s_0
-        return res
-
-    def set_mean_mu_s(self,niter=100):
-        self.mu_s = np.mean(self.mu_slist[max(1,self.nitertot-niter)::])
-            
-
-#class EasyMuffinSUREDescent(EasyMuffinSURE):
-#    
-#    def __init__(self,
-#                 mu_s = 0.5,
-#                 nb=(8,0),
-#                 tau = 1e-4,
-#                 sigma= 10,
-#                 var = 0, 
-#                 dirtyinit=[],
-#                 dirty=[],
-#                 truesky = [],
-#                 psf = []):
-#        
-#        super(EasyMuffinSUREDescent,self).__init__(
-#                mu_s,
-#                nb,
-#                tau,
-#                sigma,
-#                var,
-#                dirtyinit,
-#                dirty,
-#                truesky,
-#                psf)
-#        
-#    def init_algo(self):
-#        
-#        super(EasyMuffinSUREDescent,self).init_algo()
-#
-#        # init variables 
-#        self.dx_s = 0*init_dirty_wiener(self.n,self.psf,self.psfadj,5e1)
-#        self.dxt_s = np.zeros((self.nxy,self.nxy))
-#        self.du_s = {}
-#        self.du_s = self.Decomp(np.zeros((self.nxy,self.nxy)),self.nbw_decomp)
-#          
-#        self.dJv_s = np.zeros((self.nxy,self.nxy))
-#        self.dJx_s = 0*init_dirty_wiener(self.n,self.psf,self.psfadj,5e1)
-#        self.dJxt_s = np.zeros((self.nxy,self.nxy))
-#        self.dJu_s = {}
-#        self.dJu_s = self.Decomp(np.zeros((self.nxy,self.nxy)),self.nbw_decomp)
-#
-#    def mu_s_GradDescent(self,niter,stp=1e-2):
-#        stp = stp / np.sqrt(niter+1)
-#        GradPSURE_mu_s = self.dPSURE_mu_s()
-#        self.mu_s = np.maximum(self.mu_s - stp*GradPSURE_mu_s,0)
-#    
-#    def dPSURE_mu_s(self):
-#        dx_mu_s = self.dx_mu_s()
-#        dJ_mu_s = self.dJ_mu_s()
-#        
-#        tmp1 = conv(self.psf,self.x) - self.dirty 
-#        tmp2 = conv(self.psf,dx_mu_s)
-#        res1 = 2*np.sum(tmp1*tmp2)
-#        
-#        res2 = 2*self.sigma**2*np.sum(dJ_mu_s*self.Hn)
-#        
-#        #print(res1,' ',res2)
-#        return res1+res2
-#
-#    def dx_mu_s(self):
-#        
-#        # compute gradient
-#        tmp = myifftshift( myifft2( myfft2(self.dx_s) *self.hth_fft ) )
-#        Delta_freq = tmp.real #- self.fty
-#
-#        # compute iuwt adjoint
-#        wstu = self.Recomp(self.u, self.nbw_recomp) + self.mu_s*self.Recomp(self.du_s, self.nbw_recomp)
-#
-#        # compute xt
-#        dxtt_s = self.dx_s - self.tau*(Delta_freq + wstu )
-#        self.dxt_s = np.maximum(self.xtt, 0.0 )*dxtt_s
-#
-#        # update u
-#        tmp_spat_scal = self.Decomp((2*self.xt - self.x) + self.mu_s*(2*self.dxt_s - self.dx_s), self.nbw_decomp)
-#
-#
-#        for b in self.nbw_decomp:
-#            dutt_s = self.du_s[b] + self.sigma*tmp_spat_scal[b]
-#            self.du_s[b] = sat(self.utt[b])*dutt_s
-#                                            
-#        self.dx_s = self.dxt_s.copy()
-#        
-#        return self.dx_s
-#    
-#    def dJ_mu_s(self):
-#
-#        # compute gradient
-#        tmp = myifftshift( myifft2( myfft2(self.dJx_s) * self.hth_fft ) )
-#        dJDelta_freq_s = tmp.real #- self.Hn
-#
-#        # compute iuwt adjoint
-#        dJs_s = self.Recomp(self.Ju, self.nbw_recomp) + self.mu_s*self.Recomp(self.dJu_s, self.nbw_recomp)
-#
-#        # compute xt
-#        dJxtt_s = self.dJx_s - self.tau*(dJDelta_freq_s + dJs_s )
-#        self.dJxt_s = Heavy(self.xtt)*dJxtt_s
-#
-#        # update u
-#        tmp_spat_scal_J = self.Decomp(self.mu_s*(2*self.dJxt_s - self.dJx_s) + (2*self.Jxt - self.Jx) , self.nbw_decomp)
-#        for b in self.nbw_decomp:
-#            dJutt_s = self.dJu_s[b] + self.sigma*tmp_spat_scal_J[b]
-#            self.dJu_s[b] = Rect( self.utt[b] )*dJutt_s
-#
-#        self.dJx_s = self.dJxt_s.copy()
-#        
-#        return self.dJx_s
-#    
-#    def loop_desc(self,nitermax=10,change=True):
-#        
-#        if nitermax < 1:
-#            print('nitermax must be a positive integer, nitermax=10')
-#            nitermax=10
-#        
-#        self.mu_slist.append(self.mu_s)
-#        for niter in range(nitermax):
-#            super(EasyMuffinSUREDescent,self).update(change)
-#            self.update_Jacobians(change)
-#            self.mu_s_GradDescent(niter=niter)
-#            self.mu_slist.append(self.mu_s)
-#
-#            self.nitertot+=1
-#
-#            if self.truesky.any():
-#                if (niter % 20) ==0:
-#                    print(str_cst_snr_wmse_wmsesure_mu_title.format('It.','Cost','SNR','WMSE','WMSES','mu_s'))                    
-#                print(str_cst_snr_wmse_wmsesure_mu.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1],self.mu_slist[-1]))
-#            else:
-#                if (niter % 20) ==0:
-#                    print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s'))                    
-#                print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1]))
-#                

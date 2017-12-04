@@ -184,38 +184,6 @@ def organize_dwt_coeff(im, level) :
 			coeff.append( ( coeff_tab0, coeff_tab1, coeff_tab2))
 	return 	coeff
 
-
-#def dwt_decomp(x, list_wavelet, store_im=False):
-#    out = {} # Dictionary of coef for each wavelet 
-#    coefs = [] # List of all wavelet coeficients 
-#    
-#    for base in list_wavelet:
-#        coef = pywt.wavedec2(x,base,mode='periodization')
-#        coefs.append(coef)
-#        
-#        tmp = []
-#        for i,coefscale in enumerate(coef):
-#            if i==0:
-#                tmp = coef[0]
-#            else:
-#                (LH, HL, HH) = coef[i]
-#                tmp = np.vstack( ( np.hstack((tmp,LH)) , np.hstack((HL,HH)) ) )
-#        out[base] = tmp
-#    
-#    if store_im:
-#        return coefs, out
-#    else:
-#        return coefs
-#
-#
-#def dwt_recomp(x_in, list_wavelet):
-#    out = 0
-#    for n,base in enumerate(list_wavelet):
-#        x = x_in[n] # coef a,b,c,d at db1 for ex
-#        out +=pywt.waverec2(x, base, mode='periodization')
-#        
-#    return out
-
 #==============================================================================
 # IUWT from IUWT.jl from PyMoresane
 #==============================================================================
@@ -246,7 +214,7 @@ def iuwt_recomp(x, scale, c0=[]):
 
     max_scale = len(x) + scale
 
-    if c0.any():
+    if c0 is not None:
         recomp = c0
     else:
         recomp = np.zeros((x[0].shape[0],x[0].shape[1]), dtype=np.float)
@@ -271,6 +239,10 @@ def iuwt_decomp_adj(u,scale):
         htu += iuwt_decomp(u[k],scale_decomp)[k]
     return htu
 
+
+#==============================================================================
+# a tros algorithm
+#==============================================================================
 
 def a_trous(C0, scale):
     """

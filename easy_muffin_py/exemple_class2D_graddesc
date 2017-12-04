@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Sep 29 15:20:18 2017
+
+@author: rammanouil
+"""
+
+# ==============================================================================
+# OPEN PSF AND DIRTY CUBE - SKY to check results
+# ==============================================================================
+
+import os
+import numpy as np
+from astropy.io import fits
+import pylab as pl
+from deconv3d_tools import conv
+
+def checkdim(x):
+    if len(x.shape) == 4:
+        x = np.squeeze(x)
+        x = x.transpose((2, 1, 0))
+    return x
+
+folder = 'data256'
+file_in = 'M31_3d_conv_256_10db'
+
+folder = os.path.join(os.getcwd(), folder)
+genname = os.path.join(folder, file_in)
+psfname = genname+'_psf.fits'
+drtname = genname+'_dirty.fits'
+
+CubePSF = np.squeeze(checkdim(fits.getdata(psfname, ext=0))[:,:,0:1])
+CubeDirty = np.squeeze(checkdim(fits.getdata(drtname, ext=0))[:,:,0:1])
+
+skyname = genname+'_sky.fits'
+sky = checkdim(fits.getdata(skyname, ext=0))
+sky = sky[:,:,0:1]
+sky = np.squeeze(sky)
+sky2 = np.sum(sky*sky)
+#
+#pl.figure()
+#pl.imshow(sky)
+#pl.figure()
+#pl.imshow(CubePSF)
+#pl.figure()
+#pl.imshow(CubeDirty)
+
+#%% ==============================================================================
+#
+# ==============================================================================
+
+from deconv2d import EasyMuffinSURE, EasyMuffinSUREDescent
+
+#%% ===========================================================================
+# Test with fixed parameter
+# =============================================================================
+
+#nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+#mu_s = 0.7
+#sigma=10
+#truesky=sky
+#psf=CubePSF
+#dirty=CubeDirty
+#Noise = CubeDirty - conv(CubePSF,sky)
+#var = np.sum(Noise**2)/Noise.size
+#nitermax = 50
+#
+#args = {'mu_s':mu_s,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var}
+#
+#
+#EMs= EasyMuffinSURE(**args)
+#EMs.loop(nitermax)
+#SpectralSkyModel3 = EMs.xt
+#cost3 = EMs.costlist
+#snr3 = EMs.snrlist
+#psnr3 = EMs.psnrlist
+#psnrsure3 = EMs.psnrlistsure
+#wmse3 = EMs.wmselist
+#wmsesure3 = EMs.wmselistsure
+#
+#pl.figure()
+#pl.plot(snr3,'*',label='snr3')
+#pl.legend(loc='best')
+#
+#pl.figure()
+#pl.plot(cost3,'*',label='cost3')
+#pl.legend(loc='best')
+#
+#pl.figure()
+#pl.plot(psnr3,'*',label='psnr3')
+#pl.plot(psnrsure3,'*',label='psnrsure3')
+#pl.legend(loc='best')
+#
+#pl.figure()
+#pl.plot(wmse3,label='wmse3')
+#pl.plot(wmsesure3,'*',label='wmsesure3')
+#pl.legend(loc='best')
+
+#%% ===========================================================================
+# Test with gradient descent
+# =============================================================================
+
+nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+#nb=(8,0)
+mu_s = 0.7
+sigma=10
+truesky=sky
+psf=CubePSF
+dirty=CubeDirty
+Noise = CubeDirty - conv(CubePSF,sky)
+var = np.sum(Noise**2)/Noise.size
+nitermax = 100
+
+args = {'mu_s':mu_s,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,'sigma':1}
+
+EM= EasyMuffinSUREDescent(**args)
+EM.loop_desc(nitermax)
+SpectralSkyModel2 = EM.xt
+cost2 = EM.costlist
+snr2 = EM.snrlist
+psnr2 = EM.psnrlist
+wmse2 = EM.wmselist
+
+pl.figure()
+pl.imshow(EM.x)
+pl.colorbar()
+
+pl.figure()
+pl.imshow(EM.dx_s)
+pl.colorbar()
+
+pl.figure()
+pl.imshow(EM.dxt_s)
+pl.colorbar()
+
+for b in EM.nbw_decomp:
+    pl.figure()
+    pl.imshow(EM.du_s[b])
+    pl.colorbar()
+
+pl.figure()
+pl.imshow(EM.dJx_s)
+pl.colorbar()
+
+pl.figure()
+pl.imshow(EM.dJxt_s)
+pl.colorbar()
+
+for b in EM.nbw_decomp:
+    pl.figure()
+    pl.imshow(EM.dJu_s[b])
+    pl.colorbar()
+    
+    
+ 

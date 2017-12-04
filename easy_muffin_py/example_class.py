@@ -46,10 +46,6 @@ ax.imshow(sky[:,:,1])
 ax = fig.add_subplot(1,3,3)
 ax.imshow(CubeDirty[:,:,1])
 
-#%% ==============================================================================
-#
-# ==============================================================================
-
 from SuperNiceSpectraDeconv import SNSD
 from deconv3d import EasyMuffin, EasyMuffinSURE
 
@@ -59,6 +55,11 @@ nitermax = 20
 
 mu_s = 0.5
 mu_l = 2
+
+#%% ==============================================================================
+#
+# ==============================================================================
+
 
 DM = SNSD(mu_s=mu_s, mu_l = mu_l, nb=nb,nitermax=nitermax,truesky=sky)
 DM.parameters()
@@ -122,4 +123,69 @@ pl.legend(loc='best')
 #pl.plot(sub3,label='var')
 #pl.plot(somme,'*',label='tst')
 #pl.legend(loc='best')
+
+Noise = CubeDirty - conv(CubePSF,sky)
+var = np.sum(Noise**2)/Noise.size
+EMsfdmc= EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mu=[1e0,1e0])
+EMsfdmc.loop_fdmc(nitermax)
+SpectralSkyModel4 = EMsfdmc.xt
+cost4 = EMsfdmc.costlist
+snr4 = EMsfdmc.snrlist
+psnr4 = EMsfdmc.psnrlist
+psnrsure4 = EMsfdmc.psnrlistsure
+wmse4 = EMsfdmc.wmselist
+wmsesure4 = EMsfdmc.wmselistsure
+
+pl.figure()
+pl.plot(EMsfdmc.mu_slist)
+
+pl.figure()
+pl.plot(EMsfdmc.mu_llist)
+
+
+pl.figure()
+pl.plot(EMsfdmc.sugarfdmclist[0])
+
+pl.figure()
+pl.plot(EMsfdmc.sugarfdmclist[1])
+
+mu_s = 0.1
+mu_l = 0
+Noise = CubeDirty - conv(CubePSF,sky)
+var = np.sum(Noise**2)/Noise.size
+EMsfdmc2= EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mu=[1e0,1e0])
+EMsfdmc2.loop_fdmc(nitermax)
+
+pl.figure()
+pl.plot(EMsfdmc2.mu_slist)
+
+pl.figure()
+pl.plot(EMsfdmc2.mu_llist)
+
+
+pl.figure()
+pl.plot(EMsfdmc2.sugarfdmclist[0])
+
+pl.figure()
+pl.plot(EMsfdmc2.sugarfdmclist[1])
+
+mu_s = 0.1
+mu_l = 0.000001
+Noise = CubeDirty - conv(CubePSF,sky)
+var = np.sum(Noise**2)/Noise.size
+EMsfdmc3= EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mu=[1e0,1e0])
+EMsfdmc3.loop_fdmc(nitermax)
+
+pl.figure()
+pl.plot(EMsfdmc3.mu_slist)
+
+pl.figure()
+pl.plot(EMsfdmc3.mu_llist)
+
+pl.figure()
+pl.plot(EMsfdmc3.sugarfdmclist[0])
+
+pl.figure()
+pl.plot(EMsfdmc3.sugarfdmclist[1])
+
 
