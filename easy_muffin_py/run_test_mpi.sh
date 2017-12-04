@@ -1,6 +1,5 @@
 #!/bin/sh
-#OAR -l core=16, walltime=48:00:00
-#OAR -p host='smp01'
+#OAR -l core=33, walltime=48:00:00
 #OAR -t smp
 #OAR -O output/%jobid%.output.txt
 #OAR -E output/%jobid%.error.txt
@@ -17,7 +16,8 @@ echo $OAR_NODEFILE :
 cat $OAR_NODEFILE
 echo
 
-MAINPY=$OAR_WORKDIR/Run_tst.py"  32 0 500 10 2 10 2 10 Celine_4var"
+#MAINPY=$OAR_WORKDIR/Run_tst.py"  32 100 600 0.75 2.77 0.75 2.77 10 I_20XHALO_CL_RS_SKY_COMPOSED_128freq"
+MAINPY=$OAR_WORKDIR/Run_tst.py"  32 0 900 10 2 10 2 10 Celine_4var"
 
 cd $TMPDIR
 

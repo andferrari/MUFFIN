@@ -33,7 +33,7 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-nbw = size - 1
+nbw = size - int(size/2)
 idw = rank - 1
 
 class EasyMuffin():
@@ -55,6 +55,8 @@ class EasyMuffin():
                  mu_l_max=3,
                  absolutePrecision=0.1):
 
+        if idw > nbw:
+            comm.MPI_Finalize()
 
         if type(nb) is not tuple:
             print('nb must be a tuple of wavelets for dwt ')
@@ -190,22 +192,28 @@ class EasyMuffin():
             # precomputations
             print('')
             print("precomputations...")
+            print('1')
 
             self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
+            print('2')
 
             self.tf = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.t = np.zeros((0)) # even master has to send tloc when gatherv
+            print('3')
 
             self.xf = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.x = np.zeros((0))
             self.xt = np.zeros((0))
+            print('4')
 
             self.x2f_ = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.x2_ = np.zeros((0))
+            print('5')
 
             self.deltaf = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.delta = np.zeros((0))
+            print('6')
 
             if type(self.nb[0]) == int:
                 self.nbw_decomp = [f for f in range(self.nb[0])]

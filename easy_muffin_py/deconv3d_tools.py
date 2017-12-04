@@ -102,11 +102,11 @@ def conv(x,y):
 def dwt_recomp(wt_coeffs, DWT_list, level = 1.):
 	"""This function computes the inverse disctrete wavelet transform on a union of wavelet basis.
 		wt_coeff : matrix of decompostion coefficients (approximation and details in two columns).
-		signal_length = length of the original signal we want retrieve. 
+		signal_length = length of the original signal we want retrieve.
 		DWT_list : list of the used wavelet's name."""
 	N2 =  wt_coeffs[DWT_list[0]].shape[0] #image is supposed to be square
 	res = np.zeros((N2,N2))
-    
+
 	for i in DWT_list:
 		ima_dec = wt_coeffs[i]
 		level = pywt.dwt_max_level(N2, pywt.Wavelet(i)) ## modif 04-04-17
@@ -121,26 +121,26 @@ def dwt_decomp(x_im, DWT_list, level = 1.):
 		x = signal to be decomposed.
 		DWT_list : list of the used wavelet's name."""
 	res = {}
-	(N1, N2) = np.shape(x_im) 
-	
+	(N1, N2) = np.shape(x_im)
+
 	for i in DWT_list:
 		coeffs = pywt.wavedec2(x_im, i, 'per', level = None)## modif 04-04-17
 		level = pywt.dwt_max_level(N2, pywt.Wavelet(i)) ## modif 04-04-17
 		ima_dec = lecture_dwt_coeff(coeffs, level, N2, N2)
 		res[i] = ima_dec
-	
+
 	return res
 
 
 def lecture_dwt_coeff(coeff, level, LI, COL) :
 	""" This function reorganizes as an image the DWT coefficients with the following structure : [cAn, (cHn, cVn, cDn), ..., (cH1, cV1, cD1)] which is compatible with the pywt functions."""
 	im = np.zeros((LI, COL))
-	
+
 	ind_li = 0
 	ind_col = 0
 
 	for i in range(len(coeff)):
-		
+
 		if i == 0:
 			ind_li = int(LI/(2**(int(level) -i)))
 			ind_col = int(COL/(2**(int(level) -i)))
@@ -149,9 +149,9 @@ def lecture_dwt_coeff(coeff, level, LI, COL) :
 		else:
 			a,b = coeff[i][0].shape
 			im[:ind_li, ind_col:ind_col + b] = coeff[i][0]
-			
+
 			im[ind_li:ind_li+a,:ind_col] = coeff[i][1]
-			
+
 			im[ind_li:ind_li+a,ind_col:ind_col+b] = coeff[i][2]
 			ind_li = ind_li + b
 			ind_col = ind_col + a
@@ -166,7 +166,7 @@ def organize_dwt_coeff(im, level) :
 	ind_col = 0
 
 	for i in range(level+1):
-		
+
 		if i == 0:
 			ind_li = int(LI/(2**(int(level) -i)))
 			ind_col = int(COL/(2**(int(level) -i)))
