@@ -38,6 +38,7 @@ class EasyMuffin():
     def __init__(self,
                  mu_s=0.5,
                  mu_l=0.0,
+                 mu_wiener = 5e1,
                  nb=(8,0),
                  tau = 1e-4,
                  sigma = 10,
@@ -85,6 +86,7 @@ class EasyMuffin():
         self.psf = psf
         self.dirty=dirty
         self.var = var
+        self.mu_wiener = mu_wiener
 
         self.init_algo()
 
@@ -108,7 +110,7 @@ class EasyMuffin():
         if self.dirtyinit:
             self.x = self.dirtyinit
         else:
-            self.x = init_dirty_wiener(self.dirty, self.psf, self.psfadj, 5e1)
+            self.x = init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener)
 
 
         self.hth_fft = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.complex)
@@ -364,6 +366,7 @@ class EasyMuffinSURE(EasyMuffin):
     def __init__(self,
                  mu_s=0.5,
                  mu_l=0.0,
+                 mu_wiener = 5e1,
                  nb=(8,0),
                  tau = 1e-4,
                  sigma = 10,
@@ -377,6 +380,7 @@ class EasyMuffinSURE(EasyMuffin):
         super(EasyMuffinSURE,self).__init__(
                  mu_s,
                  mu_l,
+                 mu_wiener,
                  nb,
                  tau,
                  sigma,
@@ -402,7 +406,7 @@ class EasyMuffinSURE(EasyMuffin):
 
             # init Jacobians
             self.Jv = np.zeros((self.nxy,self.nxy,self.nfreq))
-            self.Jx = init_dirty_wiener(self.n, self.psf, self.psfadj, 5e1)
+            self.Jx = init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
             self.Jxt = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.Ju = {}
             for freq in range(self.nfreq):
@@ -452,7 +456,7 @@ class EasyMuffinSURE(EasyMuffin):
             if self.dirtyinit:
                 self.x2 = self.dirtyinit
             else:
-                self.x2 = init_dirty_wiener(self.dirty2, self.psf, self.psfadj, 5e1)
+                self.x2 = init_dirty_wiener(self.dirty2, self.psf, self.psfadj, self.mu_wiener)
 
             self.v2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
             
@@ -469,28 +473,28 @@ class EasyMuffinSURE(EasyMuffin):
             self.wmselistsurefdmc.append(self.wmsesurefdmc())
             
             self.dv_s = np.zeros((self.nxy,self.nxy,self.nfreq))
-            self.dx_s = init_dirty_wiener(self.n, self.psf, self.psfadj, 5e1)
+            self.dx_s = init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
             self.dxt_s = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.du_s = {}
             for freq in range(self.nfreq):
                 self.du_s[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
                 
             self.dv_l = np.zeros((self.nxy,self.nxy,self.nfreq))
-            self.dx_l = init_dirty_wiener(self.n, self.psf, self.psfadj, 5e1)
+            self.dx_l = init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
             self.dxt_l = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.du_l = {}
             for freq in range(self.nfreq):
                 self.du_l[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
                 
             self.dv2_s = np.zeros((self.nxy,self.nxy,self.nfreq))
-            self.dx2_s = init_dirty_wiener(self.n, self.psf, self.psfadj, 5e1)
+            self.dx2_s = init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
             self.dxt2_s = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.du2_s = {}
             for freq in range(self.nfreq):
                 self.du2_s[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
                 
             self.dv2_l = np.zeros((self.nxy,self.nxy,self.nfreq))
-            self.dx2_l = init_dirty_wiener(self.n, self.psf, self.psfadj, 5e1)
+            self.dx2_l = init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
             self.dxt2_l = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.du2_l = {}
             for freq in range(self.nfreq):
