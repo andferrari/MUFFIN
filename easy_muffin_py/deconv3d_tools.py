@@ -66,9 +66,30 @@ def myifft2(x):
 def myifftshift(x):
     return ifftshift(x,axes=(0,1))
 
-def conv(x,y):
-    tmp = myifftshift(myifft2(myfft2(x)*myfft2(y)))
+#def conv(x,y):
+#    tmp = myifftshift(myifft2(myfft2(x)*myfft2(y)))
+#    return tmp.real
+
+def conv(x,y,ref='min'):
+    if x.shape[0]==y.shape[0]:
+        tmp = myifftshift(myifft2(myfft2(x)*myfft2(y)))
+    elif x.shape[0]>y.shape[0]:
+        z = np.zeros((x.shape[0],x.shape[0]))
+        z[:y.shape[0],:y.shape[1]]=y
+        z = myifftshift(z)
+        tmp = myifftshift(myifft2(myfft2(x)*myfft2(z)))
+    else:
+        z = np.zeros((y.shape[0],y.shape[0]))
+        z[:x.shape[0],:x.shape[1]]=x
+        z = myifftshift(z)
+        tmp = myifftshift(myifft2(myfft2(z)*myfft2(y)))
+    
+    if ref=='min':
+        Nout = np.minimum(x.shape[0],y.shape[0])
+        tmp = tmp[:Nout,:,Nout]
+    
     return tmp.real
+
 #==============================================================================
 # DWT from adapted to same style as IUWT.jl from PyMoresane
 #==============================================================================
