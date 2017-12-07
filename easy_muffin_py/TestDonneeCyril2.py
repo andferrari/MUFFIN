@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+e#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Wed Dec  6 14:30:26 2017
@@ -35,7 +35,7 @@ def checkdim(x):
     if len(x.shape) == 4:
         x = np.squeeze(x)
         x = x.transpose((2, 1, 0))
-    return x
+return x
 
 
 folder = 'DataCyril'
@@ -122,23 +122,23 @@ pl.legend(loc='best')
 
 ###
 
-Noise = CubeDirty - conv(CubePSF,sky)
-var = np.sum(Noise**2)/Noise.size
-EMsfdmc= EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mu=[1e0,1e0],mu_wiener=0.08)
-EMsfdmc.loop_fdmc(nitermax)
-SpectralSkyModel4 = EMsfdmc.xt
-cost4 = EMsfdmc.costlist
-snr4 = EMsfdmc.snrlist
-psnr4 = EMsfdmc.psnrlist
-psnrsure4 = EMsfdmc.psnrlistsure
-wmse4 = EMsfdmc.wmselist
-wmsesure4 = EMsfdmc.wmselistsure
+# Noise = CubeDirty - conv(CubePSF,sky)
+# var = np.sum(Noise**2)/Noise.size
+# EMsfdmc= EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mu=[1e0,1e0],mu_wiener=0.08)
+# EMsfdmc.loop_fdmc(nitermax)
+# SpectralSkyModel4 = EMsfdmc.xt
+# cost4 = EMsfdmc.costlist
+# snr4 = EMsfdmc.snrlist
+# psnr4 = EMsfdmc.psnrlist
+# psnrsure4 = EMsfdmc.psnrlistsure
+# wmse4 = EMsfdmc.wmselist
+# wmsesure4 = EMsfdmc.wmselistsure
 
-pl.figure()
-pl.plot(EMsfdmc.mu_slist)
+# pl.figure()
+# pl.plot(EMsfdmc.mu_slist)
 
-pl.figure()
-pl.plot(EMsfdmc.mu_llist)
+# pl.figure()
+# pl.plot(EMsfdmc.mu_llist)
 
 
 
