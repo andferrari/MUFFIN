@@ -86,7 +86,8 @@ def conv(x,y,ref='min'):
     
     if ref=='min':
         Nout = np.minimum(x.shape[0],y.shape[0])
-        tmp = tmp[:Nout,:,Nout]
+        tmp = myifftshift(tmp)
+        tmp = tmp[:Nout,:Nout]
     
     return tmp.real
 
