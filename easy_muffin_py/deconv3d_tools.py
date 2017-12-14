@@ -84,7 +84,7 @@ def conv(x,y,ref='min'):
         z = myifftshift(z)
         tmp = myifftshift(myifft2(myfft2(z)*myfft2(y)))
     
-    if ref=='min':
+    if x.shape[0]!=y.shape[0] and ref=='min':
         Nout = np.minimum(x.shape[0],y.shape[0])
         tmp = myifftshift(tmp)
         tmp = tmp[:Nout,:Nout]
