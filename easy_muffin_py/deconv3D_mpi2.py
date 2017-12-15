@@ -131,122 +131,237 @@ class EasyMuffin():
             else:
                 sys.exit()
 
-
+        np.random.seed(1)
+        self.n = np.random.binomial(1,0.5,(self.nxy,self.nxy,self.nfreq))
+        self.n[self.n==0] = -1
 
         self.init_algo()
 
     def init_algo(self):
         """Initialization of the algorithm (all intermediate variables)"""
-
-        self.psfadj = defadj(self.psf)
-        print('psf size ', self.psf.shape)
-        print('drt size ', self.dirty.shape)
-
-        # precomputations
-        print('')
-        print("precomputations...")
-        self.nfreq = self.dirty.shape[2]
-        self.nxy = self.dirty.shape[0]
-
-        # x initialization
-        if self.dirtyinit:
-            self.x = self.dirtyinit
+        
+        if rank ==0:
+            
+            print('psf size ', self.psf.shape)
+            print('drt size ', self.dirty.shape)
+            
+            # precomputations
+            print('')
+            print('precomputations...')
+            print('1')
+            
+            # x initialization
+            self.xf = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+            self.x = np.zeros((0))
+            self.xt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+            
+            self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+            self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+            
+            self.t = np.zeros((self.nxy,self.nxy,self.nfreq),dtype=np.float,order='F')
+            self.tf = np.zeros((0))
+            
+            self.deltaf = np.zeros((self.nxy,self.nxy,self.nfreq),dtype=np.float,order='F')
+            self.delta = np.zeros((0))
+    
+            if type(self.nb[0]) == int:
+                self.Decomp = iuwt_decomp
+                self.Recomp = iuwt_decomp_adj ### adjoint pas recomp
+                self.nbw_decomp = [f for f in range(self.nb[0])]
+                self.nbw_recomp = self.nb[-1]
+                self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
+                print('')
+                print('IUWT: tau = ', self.tau)
+                print('')
+            else:
+                self.Decomp = dwt_decomp
+                self.Recomp = dwt_recomp
+                self.nbw_decomp =self.nb
+                self.nbw_recomp = self.nb
+                self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
+                print('')
+                print('DWT: tau = ', self.tau)
+                print('')
+                
+            # Compute spatial and spectral scaling parameters
+            test = 0
+            if test ==1:
+                self.alpha_l = 1/(np.sum(self.dirty**2,2)+1e-1) # image
+                self.alpha_l = conv(self.alpha_l,np.ones((3,3)),'max')
+                self.alpha_l = self.alpha_l/self.alpha_l.max()
+            else:
+                self.alpha_l = np.ones((self.nxy,self.nxy))
+            
         else:
-            self.x = init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener)
-
-        # initializing alg. variables
-        self.hth_fft = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.complex)
-        self.fty = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
-        self.psfadj_fft = myfft2(self.psfadj)
-        self.hth_fft = myfft2( myifftshift( myifft2( self.psfadj_fft * myfft2(self.psf) ) ) )
-        tmp = myifftshift(myifft2(myfft2(self.dirty)*self.psfadj_fft))
-        self.fty = tmp.real
-        self.wstu = np.zeros((self.nxy,self.nxy), dtype=np.float)
-        self.Delta_freq = np.zeros((self.nxy,self.nxy), dtype=np.float)
-        self.xtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
-        self.xt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
-
-        if type(self.nb[0]) == int:
-            self.Decomp = iuwt_decomp
-            self.Recomp = iuwt_decomp_adj ### adjoint pas recomp
-            self.nbw_decomp = [f for f in range(self.nb[0])]
-            self.nbw_recomp = self.nb[-1]
-            self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
-            print('')
-            print('IUWT: tau = ', self.tau)
-            print('')
-        else:
-            self.Decomp = dwt_decomp
-            self.Recomp = dwt_recomp
-            self.nbw_decomp =self.nb
-            self.nbw_recomp = self.nb
-            self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
-            print('')
-            print('DWT: tau = ', self.tau)
-            print('')
-
+            
+            self.nfreq = self.lst_nbf[rank]
+            self.psf = np.asfortranarray(self.psf[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq])
+            self.dirty = np.asfortranarray(self.dirty[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq])
+            
+            if self.truesky is not None:
+                self.truesky = self.truesky[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq]
+            
+            self.psfadj = defadj(self.psf)
+            
+            # x initialization
+            if self.dirtyinit:
+                self.x = np.asfortranarray(self.dirtyinit)
+            else:
+                self.x = np.asfortranarray(init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener))
+    
+            # initializing alg. variables
+            self.hth_fft = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.complex, order='F')
+            self.fty = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
+            self.psfadj_fft = myfft2(self.psfadj)
+            self.hth_fft = myfft2( myifftshift( myifft2( self.psfadj_fft * myfft2(self.psf) ) ) )
+            tmp = myifftshift(myifft2(myfft2(self.dirty)*self.psfadj_fft))
+            self.fty = tmp.real
+            self.wstu = np.zeros((self.nxy,self.nxy), dtype=np.float, order='F')
+            self.Delta_freq = np.zeros((self.nxy,self.nxy), dtype=np.float, order='F')
+            self.xtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
+            self.xt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
+            self.xf = np.zeros((0))
+            self.t = np.zeros((self.nxy,self.nxy,self.nfreq),dtype=np.float,order='F')
+            self.tf = np.zeros((0))
+            self.delta = np.zeros((self.nxy,self.nxy,self.nfreq),dtype=np.float,order='F')
+            self.deltaf = np.zeros((0))
+    
+            if type(self.nb[0]) == int:
+                self.Decomp = iuwt_decomp
+                self.Recomp = iuwt_decomp_adj ### adjoint pas recomp
+                self.nbw_decomp = [f for f in range(self.nb[0])]
+                self.nbw_recomp = self.nb[-1]
+                self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
+                print('')
+                print('IUWT: tau = ', self.tau)
+                print('')
+            else:
+                self.Decomp = dwt_decomp
+                self.Recomp = dwt_recomp
+                self.nbw_decomp =self.nb
+                self.nbw_recomp = self.nb
+                self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
+                print('')
+                print('DWT: tau = ', self.tau)
+                print('')
+                
+            self.tau = 0
+    
             self.utt = {}
-        for freq in range(self.nfreq):
-            self.utt[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
-        self.u = {}
-        for freq in range(self.nfreq):
-            self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
-        self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
-        self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
+            for freq in range(self.nfreq):
+                self.utt[freq] = self.Decomp(np.zeros((self.nxy,self.nxy),order='F') , self.nbw_decomp)
+            self.u = {}
+            for freq in range(self.nfreq):
+                self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy),order='F') , self.nbw_decomp)
+                
+            # Compute spatial and spectral scaling parameters
+            test = 0
+            if test ==1:
+                self.alpha_s = 1/(np.sum(np.sum(self.dirty**2,0),0)+1e-1) # col. vector
+                self.alpha_s = self.alpha_s/self.alpha_s.max()
+            else:
+                self.alpha_s = np.ones(self.nfreq)
 
+        self.tau = comm.bcast(self.tau,root=0) # root bcasts tau to everyone else 
         self.nitertot = 0
-
-        # Compute spatial and spectral scaling parameters
-        test = 1
-        if test ==1:
-            self.alpha_s = 1/(np.sum(np.sum(self.dirty**2,0),0)+1e-1) # col. vector
-            self.alpha_l = 1/(np.sum(self.dirty**2,2)+1e-1) # image
-            self.alpha_l = conv(self.alpha_l,np.ones((3,3)),'max')
-            self.alpha_s = self.alpha_s/self.alpha_s.max()
-            self.alpha_l = self.alpha_l/self.alpha_l.max()
-        else:
-            self.alpha_s = np.ones(self.nfreq)
-            self.alpha_l = np.ones((self.nxy,self.nxy))
-
-        # compute cost & snr, psnr, wmse
+        
         self.costlist = []
+        comm.Gatherv(self.x,[self.xf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         self.costlist.append(self.cost())
+        
+        # compute snr, psnr, wmse
         if self.truesky.any():
             self.snrlist = []
-            self.truesky2 = np.sum(self.truesky*self.truesky)
             self.wmselist = []
             self.psnrlist = []
+            self.truesky2 = np.sum(self.truesky*self.truesky)
             self.psnrnum = np.sum((self.dirty-self.truesky)**2)/(self.nxy*self.nxy*self.nfreq)
+            
             self.snrlist.append(self.snr())
             self.psnrlist.append(self.psnr())
             self.wmselist.append(self.wmse())
+            if rank==0:
+                print('The snr initialization is ',self.snrlist[0])
+                print('')
+
 
     def cost(self):
-        """Compute cost for current iterate x"""
-        tmp = self.dirty - myifftshift(myifft2(myfft2(self.x)*myfft2(self.psf)))
-        LS_cst = 0.5*(np.linalg.norm(tmp)**2)
-        tmp = 0.
-        for freq in range(self.nfreq):
-            tmp1 = self.Decomp(self.x[:,:,freq],self.nbw_decomp)
-            for b in self.nbw_decomp:
-                tmp = tmp + np.sum(np.abs(tmp1[b]*self.alpha_s[freq]))
-        Spt_cst = self.mu_s*tmp
-        Spc_cst = self.mu_l*np.sum(np.abs(dct(self.x*self.alpha_l[...,None],axis=2,norm='ortho')))
+        if not rank==0:
+            """Compute cost for current iterate x"""
+            tmp = self.dirty - myifftshift(myifft2(myfft2(self.x)*myfft2(self.psf)))
+            LS_cst = 0.5*(np.linalg.norm(tmp)**2)
+            tmp = 0.
+            for freq in range(self.nfreq):
+                tmp1 = self.Decomp(self.x[:,:,freq],self.nbw_decomp)
+                for b in self.nbw_decomp:
+                    tmp = tmp + np.sum(np.abs(tmp1[b]*self.alpha_s[freq]))
+            Spt_cst = self.mu_s*tmp
+            cst = Spt_cst + LS_cst
+        else:
+            Spc_cst = self.mu_l*np.sum(np.abs(dct(self.x*self.alpha_l[...,None],axis=2,norm='ortho')))
+            cst = Spc_cst
+            
+        cst_list = comm.gather(cst)
+        
+        if rank==0:
+            return sum(cst_list)/(self.nxy*self.nxy*self.nfreq)
+        else:
+            return cst
+            
         return (LS_cst + Spt_cst + Spc_cst)/(self.nxy*self.nxy*self.nfreq)
 
     def snr(self):
-        resid = self.truesky - self.x
-        return 10*np.log10(self.truesky2 / np.sum(resid*resid))
+        if not rank==0:
+            resid = self.truesky - self.x
+            resid = np.float(np.sum(resid*resid))
+        else:
+            resid = 0
+            
+        rlist = comm.gather(resid)
+        
+        if rank==0:
+            return 10*np.log10(self.truesky2 / np.sum(rlist))
+        else:
+            return resid
 
     def psnr(self):
-        resid = (np.linalg.norm(conv(self.psf,self.truesky-self.x))**2)/(self.nxy*self.nxy*self.nfreq)
-        return 10*np.log10(self.psnrnum / resid)
+        if not rank==0:
+            resid = np.linalg.norm(conv(self.psf,self.truesky-self.x))**2
+        else:
+            resid = 0
+            
+        rlist = comm.gather(resid)
+        
+        if rank==0:
+            return 10*np.log10(self.psnrnum / (np.sum(rlist)/(self.nxy*self.nxy*self.nfreq)))
+        else:
+            return 
 
     def wmse(self):
-        return (np.linalg.norm(conv(self.psf,self.truesky-self.x))**2)/(self.nxy*self.nxy*self.nfreq)
+        if not rank == 0:
+            resid = np.linalg.norm(conv(self.psf,self.truesky-self.x))**2
+        else:
+            resid = 0
+            
+        rlist = comm.gather(resid)
+        
+        if rank==0:
+            return np.sum(rlist)/(self.nxy*self.nxy*self.nfreq)
+        else:
+            return resid
 
     def mse(self):
-        return (np.linalg.norm(self.truesky-self.x)**2)/(self.nxy*self.nxy*self.nfreq)
+        if not rank==0:
+            resid = np.linalg.norm(self.truesky-self.x)**2
+        else:
+            resid = 0
+            
+        rlist = comm.gather(resid)
+        
+        if rank==0:
+            return np.sum(rlist)/(self.nxy*self.nxy*self.nfreq)
+        else:
+            return resid
 
    #======================================================================
    # MAIN Iteration - EASY MUFFIN
@@ -344,9 +459,9 @@ class EasyMuffinSURE(EasyMuffin):
 
             # compute Hn
             self.Hn = np.zeros((self.nxy,self.nxy,self.nfreq))
-            np.random.seed(1)
-            self.n = np.random.binomial(1,0.5,(self.nxy,self.nxy,self.nfreq))
-            self.n[self.n==0] = -1
+#            np.random.seed(1)
+#            self.n = np.random.binomial(1,0.5,(self.nxy,self.nxy,self.nfreq))
+#            self.n[self.n==0] = -1
             self.Hn = conv(self.n,self.psfadj)
 
             # init Jacobians
