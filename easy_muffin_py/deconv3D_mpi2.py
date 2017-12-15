@@ -5,7 +5,7 @@ Created on Fri Dec 15 10:05:32 2017
 
 @author: rammanouil
 """
-test
+
 import numpy as np
 from scipy.fftpack import dct,idct
 
@@ -13,7 +13,7 @@ from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heav
 from deconv3d_tools import myfft2, myifft2, myifftshift, conv, optimal_split
 from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp
 from mpi4py import MPI
-import sys 
+import sys
 
 str_cost="| {:5d} | {:6.6e} |"
 str_cost_title="| {:5s} | {:12s} |\n"+"-"*24
@@ -33,13 +33,13 @@ str_cost_wmsesure_mu_title = "-"*69+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {
 str_cst_snr_wmse_wmsesure_mu = "| {:5d} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} |"
 str_cst_snr_wmse_wmsesure_mu_title="-"*99+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {:12s} | {:12s} | {:12s} |\n"+"-"*99
 
-#Global variable - 
+#Global variable -
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
 nbw = size - int(size)
-idw = rank - 1 
+idw = rank - 1
 
 class EasyMuffin():
     def __init__(self,
@@ -54,7 +54,7 @@ class EasyMuffin():
                  dirty=[],
                  truesky=[],
                  psf=[]):
-        
+
         if idw > nbw:
             comm.MPI_Finalize()
 
@@ -96,23 +96,23 @@ class EasyMuffin():
         self.dirty=dirty
         self.var = var
         self.mu_wiener = mu_wiener
-        
+
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
-        
-        # Partitioning the frequency bands 
+
+        # Partitioning the frequency bands
         self.lst_nbf = optimal_split(self.nfreq,nbw)
         self.lst_nbf[0:0] = [self.nfreq]
         self.nf2 = self.lst_nbf[1:-1:1]
         self.nf2 = np.cumsum(self.nf2)
         self.nf2 = self.nf2.tolist()
         self.nf2[0:0] = [0]
-        
+
         if rank ==0:
             print('')
             print(self.lst_nbf)
             print(self.nf2)
-            
+
         nbsum = 0
         self.sendcounts = [0,]
         self.displacements = [0,]
@@ -121,7 +121,7 @@ class EasyMuffin():
             taille = self.nxy*self.nxy*self.lst_nbf[i+1]
             self.sendcounts.append(taille)
             nbsum+=taille
-            
+
         if nbw > self.nfreq:
             if rank==0:
                 print('----------------------------------------------------------------')
@@ -130,8 +130,8 @@ class EasyMuffin():
                 sys.exit()
             else:
                 sys.exit()
-                
-        
+
+
 
         self.init_algo()
 
@@ -148,13 +148,13 @@ class EasyMuffin():
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
 
-        # x initialization 
+        # x initialization
         if self.dirtyinit:
             self.x = self.dirtyinit
         else:
             self.x = init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener)
 
-        # initializing alg. variables 
+        # initializing alg. variables
         self.hth_fft = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.complex)
         self.fty = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
         self.psfadj_fft = myfft2(self.psfadj)
@@ -195,8 +195,8 @@ class EasyMuffin():
         self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
 
         self.nitertot = 0
-        
-        # Compute spatial and spectral scaling parameters 
+
+        # Compute spatial and spectral scaling parameters
         test = 1
         if test ==1:
             self.alpha_s = 1/(np.sum(np.sum(self.dirty**2,0),0)+1e-1) # col. vector
@@ -244,21 +244,21 @@ class EasyMuffin():
 
     def wmse(self):
         return (np.linalg.norm(conv(self.psf,self.truesky-self.x))**2)/(self.nxy*self.nxy*self.nfreq)
-        
+
     def mse(self):
         return (np.linalg.norm(self.truesky-self.x)**2)/(self.nxy*self.nxy*self.nfreq)
 
    #======================================================================
    # MAIN Iteration - EASY MUFFIN
    #======================================================================
-   
+
     def update(self):
 
         t = idct(self.v, axis=2, norm='ortho') # to check
         # compute gradient
         tmp = myifftshift( myifft2( myfft2(self.x) *self.hth_fft ) )
         Delta_freq = tmp.real- self.fty
-        
+
         for freq in range(self.nfreq):
             # compute iuwt adjoint
             wstu = self.Recomp(self.u[freq], self.nbw_recomp)
@@ -270,12 +270,12 @@ class EasyMuffin():
             for b in self.nbw_decomp:
                 self.utt[freq][b] = self.u[freq][b] + self.sigma*self.mu_s*self.alpha_s[freq]*tmp_spat_scal[b]
                 self.u[freq][b] = sat(self.utt[freq][b])
-        
+
         # update v
         self.vtt = self.v + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.xt - self.x, axis=2, norm='ortho')
         self.v = sat(self.vtt)
         self.x = self.xt.copy()
-        
+
         # compute cost snr, psnr, wmse if truesky given
         self.costlist.append(self.cost())
         if self.truesky.any():
@@ -292,7 +292,7 @@ class EasyMuffin():
         if nitermax< 1:
             print('nitermax must be a positive integer, nitermax=10')
             nitermax=10
-        
+
         # Iterations
         for niter in range(nitermax):
             self.update()
@@ -334,7 +334,7 @@ class EasyMuffinSURE(EasyMuffin):
                  dirty,
                  truesky,
                  psf)
-        
+
         self.step_mu = step_mu
 
 
@@ -373,15 +373,15 @@ class EasyMuffinSURE(EasyMuffin):
             self.mu_llist = []
             self.mu_llist.append(self.mu_l)
 
-            # fdmc variables 
+            # fdmc variables
             self.sugarfdmclist = {}
             self.sugarfdmclist[0] = [0]
             self.sugarfdmclist[1] = [0]
             np.random.seed(1)
             self.delta = np.random.randn(self.nxy,self.nxy,self.nfreq)
-            self.eps = 20*(self.var**0.5)*((self.nxy**2)**(-0.3)) # à verifier 
+            self.eps = 20*(self.var**0.5)*((self.nxy**2)**(-0.3)) # à verifier
             self.dirty2 = self.dirty + self.eps*self.delta
-            
+
             self.xt2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
             self.u2 = {}
             for freq in range(self.nfreq):
@@ -393,11 +393,11 @@ class EasyMuffinSURE(EasyMuffin):
                 self.x2 = init_dirty_wiener(self.dirty2, self.psf, self.psfadj, self.mu_wiener)
 
             self.v2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
-            
+
             self.fty2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
             tmp = myifftshift(myifft2(myfft2(self.dirty2)*self.psfadj_fft))
             self.fty2 = tmp.real
-            
+
             self.xtt2 = self.xtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.utt2 = {}
             for freq in range(self.nfreq):
@@ -405,28 +405,28 @@ class EasyMuffinSURE(EasyMuffin):
             self.vtt2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
             self.wmselistsurefdmc = []
             self.wmselistsurefdmc.append(self.wmsesurefdmc())
-            
+
             self.dv_s = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.dx_s = init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
             self.dxt_s = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.du_s = {}
             for freq in range(self.nfreq):
                 self.du_s[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
-                
+
             self.dv_l = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.dx_l = init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
             self.dxt_l = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.du_l = {}
             for freq in range(self.nfreq):
                 self.du_l[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
-                
+
             self.dv2_s = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.dx2_s = init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
             self.dxt2_s = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.du2_s = {}
             for freq in range(self.nfreq):
                 self.du2_s[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
-                
+
             self.dv2_l = np.zeros((self.nxy,self.nxy,self.nfreq))
             self.dx2_l = init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
             self.dxt2_l = np.zeros((self.nxy,self.nxy,self.nfreq))
@@ -444,9 +444,9 @@ class EasyMuffinSURE(EasyMuffin):
     def wmsesurefdmc(self):
         tmp = self.dirty - conv(self.x,self.psf)
         LS_cst = np.linalg.norm(tmp)**2
-        tmp = ((conv(self.x2,self.psf) - conv(self.x,self.psf))*self.delta)/self.eps              
+        tmp = ((conv(self.x2,self.psf) - conv(self.x,self.psf))*self.delta)/self.eps
         return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
-        
+
     def psnrsure(self):
         return 10*np.log10(self.psnrnum/self.wmsesure())
 
@@ -475,7 +475,7 @@ class EasyMuffinSURE(EasyMuffin):
         # psnrsure
         if self.truesky.any():
             self.psnrlistsure.append(self.psnrsure())
-        
+
         return self.wmselistsure[-1]
 
     def loop(self,nitermax=10):
@@ -522,11 +522,11 @@ class EasyMuffinSURE(EasyMuffin):
         # update v
         self.vtt2 = self.v2 + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.xt2 - self.x2, axis=2, norm='ortho')
         self.v2 = sat(self.vtt2)
-        self.x2 = self.xt2.copy()       
+        self.x2 = self.xt2.copy()
         self.wmselistsurefdmc.append(self.wmsesurefdmc())
 
     def dx_mu(self):
-        
+
         dt_s = idct(self.dv_s, axis=2, norm='ortho')
 
         # compute gradient
@@ -582,7 +582,7 @@ class EasyMuffinSURE(EasyMuffin):
 
         self.dx_l = self.dxt_l.copy()
 
-        
+
     def dx2_mu(self):
         dt_s = idct(self.dv2_s, axis=2, norm='ortho')
 
@@ -639,43 +639,43 @@ class EasyMuffinSURE(EasyMuffin):
         self.dv2_l = sat(self.vtt2)*dvtt2_l
 
         self.dx2_l = self.dxt2_l.copy()
-        
-        
+
+
     def sugarfdmc(self):
 
         tmp = 2*conv(self.psf,self.dx_s)*(conv(self.psf,self.x)-self.dirty) + 2*self.var*conv(self.psf,self.dx2_s-self.dx_s)*self.delta/self.eps
         res1 = np.sum(tmp)/(self.nxy*self.nxy)
-        
+
         tmp = 2*conv(self.psf,self.dx_l)*(conv(self.psf,self.x)-self.dirty) + 2*self.var*conv(self.psf,self.dx2_l-self.dx_l)*self.delta/self.eps
         res2 = np.sum(tmp)/(self.nxy*self.nxy)
-        
+
         self.sugarfdmclist[0].append(res1)
         self.sugarfdmclist[1].append(res2)
-        
+
     def loop_fdmc(self,nitermax=10):
-        
+
         if nitermax < 1:
             print('nitermax must be a positve integer, nitermax=10')
             nitermax=10
-            
+
         for niter in range(nitermax):
             self.mu_slist.append(self.mu_s)
             self.mu_llist.append(self.mu_l)
             super(EasyMuffinSURE,self).update()
             self.update_Jacobians()
-            
-            self.update2() # 
-            self.dx_mu() # 
-            self.dx2_mu() # 
+
+            self.update2() #
+            self.dx_mu() #
+            self.dx2_mu() #
             self.sugarfdmc()
-            
+
             if niter>1 and niter%10==0:
-                self.GradDes_mu(self.step_mu) 
+                self.GradDes_mu(self.step_mu)
                 if niter>1000 and niter%100==0:
                     self.step_mu = [tmp/1.2 for tmp in self.step_mu]
-                
+
             self.nitertot+=1
-            
+
             if self.truesky.any():
                 if (niter % 20) ==0:
                     print(str_cst_snr_wmse_wmsesure_mu_title.format('It.','Cost','SNR','WMSE','WMSES','mu_s','mu_l'))
@@ -688,4 +688,3 @@ class EasyMuffinSURE(EasyMuffin):
     def GradDes_mu(self,step=[1e-3,1e-3]):
         self.mu_s = np.maximum(self.mu_s - step[0]*self.sugarfdmclist[0][-1],0)
         self.mu_l = np.maximum(self.mu_l - step[1]*self.sugarfdmclist[1][-1],0)
-        
