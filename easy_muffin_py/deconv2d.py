@@ -652,11 +652,11 @@ class EasyMuffinSURE(EasyMuffin):
             if self.truesky.any():
                 if (niter % 20) ==0:
                     print(str_cst_snr_wmse_wmsesure_mu_title.format('It.','Cost','SNR','WMSE','WMSES','mu_s'))                    
-                print(str_cst_snr_wmse_wmsesure_mu.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1],self.mu_slist[-1]))
+                print(str_cst_snr_wmse_wmsesure_mu.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsurefdmc[-1],self.mu_slist[-1]))
             else:
                 if (niter % 20) ==0:
                     print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s'))                    
-                print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1]))
+                print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsurefdmc[-1],self.mu_slist[-1]))
                 
 
     def GradDesc_mus(self,step=1e-3):        
@@ -735,134 +735,3 @@ class EasyMuffinSURE(EasyMuffin):
     def set_mean_mu_s(self,niter=100):
         self.mu_s = np.mean(self.mu_slist[max(1,self.nitertot-niter)::])
             
-
-#class EasyMuffinSUREDescent(EasyMuffinSURE):
-#    
-#    def __init__(self,
-#                 mu_s = 0.5,
-#                 nb=(8,0),
-#                 tau = 1e-4,
-#                 sigma= 10,
-#                 var = 0, 
-#                 dirtyinit=[],
-#                 dirty=[],
-#                 truesky = [],
-#                 psf = []):
-#        
-#        super(EasyMuffinSUREDescent,self).__init__(
-#                mu_s,
-#                nb,
-#                tau,
-#                sigma,
-#                var,
-#                dirtyinit,
-#                dirty,
-#                truesky,
-#                psf)
-#        
-#    def init_algo(self):
-#        
-#        super(EasyMuffinSUREDescent,self).init_algo()
-#
-#        # init variables 
-#        self.dx_s = 0*init_dirty_wiener(self.n,self.psf,self.psfadj,5e1)
-#        self.dxt_s = np.zeros((self.nxy,self.nxy))
-#        self.du_s = {}
-#        self.du_s = self.Decomp(np.zeros((self.nxy,self.nxy)),self.nbw_decomp)
-#          
-#        self.dJv_s = np.zeros((self.nxy,self.nxy))
-#        self.dJx_s = 0*init_dirty_wiener(self.n,self.psf,self.psfadj,5e1)
-#        self.dJxt_s = np.zeros((self.nxy,self.nxy))
-#        self.dJu_s = {}
-#        self.dJu_s = self.Decomp(np.zeros((self.nxy,self.nxy)),self.nbw_decomp)
-#
-#    def mu_s_GradDescent(self,niter,stp=1e-2):
-#        stp = stp / np.sqrt(niter+1)
-#        GradPSURE_mu_s = self.dPSURE_mu_s()
-#        self.mu_s = np.maximum(self.mu_s - stp*GradPSURE_mu_s,0)
-#    
-#    def dPSURE_mu_s(self):
-#        dx_mu_s = self.dx_mu_s()
-#        dJ_mu_s = self.dJ_mu_s()
-#        
-#        tmp1 = conv(self.psf,self.x) - self.dirty 
-#        tmp2 = conv(self.psf,dx_mu_s)
-#        res1 = 2*np.sum(tmp1*tmp2)
-#        
-#        res2 = 2*self.sigma**2*np.sum(dJ_mu_s*self.Hn)
-#        
-#        #print(res1,' ',res2)
-#        return res1+res2
-#
-#    def dx_mu_s(self):
-#        
-#        # compute gradient
-#        tmp = myifftshift( myifft2( myfft2(self.dx_s) *self.hth_fft ) )
-#        Delta_freq = tmp.real #- self.fty
-#
-#        # compute iuwt adjoint
-#        wstu = self.Recomp(self.u, self.nbw_recomp) + self.mu_s*self.Recomp(self.du_s, self.nbw_recomp)
-#
-#        # compute xt
-#        dxtt_s = self.dx_s - self.tau*(Delta_freq + wstu )
-#        self.dxt_s = np.maximum(self.xtt, 0.0 )*dxtt_s
-#
-#        # update u
-#        tmp_spat_scal = self.Decomp((2*self.xt - self.x) + self.mu_s*(2*self.dxt_s - self.dx_s), self.nbw_decomp)
-#
-#
-#        for b in self.nbw_decomp:
-#            dutt_s = self.du_s[b] + self.sigma*tmp_spat_scal[b]
-#            self.du_s[b] = sat(self.utt[b])*dutt_s
-#                                            
-#        self.dx_s = self.dxt_s.copy()
-#        
-#        return self.dx_s
-#    
-#    def dJ_mu_s(self):
-#
-#        # compute gradient
-#        tmp = myifftshift( myifft2( myfft2(self.dJx_s) * self.hth_fft ) )
-#        dJDelta_freq_s = tmp.real #- self.Hn
-#
-#        # compute iuwt adjoint
-#        dJs_s = self.Recomp(self.Ju, self.nbw_recomp) + self.mu_s*self.Recomp(self.dJu_s, self.nbw_recomp)
-#
-#        # compute xt
-#        dJxtt_s = self.dJx_s - self.tau*(dJDelta_freq_s + dJs_s )
-#        self.dJxt_s = Heavy(self.xtt)*dJxtt_s
-#
-#        # update u
-#        tmp_spat_scal_J = self.Decomp(self.mu_s*(2*self.dJxt_s - self.dJx_s) + (2*self.Jxt - self.Jx) , self.nbw_decomp)
-#        for b in self.nbw_decomp:
-#            dJutt_s = self.dJu_s[b] + self.sigma*tmp_spat_scal_J[b]
-#            self.dJu_s[b] = Rect( self.utt[b] )*dJutt_s
-#
-#        self.dJx_s = self.dJxt_s.copy()
-#        
-#        return self.dJx_s
-#    
-#    def loop_desc(self,nitermax=10,change=True):
-#        
-#        if nitermax < 1:
-#            print('nitermax must be a positive integer, nitermax=10')
-#            nitermax=10
-#        
-#        self.mu_slist.append(self.mu_s)
-#        for niter in range(nitermax):
-#            super(EasyMuffinSUREDescent,self).update(change)
-#            self.update_Jacobians(change)
-#            self.mu_s_GradDescent(niter=niter)
-#            self.mu_slist.append(self.mu_s)
-#
-#            self.nitertot+=1
-#
-#            if self.truesky.any():
-#                if (niter % 20) ==0:
-#                    print(str_cst_snr_wmse_wmsesure_mu_title.format('It.','Cost','SNR','WMSE','WMSES','mu_s'))                    
-#                print(str_cst_snr_wmse_wmsesure_mu.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1],self.mu_slist[-1]))
-#            else:
-#                if (niter % 20) ==0:
-#                    print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s'))                    
-#                print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsure[-1],self.mu_slist[-1]))
-#                
