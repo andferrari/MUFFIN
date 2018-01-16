@@ -21,7 +21,7 @@ def checkdim(x):
         x = x.transpose((2, 1, 0))
     return x
 
-folder = 'data256'
+folder = 'data256Eusipco'
 file_in = 'M31_3d_conv_256_10db'
 
 folder = os.path.join(os.getcwd(), folder)
@@ -64,7 +64,7 @@ psf=CubePSF
 dirty=CubeDirty
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
-nitermax = 10
+nitermax = 500
 
 args = {'mu_s':mu_s,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var}
 
@@ -76,8 +76,10 @@ snr2 = EM.snrlist
 psnr2 = EM.psnrlist
 wmse2 = EM.wmselist
 
+step_mus = 10
+args = {'mu_s':mu_s,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,'step_mus':step_mus}
 EMs= EasyMuffinSURE(**args)
-EMs.loop(nitermax)
+EMs.loop_fdmc(nitermax)
 SpectralSkyModel3 = EMs.xt
 cost3 = EMs.costlist
 snr3 = EMs.snrlist
@@ -106,7 +108,13 @@ pl.figure()
 pl.plot(wmse2,label='wmse2')
 pl.plot(wmse3,label='wmse3')
 pl.plot(wmsesure3,'*',label='wmsesure3')
+pl.plot(EMs.wmselistsurefdmc,'o',label='wmsesurefdmc')
 pl.legend(loc='best')
+
+pl.figure()
+pl.plot(EMs.mu_slist,label='mus')
+pl.legend(loc='best')
+
 
 #%% ===========================================================================
 # Find best mu_s mu_l using greedy approach

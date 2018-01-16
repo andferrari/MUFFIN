@@ -33,7 +33,7 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-nbw = size - int(size/2)
+nbw = size - 1
 idw = rank - 1
 
 class EasyMuffin():

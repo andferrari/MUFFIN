@@ -12,7 +12,7 @@ Created on Fri Oct 28 10:08:49 2016
 import os
 import numpy as np
 from astropy.io import fits
-import pylab as pl
+import matplotlib.pyplot as pl
 import sys
 
 from mpi4py import MPI 

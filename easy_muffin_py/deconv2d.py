@@ -560,8 +560,7 @@ class EasyMuffinSURE(EasyMuffin):
 
         if change:
             self.x2 = xt_.copy()
-            if self.truesky.any():
-                self.wmselistsurefdmc.append(self.wmsesurefdmc())
+            self.wmselistsurefdmc.append(self.wmsesurefdmc())
         else:
             self.x22_ = xt_.copy()
             

@@ -11,12 +11,12 @@ Ceci est un script temporaire.
 
 import numpy as np
 from astropy.io import fits
-import pylab as pl
+import matplotlib.pyplot as pl
 from deconv3d_tools import conv 
 
 psfname = 'data_Mircea/dirty_images/PSF.fits'
-drtname = 'data_Mircea/dirty_images/Hoag_dirty.fits'
-skyname = 'data_Mircea/true_images/Hoag.fits'
+drtname = 'data_Mircea/dirty_images/M101_dirty.fits'
+skyname = 'data_Mircea/true_images/M101.fits'
 
 CubePSF = fits.getdata(psfname, ext=0)
 CubeDirty = fits.getdata(drtname, ext=0)
@@ -50,7 +50,7 @@ psf=CubePSF
 dirty=CubeDirty
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
-nitermax = 10
+nitermax = 300
 
 args = {'mu_s':mu_s,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var}
 
@@ -62,6 +62,9 @@ snr2 = EM.snrlist
 psnr2 = EM.psnrlist
 wmse2 = EM.wmselist
 
+
+step_mus = 10
+args = {'mu_s':mu_s,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,'step_mus':step_mus}
 EMs= EasyMuffinSURE(**args)
 EMs.loop_fdmc(nitermax)
 SpectralSkyModel3 = EMs.xt
@@ -71,6 +74,10 @@ psnr3 = EMs.psnrlist
 psnrsure3 = EMs.psnrlistsure
 wmse3 = EMs.wmselist
 wmsesure3 = EMs.wmselistsure
+
+err = np.mean((EMs.dirty - EMs.truesky)**2)
+psnr = 10*np.log10(EMs.truesky.max()**2/err), 10*np.log10(np.mean(EMs.truesky**2)/err) # PSNR + SNR
+
 
 pl.figure()
 pl.plot(snr2,label='snr2')
@@ -92,6 +99,10 @@ pl.figure()
 pl.plot(wmse2,label='wmse2')
 pl.plot(wmse3,label='wmse3')
 pl.plot(wmsesure3,'*',label='wmsesure3')
+pl.legend(loc='best')
+
+pl.figure()
+pl.plot(EMs.mu_slist,label='mus')
 pl.legend(loc='best')
 
 #%% ===========================================================================
