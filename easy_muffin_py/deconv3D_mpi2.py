@@ -38,7 +38,7 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-nbw = size - int(size)
+nbw = size
 idw = rank - 1
 
 class EasyMuffin():
@@ -158,8 +158,8 @@ class EasyMuffin():
             self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             
-            self.t = np.zeros((self.nxy,self.nxy,self.nfreq),dtype=np.float,order='F')
-            self.tf = np.zeros((0))
+            self.tf = np.zeros((self.nxy,self.nxy,self.nfreq),dtype=np.float,order='F')
+            self.t = np.zeros((0))
             
             self.deltaf = np.zeros((self.nxy,self.nxy,self.nfreq),dtype=np.float,order='F')
             self.delta = np.zeros((0))
@@ -231,7 +231,7 @@ class EasyMuffin():
                 self.Recomp = iuwt_decomp_adj ### adjoint pas recomp
                 self.nbw_decomp = [f for f in range(self.nb[0])]
                 self.nbw_recomp = self.nb[-1]
-                self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
+                #self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
                 print('')
                 print('IUWT: tau = ', self.tau)
                 print('')
@@ -240,7 +240,7 @@ class EasyMuffin():
                 self.Recomp = dwt_recomp
                 self.nbw_decomp =self.nb
                 self.nbw_recomp = self.nb
-                self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
+                #self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
                 print('')
                 print('DWT: tau = ', self.tau)
                 print('')
@@ -284,7 +284,6 @@ class EasyMuffin():
                 print('The snr initialization is ',self.snrlist[0])
                 print('')
 
-
     def cost(self):
         if not rank==0:
             """Compute cost for current iterate x"""
@@ -307,8 +306,6 @@ class EasyMuffin():
             return sum(cst_list)/(self.nxy*self.nxy*self.nfreq)
         else:
             return cst
-            
-        return (LS_cst + Spt_cst + Spc_cst)/(self.nxy*self.nxy*self.nfreq)
 
     def snr(self):
         if not rank==0:
@@ -335,7 +332,7 @@ class EasyMuffin():
         if rank==0:
             return 10*np.log10(self.psnrnum / (np.sum(rlist)/(self.nxy*self.nxy*self.nfreq)))
         else:
-            return 
+            return resid
 
     def wmse(self):
         if not rank == 0:
@@ -368,32 +365,43 @@ class EasyMuffin():
    #======================================================================
 
     def update(self):
+        
+        if rank ==0:
+            # rank 0 computes idct 
+            self.tf = np.asfortranarray(idct(self.v, axis=2, norm='ortho')) # to check
+            
+        comm.Scatterv([self.tf,self.sendcounts,self.displacements,MPI.DOUBLE],self.t,root=0)
 
-        t = idct(self.v, axis=2, norm='ortho') # to check
-        # compute gradient
-        tmp = myifftshift( myifft2( myfft2(self.x) *self.hth_fft ) )
-        Delta_freq = tmp.real- self.fty
+        if not rank==0:
+            # compute gradient
+            tmp = myifftshift( myifft2( myfft2(self.x) *self.hth_fft ) )
+            Delta_freq = tmp.real- self.fty
 
-        for freq in range(self.nfreq):
-            # compute iuwt adjoint
-            wstu = self.Recomp(self.u[freq], self.nbw_recomp)
-            # compute xt
-            self.xtt[:,:,freq] = self.x[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + self.mu_s*self.alpha_s[freq]*wstu + self.mu_l*self.alpha_l*t[:,:,freq])
-            self.xt[:,:,freq] = np.maximum(self.xtt[:,:,freq], 0.0 )
-            # update u
-            tmp_spat_scal = self.Decomp(2*self.xt[:,:,freq] - self.x[:,:,freq] , self.nbw_decomp)
-            for b in self.nbw_decomp:
-                self.utt[freq][b] = self.u[freq][b] + self.sigma*self.mu_s*self.alpha_s[freq]*tmp_spat_scal[b]
-                self.u[freq][b] = sat(self.utt[freq][b])
+            for freq in range(self.nfreq):
+                # compute iuwt adjoint
+                wstu = self.Recomp(self.u[freq], self.nbw_recomp)
+                # compute xt
+                self.xtt[:,:,freq] = self.x[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + self.mu_s*self.alpha_s[freq]*wstu + self.mu_l*self.alpha_l*self.t[:,:,freq])
+                self.xt[:,:,freq] = np.maximum(self.xtt[:,:,freq], 0.0 )
+                # update u
+                tmp_spat_scal = self.Decomp(2*self.xt[:,:,freq] - self.x[:,:,freq] , self.nbw_decomp)
+                for b in self.nbw_decomp:
+                    self.utt[freq][b] = self.u[freq][b] + self.sigma*self.mu_s*self.alpha_s[freq]*tmp_spat_scal[b]
+                    self.u[freq][b] = sat(self.utt[freq][b])
+                    
+            self.delta = np.asfortranarray(2*self.xt-self.x)
 
-        # update v
-        self.vtt = self.v + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.xt - self.x, axis=2, norm='ortho')
-        self.v = sat(self.vtt)
-        self.x = self.xt.copy()
+        comm.gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+
+        if rank==0:
+            # update v
+            self.vtt = self.v + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.xt - self.x, axis=2, norm='ortho')
+            self.v = sat(self.vtt)
+            self.x = self.xt.copy(order='F')
 
         # compute cost snr, psnr, wmse if truesky given
         self.costlist.append(self.cost())
-        if self.truesky.any():
+        if self.truesky is not None:
             self.snrlist.append(self.snr())
             self.psnrlist.append(self.psnr())
             self.wmselist.append(self.wmse())
@@ -405,20 +413,22 @@ class EasyMuffin():
     def loop(self,nitermax=10):
         """ main loop """
         if nitermax< 1:
-            print('nitermax must be a positive integer, nitermax=10')
+            if rank==0:
+                print('nitermax must be a positive integer, nitermax=10')
             nitermax=10
 
         # Iterations
         for niter in range(nitermax):
             self.update()
-            if self.truesky.any():
-                if (niter % 20) ==0:
-                    print(str_cst_snr_title.format('It.','Cost','SNR'))
-                print(str_cst_snr.format(niter,self.costlist[-1],self.snrlist[-1]))
-            else:
-                if (niter % 20) ==0:
-                    print(str_cost_title.format('It.','Cost'))
-                print(str_cost.format(niter,self.costlist[-1]))
+            if rank==0:
+                if self.truesky.any():
+                    if (niter % 20) ==0:
+                        print(str_cst_snr_title.format('It.','Cost','SNR'))
+                    print(str_cst_snr.format(niter,self.costlist[-1],self.snrlist[-1]))
+                else:
+                    if (niter % 20) ==0:
+                        print(str_cost_title.format('It.','Cost'))
+                    print(str_cost.format(niter,self.costlist[-1]))
 
 
 class EasyMuffinSURE(EasyMuffin):

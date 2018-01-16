@@ -47,46 +47,48 @@ from deconv2d import EasyMuffinSURE
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 #nb = (7,0)
-nitermax = 1000
+nitermax = 3000
 
 Noise = CubeDirty - conv(CubePSF,sky)
 var = np.sum(Noise**2)/Noise.size
 
 mu_s = 0.5
-EM= EasyMuffinSURE(mu_s=mu_s, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mus=0.5)
+EM= EasyMuffinSURE(mu_s=mu_s, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mus=1.5)
 EM.loop_fdmc(nitermax)
 
 mu_s = 0.1
-EM2= EasyMuffinSURE(mu_s=mu_s, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mus=0.5)
+EM2= EasyMuffinSURE(mu_s=mu_s, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mus=1.5)
 EM2.loop_fdmc(nitermax)
 
 mu_s = 1
-EM3= EasyMuffinSURE(mu_s=mu_s, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mus=0.5)
+EM3= EasyMuffinSURE(mu_s=mu_s, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mus=1.5)
 EM3.loop_fdmc(nitermax)
 
 
 pl.figure()
-pl.plot(EM.wmselist,label='wmse')
-pl.plot(EM.wmselistsure,'+',label='wmse sure')
-pl.plot(EM.wmselistsurefdmc,'*',label='wmse sure_fdmc')
+pl.plot(EM2.wmselist,label='wmse')
+pl.plot(EM2.wmselistsure,'+',label='wmse sure')
+pl.plot(EM2.wmselistsurefdmc,'*',label='wmse sure_fdmc')
 pl.legend()
 
 pl.figure()
-pl.plot(EM.sugarfdmclist,'-*',label='sugarfdmc')
-pl.plot(np.zeros(np.size(EM.sugarfdmclist)),label='0')
+pl.plot(EM2.sugarfdmclist,'-*',label='sugarfdmc')
+pl.plot(np.zeros(np.size(EM2.sugarfdmclist)),label='0')
 pl.legend()
 
 pl.figure()
-pl.plot(EM3.mu_slist)
-pl.plot(EM.mu_slist)
-pl.plot(EM2.mu_slist)
+pl.plot(EM2.mu_slist,label='2')
+pl.plot(EM3.mu_slist,label='3')
+pl.plot(EM.mu_slist,label='1')
+pl.legend()
 
 pl.figure()
-pl.plot(EM.costlist)
+pl.plot(EM2.costlist)
 
 pl.figure()
-pl.plot(EM.snrlist)
-
+pl.plot(EM2.snrlist,label='2')
+pl.plot(EM3.snrlist,label='3')
+pl.legend()
 
 #%% 
 
