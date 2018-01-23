@@ -394,7 +394,7 @@ class EasyMuffin():
             else:
                 return resid
         else:
-            return (np.linalg.norm(conv(self.psf,self.truesky-self.x2_))**2)/(self.nxy*self.nxy*self.nfreq) ########@
+            return (np.linalg.norm(conv(self.psf,self.truesky-self.x2_))**2)/(self.nxy*self.nxy*self.nfreq) ########@xt
 
 
     def mse(self):

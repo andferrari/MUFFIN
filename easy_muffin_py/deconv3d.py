@@ -136,7 +136,7 @@ class EasyMuffin():
             print('DWT: tau = ', self.tau)
             print('')
 
-            self.utt = {}
+        self.utt = {}
         for freq in range(self.nfreq):
             self.utt[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
         self.u = {}
@@ -148,7 +148,7 @@ class EasyMuffin():
         self.nitertot = 0
         
         # Compute spatial and spectral scaling parameters 
-        test = 1
+        test = 0
         if test ==1:
             self.alpha_s = 1/(np.sum(np.sum(self.dirty**2,0),0)+1e-1) # col. vector
             self.alpha_l = 1/(np.sum(self.dirty**2,2)+1e-1) # image
@@ -171,6 +171,8 @@ class EasyMuffin():
             self.snrlist.append(self.snr())
             self.psnrlist.append(self.psnr())
             self.wmselist.append(self.wmse())
+            print('The snr of the initialisation is ',self.snrlist[0])
+            print('')
 
     def cost(self):
         """Compute cost for current iterate x"""
@@ -396,7 +398,11 @@ class EasyMuffinSURE(EasyMuffin):
         tmp = self.dirty - conv(self.x,self.psf)
         LS_cst = np.linalg.norm(tmp)**2
         tmp = ((conv(self.x2,self.psf) - conv(self.x,self.psf))*self.delta)/self.eps              
-        return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
+        wmse = LS_cst - self.var*(self.nxy*self.nxy) + 2*self.var*np.sum(tmp)
+        
+#       return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
+
+        return wmse/(self.nxy*self.nxy*self.nfreq)
         
     def psnrsure(self):
         return 10*np.log10(self.psnrnum/self.wmsesure())
