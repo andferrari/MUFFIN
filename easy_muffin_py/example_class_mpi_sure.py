@@ -59,14 +59,15 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-import deconv3d_mpi as dcvMpi
+#import deconv3d_mpi as dcvMpi
+import deconv3D_mpi2 as dcvMpi
 
 import deconv3d as dcv
 
 #nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 nb=(7,0)
-nitermax = 3
-mu_s = 0.5
+nitermax = 20
+mu_s = 0.
 mu_l = 0.5
 
 if rank==0:

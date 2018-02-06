@@ -601,10 +601,10 @@ class EasyMuffinSURE(EasyMuffin):
     def sugarfdmc(self):
 
         tmp = 2*conv(self.psf,self.dx_s)*(conv(self.psf,self.x)-self.dirty) + 2*self.var*conv(self.psf,self.dx2_s-self.dx_s)*self.delta/self.eps
-        res1 = np.sum(tmp)/(self.nxy*self.nxy)
+        res1 = np.sum(tmp)/(self.nxy*self.nxy*self.nfreq)
         
         tmp = 2*conv(self.psf,self.dx_l)*(conv(self.psf,self.x)-self.dirty) + 2*self.var*conv(self.psf,self.dx2_l-self.dx_l)*self.delta/self.eps
-        res2 = np.sum(tmp)/(self.nxy*self.nxy)
+        res2 = np.sum(tmp)/(self.nxy*self.nxy*self.nfreq)
         
         self.sugarfdmclist[0].append(res1)
         self.sugarfdmclist[1].append(res2)
