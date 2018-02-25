@@ -195,13 +195,16 @@ if rank ==0:
     
 
 ## ==============================================================================
-## Print Figures
+#%% Print Figures
 ## ==============================================================================
 import matplotlib.pyplot as pl
 from matplotlib import cm
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
 
 daytime = '2018-01-29 14:50:52.277198'
+daytime = '2018-02-23 12:12:47.795495'
+daytime = '2018-02-22 18:20:25.570735'
 drctry = os.path.join(os.getcwd(),'output_Gradient/'+daytime)
 os.chdir(drctry)
 
@@ -212,6 +215,8 @@ wmsesurefdmc = np.load('wmsesurefdmc.npy')
 sugarfdmc0 = np.load('sugarfdmc0.npy')
 sugarfdmc1 = np.load('sugarfdmc1.npy')
 dRisk0 = np.load('dRisk0.npy')
+
+
 dRisk1 = np.load('dRisk1.npy')
 EMsugarfdmc0 = np.load('EMsugarfdmc0.npy')
 EMsugarfdmc1 = np.load('EMsugarfdmc1.npy')
@@ -232,6 +237,8 @@ sugarfdmc0_ = np.reshape(sugarfdmc0,(num,num))
 sugarfdmc1_ = np.reshape(sugarfdmc1,(num,num))
 
 snr_ = np.reshape(snr,(num,num))
+psnr_ = np.reshape(psnr,(num,num))
+
 #
 pl.figure()
 pl.plot(wmse,'*',label='wmse')
@@ -242,7 +249,7 @@ pl.legend()
 #
 fig = pl.figure()
 ax = fig.gca(projection='3d')
-surf = ax.plot_surface(mu_1, mu_2, wmse_, cmap=cm.coolwarm,linewidth=0, antialiased=False)
+surf = ax.plot_surface(mu_1, mu_2, wmse_, cmap=cm.nipy_spectral,linewidth=0, antialiased=False)
 fig.colorbar(surf, shrink=0.5, aspect=5)
 #ax.plot_wireframe(mu_1,mu_2 ,wmse_ )
 #ax.scatter(mu_1, mu_2, wmse_, c='r', marker='o')
@@ -250,6 +257,40 @@ ax.set_xlabel('mu_1')
 ax.set_ylabel('mu_2')
 ax.set_zlabel('wmse_')
 pl.show()
+
+fig = pl.figure()
+ax = fig.gca()
+im = ax.imshow(wmse_**0.01,cmap=cm.nipy_spectral)
+fig.colorbar(im)
+
+fig = pl.figure()
+ax = fig.gca()
+im = ax.imshow(snr_,cmap=cm.nipy_spectral)
+fig.colorbar(im)
+
+
+fig = pl.figure()
+ax = fig.gca(projection='3d')
+surf = ax.plot_surface(mu_1,mu_2,snr_,cmap=cm.nipy_spectral,linewidth=0,antialiased=False)
+fig.colorbar(surf,shrink=0.5,aspect=5)
+ax.set_xlabel('mu_1')
+ax.set_ylabel('mu_2')
+ax.set_zlabel('snr')
+pl.show()
+
+fig = pl.figure()
+ax = fig.gca(projection='3d')
+surf = ax.plot_surface(mu_1,mu_2,-psnr_,cmap=cm.nipy_spectral,linewidth=0,antialiased=False)
+fig.colorbar(surf,shrink=0.5,aspect=5)
+ax.set_xlabel('mu_1')
+ax.set_ylabel('mu_2')
+ax.set_zlabel('psnr')
+pl.show()
+
+fig = pl.figure()
+ax = fig.gca()
+im = ax.imshow(psnr_**2,cmap=cm.nipy_spectral)
+fig.colorbar(im)
 
 #
 fig = pl.figure()
@@ -263,6 +304,11 @@ ax.set_ylabel('mu_2')
 ax.set_zlabel('wmse_')
 pl.show()
 
+fig = pl.figure()
+ax = fig.gca()
+im = ax.imshow(wmsesurefdmc_**0.1,cmap=cm.nipy_spectral)
+fig.colorbar(im)
+
 #
 fig = pl.figure()
 ax = fig.gca(projection='3d')
@@ -274,6 +320,11 @@ ax.set_xlabel('mu_1')
 ax.set_ylabel('mu_2')
 ax.set_zlabel('wmse_')
 pl.show()
+
+fig = pl.figure()
+ax = fig.gca()
+im = ax.imshow(wmsesure_**0.1,cmap=cm.nipy_spectral)
+fig.colorbar(im)
 
 #
 fig = pl.figure()
@@ -287,6 +338,11 @@ ax.set_ylabel('mu_2')
 ax.set_zlabel('wmse_')
 pl.show()
 
+fig = pl.figure()
+ax = fig.gca()
+im = ax.imshow(dRisk0_,cmap=cm.nipy_spectral)
+fig.colorbar(im)
+
 #
 fig = pl.figure()
 ax = fig.gca(projection='3d')
@@ -298,6 +354,11 @@ ax.set_xlabel('mu_1')
 ax.set_ylabel('mu_2')
 ax.set_zlabel('wmse_')
 pl.show()
+
+fig = pl.figure()
+ax = fig.gca()
+im = ax.imshow(dRisk1_,cmap=cm.nipy_spectral)
+fig.colorbar(im)
 
 #
 fig = pl.figure()
@@ -311,6 +372,11 @@ ax.set_ylabel('mu_2')
 ax.set_zlabel('wmse_')
 pl.show()
 
+fig = pl.figure()
+ax = fig.gca()
+im = ax.imshow(sugarfdmc0_,cmap=cm.nipy_spectral)
+fig.colorbar(im)
+
 #
 fig = pl.figure()
 ax = fig.gca(projection='3d')
@@ -322,6 +388,11 @@ ax.set_xlabel('mu_1')
 ax.set_ylabel('mu_2')
 ax.set_zlabel('wmse_')
 pl.show()
+
+fig = pl.figure()
+ax = fig.gca()
+im = ax.imshow(sugarfdmc1_,cmap=cm.nipy_spectral)
+fig.colorbar(im)
 
 #
 fig = pl.figure()
@@ -336,7 +407,6 @@ ax.set_zlabel('wmse_')
 pl.show()
 
 
-
 pl.figure()
 pl.plot(EMsugarfdmc0,'-*',label='EMsugarfdmc0')
 pl.legend()
@@ -344,3 +414,6 @@ pl.legend()
 pl.figure()
 pl.plot(EMsugarfdmc1,'-*',label='EMsugarfdmc0')
 pl.legend()
+
+pl.figure()
+pl.plot(snr_)

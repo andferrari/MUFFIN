@@ -171,7 +171,7 @@ if rank ==0:
     
 
 ## ==============================================================================
-## Print Figures
+#%% Print Figures
 #### ==============================================================================
 import matplotlib.pyplot as pl 
 daytime = '2018-01-29 09:56:39.940328'
@@ -184,8 +184,10 @@ wmse = np.load('wmse.npy')
 wmsesure = np.load('wmsesure.npy')
 wmsesurefdmc = np.load('wmsesurefdmc.npy')
 sugarfdmc1 = np.load('sugarfdmc1.npy')
-dRisk = np.load('dRisk.npy')
+#dRisk = np.load('dRisk.npy')
 EMsugarfdmc1 = np.load('EMsugarfdmc1.npy')
+
+os.chdir('../..')
 
 pl.figure()
 pl.plot(Risk,label='Risk')

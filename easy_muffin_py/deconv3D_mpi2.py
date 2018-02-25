@@ -920,6 +920,9 @@ class EasyMuffinSURE(EasyMuffin):
             res1 = sum(res1_lst)/self.nfreq
             res2 = sum(res2_lst)/self.nfreq
             
+        res1 = comm.bcast(res1,root=0) # root bcasts res1 to everyone else
+        res2 = comm.bcast(res2,root=0) # root bcasts res2 to everyone else
+        
         self.sugarfdmclist[0].append(res1)
         self.sugarfdmclist[1].append(res2)
             
@@ -930,7 +933,7 @@ class EasyMuffinSURE(EasyMuffin):
             if rank==0:
                 print('nitermax must be a positve integer, nitermax=10')
             nitermax=10
-
+            
         for niter in range(nitermax):
             self.mu_slist.append(self.mu_s)
             self.mu_llist.append(self.mu_l)
@@ -941,11 +944,11 @@ class EasyMuffinSURE(EasyMuffin):
             self.dx_mu() #
             self.dx2_mu() #
             self.sugarfdmc()
-
-            if niter>1 and niter%50==0:
+            
+            if niter>1 and niter%30==0:
                 self.GradDes_mu(self.step_mu)
-                if niter>500 and niter%100==0:
-                    self.step_mu = [tmp/2 for tmp in self.step_mu]
+                if niter>4000 and niter%1000==0:
+                    self.step_mu = [tmp/1.1 for tmp in self.step_mu]
 
             self.nitertot+=1
 
@@ -963,4 +966,6 @@ class EasyMuffinSURE(EasyMuffin):
     def GradDes_mu(self,step=[1e-3,1e-3]):
         self.mu_s = np.maximum(self.mu_s - step[0]*self.sugarfdmclist[0][-1],0)
         self.mu_l = np.maximum(self.mu_l - step[1]*self.sugarfdmclist[1][-1],0)
+        
+        #print(rank,' ',self.mu_l)
 

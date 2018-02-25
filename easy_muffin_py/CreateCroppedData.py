@@ -34,12 +34,12 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 skyname = genname+'_sky.fits'
 
-CubePSF = 0*checkdim(fits.getdata(psfname, ext=0))[94:158,94:158,:]
-CubePSF[int(np.shape(CubePSF)[0]*0.5),int(np.shape(CubePSF)[1]*0.5)] = 1
+CubePSF = checkdim(fits.getdata(psfname, ext=0))[96:-96,96:-96,:]
+#CubePSF[int(np.shape(CubePSF)[0]*0.5),int(np.shape(CubePSF)[1]*0.5)] = 1
 
 sky = fits.getdata(skyname, ext=0) 
 sky = np.transpose(sky)
-sky = sky[94:158,94:158,:]
+sky = sky[110:110+64,130:130+64,:]
 
 # Create dirty image 
 CubeDirtyy = conv(CubePSF,sky)
@@ -56,13 +56,13 @@ snrr = 10*np.log10(Ps/Pb)
 
 # save data cubes as M31_3d_conv_256_10db_( psf.fits; dirty.fits; sky.fits)
 tmp = fits.PrimaryHDU(CubePSF)
-tmp.writeto('m31_3d_crpd2_10db_psf.fits')
+tmp.writeto('m31_3d_crpd3_10db_psf.fits')
 
 tmp = fits.PrimaryHDU(CubeDirtyy_10db)
-tmp.writeto('m31_3d_crpd2_10db_dirty.fits')
+tmp.writeto('m31_3d_crpd3_10db_dirty.fits')
 
 tmp = fits.PrimaryHDU(sky)
-tmp.writeto('m31_3d_crpd2_10db_sky.fits')
+tmp.writeto('m31_3d_crpd3_10db_sky.fits')
 
 pl.figure()
 pl.imshow(CubePSF[:,:,1])

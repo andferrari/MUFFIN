@@ -1,0 +1,13 @@
+
+
+mpirun --np 16  python3 Run_tst_mpi2.py 20 20000 1.5 12 0.7 10 m31_3d_crpd3_10db
+
+mpirun --np 16  python3 Run_tst_mpi2.py 20 20000 0.5 7 0.5 7 m31_3d_crpd3_10db
+
+mpirun --np 16  python3 Run_tst_mpi2.py 20 20000 1.5 7 1 10 m31_3d_crpd3_10db
+
+mpirun --np 16  python3 Run_tst_mpi2.py 20 20000 0.5 12 0.7 10 m31_3d_crpd3_10db
+
+mpirun --np 16  python3 Run_tst_mpi2.py 20 20000 0 0 0 0 m31_3d_crpd3_10db
+
+mpirun --np 16 python3 SUGARFDMC_CheckGradient3.py 20 1000 0 2 0 20 20 m31_3d_crpd3_10db
