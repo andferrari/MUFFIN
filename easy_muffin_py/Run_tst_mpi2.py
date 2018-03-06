@@ -88,6 +88,7 @@ def checkdim(x):
 
 folder = 'data'
 #folder = 'data256Eusipco'
+folder = 'data_david'
 file_in = data_suffix
 folder = os.path.join(os.getcwd(), folder)
 genname = os.path.join(folder, file_in)
