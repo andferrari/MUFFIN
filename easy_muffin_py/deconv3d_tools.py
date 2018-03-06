@@ -23,6 +23,16 @@ def compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp):
     tau = tau
     return tau
 
+def compute_tau_DWT_I(psf,mu_s,mu_l,sigma,nbw_decomp):
+
+    beta = np.max(abs2(myfft2(psf)))
+
+    #print('nbw_decomp=',len(nbw_decomp))
+
+    tau = 0.9/(beta/2  + sigma*(mu_s**2)*(len(nbw_decomp) +1) + sigma*(mu_l**2))
+    tau = tau
+    return tau
+
 def compute_tau_2D(psf,mu_s,sigma,nbw_decomp):
 
     beta = np.max(abs2(myfft2(psf)))
@@ -153,6 +163,41 @@ def dwt_decomp(x_im, DWT_list, level = 1.):
 
 	return res
 
+def dwt_I_recomp(wt_coeffs, DWT_list, level = 1.):
+	"""This function computes the inverse disctrete wavelet transform on a union of wavelet basis.
+		wt_coeff : matrix of decompostion coefficients (approximation and details in two columns).
+		signal_length = length of the original signal we want retrieve.
+		DWT_list : list of the used wavelet's name."""
+	N2 =  wt_coeffs[DWT_list[0]].shape[0] #image is supposed to be square
+	res = np.zeros((N2,N2))
+	tmp = list(DWT_list)
+	tmp.remove('I')
+	DWT_list=tuple(tmp)
+	for i in DWT_list:
+		ima_dec = wt_coeffs[i]
+		level = pywt.dwt_max_level(N2, pywt.Wavelet(i)) ## modif 04-04-17
+		wt_coeffs_2D = organize_dwt_coeff(ima_dec, level)
+		ima_rec = pywt.waverec2(wt_coeffs_2D, i, 'per')
+		res = res + ima_rec
+	res = res + wt_coeffs['I'] ##
+	return res
+
+def dwt_I_decomp(x_im, DWT_list, level = 1.):
+	"""This function computes the disctrete wavelet transform on a union of wavelet basis.
+		x = signal to be decomposed.
+		DWT_list : list of the used wavelet's name."""
+	res = {}
+	(N1, N2) = np.shape(x_im)
+	tmp = list(DWT_list)
+	tmp.remove('I')
+	DWT_list=tuple(tmp)
+	for i in DWT_list:
+		coeffs = pywt.wavedec2(x_im, i, 'per', level = None)## modif 04-04-17
+		level = pywt.dwt_max_level(N2, pywt.Wavelet(i)) ## modif 04-04-17
+		ima_dec = lecture_dwt_coeff(coeffs, level, N2, N2)
+		res[i] = ima_dec
+	res['I'] = x_im ##
+	return res
 
 def lecture_dwt_coeff(coeff, level, LI, COL) :
 	""" This function reorganizes as an image the DWT coefficients with the following structure : [cAn, (cHn, cVn, cDn), ..., (cH1, cV1, cD1)] which is compatible with the pywt functions."""

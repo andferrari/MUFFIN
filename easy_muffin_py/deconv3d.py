@@ -10,7 +10,7 @@ from scipy.fftpack import dct,idct
 
 from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heavy, Rect
 from deconv3d_tools import myfft2, myifft2, myifftshift, conv
-from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp
+from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp, dwt_I_decomp, dwt_I_recomp
 
 str_cost="| {:5d} | {:6.6e} |"
 str_cost_title="| {:5s} | {:12s} |\n"+"-"*24
@@ -125,6 +125,15 @@ class EasyMuffin():
             self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
             print('')
             print('IUWT: tau = ', self.tau)
+            print('')
+        elif self.nb[-1] == 'I':
+            self.Decomp = dwt_I_decomp
+            self.Recomp = dwt_I_recomp
+            self.nbw_decomp = self.nb
+            self.nbw_recomp = self.nb
+            self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
+            print('')
+            print('DWT+I: tau = ', self.tau)
             print('')
         else:
             self.Decomp = dwt_decomp
