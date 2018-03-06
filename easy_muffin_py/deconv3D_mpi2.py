@@ -136,7 +136,7 @@ class EasyMuffin():
         
         # fdmc variables
         #self.eps = 20*(self.var**0.5)*((self.nxy**2)**(-0.3)) # à verifier
-        self.eps = 20*(self.var**0.5)*((self.nxy**2)**(-0.3)) # à verifier
+        self.eps = 4*(self.var**0.5)*((self.nxy**2)**(-0.3)) # à verifier
         np.random.seed(1)
         
         self.DeltaSURE = np.random.randn(self.nxy,self.nxy,self.nfreq)
