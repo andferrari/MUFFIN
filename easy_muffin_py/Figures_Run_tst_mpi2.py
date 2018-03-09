@@ -264,6 +264,43 @@ daytime = '2018-03-02 15:55:07.720597'
 daytime = '2018-03-02 16:14:23.147426'
 
 daytime = '2018-03-02 16:33:24.904321'
+daytime = '2018-03-02 17:04:59.523706'
+
+daytime = '2018-03-02 17:36:41.902884'
+daytime = '2018-03-02 18:09:42.153320'
+
+daytime = '2018-03-06 13:55:02.523390' # Data david ss 
+daytime = '2018-03-06 14:04:19.147305' # avec I 
+daytime = '2018-03-06 14:11:11.349655' # avec 
+daytime = '2018-03-06 14:15:17.756256' # ss I 
+daytime = '2018-03-06 14:27:14.082844' #
+daytime = '2018-03-06 15:10:31.527168' #
+daytime = '2018-03-06 15:33:59.993596' #
+daytime = '2018-03-06 15:53:01.492861' #
+daytime = '2018-03-06 16:23:43.353712' #
+
+daytime = '2018-03-07 17:24:20.397566'
+daytime = '2018-03-07 17:31:15.247129'
+
+daytime = '2018-03-07 17:33:54.128476'
+daytime = '2018-03-07 17:35:29.114988'
+daytime = '2018-03-07 17:51:17.291532'
+
+daytime = '2018-03-07 17:53:15.769294'
+daytime = '2018-03-07 17:56:21.445224'
+daytime = '2018-03-08 08:27:11.748521'
+
+daytime = '2018-03-08 08:30:32.256810'
+daytime = '2018-03-08 09:06:23.028689'
+daytime = '2018-03-08 09:24:20.556304'
+daytime = '2018-03-08 09:40:16.786267'
+daytime = '2018-03-08 09:51:30.028312'
+
+daytime = '2018-03-08 10:07:44.761006'
+daytime = '2018-03-08 10:20:11.099635'
+daytime = '2018-03-08 10:30:14.384150'
+
+daytime = '2018-03-08 15:30:35.768490'
 
 #%% 
 pl.close('all')
@@ -286,6 +323,20 @@ psnr = np.load('psnrsure.npy')
 #psnrsure=np.load('psnrsure.npy')
 
 os.chdir('../..')
+
+pl.figure()
+pl.plot(x0_tst[5,12,:])
+pl.plot(sky[5,12,:])
+#pl.plot(CubeDirty[5,12,:])
+
+pl.figure()
+pl.plot(x0_tst[12,12,:])
+pl.plot(sky[12,12,:])
+
+pl.figure()
+pl.plot(x0_tst[20,20,:])
+pl.plot(sky[20,20,:])
+#pl.plot(CubeDirty[20,20,:])
 
 pl.figure()
 pl.imshow(x0_tst[:,:,0],cmap='nipy_spectral')
@@ -821,3 +872,97 @@ for sugar in sugar1_:
 pl.plot(0*sugar[1:])
 pl.title('sugar1')
 pl.legend()
+
+#%% test with diff N_dct and mu_l
+from astropy.io import fits
+
+pl.close('all')
+daytime = []
+daytime.append('2018-03-08 14:18:22.684201') #  
+daytime.append('2018-03-08 14:27:08.605860') # 
+daytime.append('2018-03-08 14:36:16.661912') #  
+
+daytime.append('2018-03-08 14:45:14.516551') #  
+daytime.append('2018-03-08 14:54:12.971718') #  
+daytime.append('2018-03-08 15:03:21.921573') #  
+
+daytime.append('2018-03-08 15:12:12.879262') #  
+daytime.append('2018-03-08 15:21:16.090804') #  
+daytime.append('2018-03-08 15:30:35.768490') #  
+
+def checkdim(x):
+    if len(x.shape) == 4:
+        x = np.squeeze(x)
+        x = x.transpose((2, 1, 0))
+    return x
+
+folder = 'data_david'
+file_in = 'M31_skyline2_20db'
+folder = os.path.join(os.getcwd(), folder)
+genname = os.path.join(folder, file_in)
+skyname = genname+'_sky.fits'
+sky = checkdim(fits.getdata(skyname, ext=0))
+    
+spc1_ = []
+spc2_ = []
+snr_ = []
+spc3_ = []
+for day in daytime :
+    drctry = os.path.join(os.getcwd(),'output/'+day)
+    os.chdir(drctry)
+    tmp = np.load('x0_tst.npy')
+    spc1_.append(tmp[5,12,:])
+    spc2_.append(tmp[20,20,:])
+    spc3_.append(tmp[12,12,:])
+    snr_.append(np.load('snr_tst.npy'))
+    os.chdir('../..')
+
+ndct_ = [5,50,256]
+mul_ = [5,10,500]
+
+pl.figure()
+cnt = 0
+plt = 331
+for ndct in ndct_:
+    for mul in mul_:
+        pl.subplot(plt)
+        pl.plot(sky[5,12,:])
+        pl.plot(spc1_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        plt+=1
+        pl.legend()
+
+pl.figure()
+cnt = 0
+plt = 331
+for ndct in ndct_:
+    for mul in mul_:
+        pl.subplot(plt)
+        pl.plot(sky[20,20,:])
+        pl.plot(spc2_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        plt+=1
+        pl.legend()
+
+pl.figure()
+plt = 331
+cnt = 0
+for ndct in ndct_:
+    for mul in mul_:
+        pl.subplot(plt)
+        pl.plot(sky[12,12,:])
+        pl.plot(spc3_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        plt+=1
+        pl.legend()
+        
+pl.figure()        
+cnt = 0
+for ndct in ndct_:
+    for mul in mul_:
+        pl.plot(snr_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        pl.legend()
+
+
+

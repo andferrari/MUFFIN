@@ -6,7 +6,10 @@ Created on Fri Dec 15 10:05:32 2017
 @author: rammanouil
 """
 import numpy as np
-from scipy.fftpack import dct,idct
+#from scipy.fftpack import dct,idct
+
+from scipy.fftpack import idct
+from deconv3d_tools import dctt 
 
 from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heavy, Rect
 from deconv3d_tools import myfft2, myifft2, myifftshift, conv, optimal_split
@@ -52,7 +55,8 @@ class EasyMuffin():
                  dirtyinit=[],
                  dirty=[],
                  truesky=[],
-                 psf=[]):
+                 psf=[],
+                 N_dct=-1):
 
         if idw > nbw:
             comm.MPI_Finalize()
@@ -98,6 +102,11 @@ class EasyMuffin():
 
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
+        
+        if N_dct < 0:
+            self.N_dct = self.psf.shape[2]
+        else:
+            self.N_dct = N_dct
 
         # Partitioning the frequency bands
         self.lst_nbf = optimal_split(self.nfreq,nbw)
@@ -111,6 +120,7 @@ class EasyMuffin():
             print('')
             print(self.lst_nbf)
             print(self.nf2)
+            print('N_dct :',self.N_dct)
 
         nbsum = 0
         self.sendcounts = [0,]
@@ -252,6 +262,15 @@ class EasyMuffin():
                 #print('')
                 #print('IUWT: tau = ', self.tau)
                 #print('')
+            elif self.nb[-1] == 'I':
+                self.Decomp = dwt_I_decomp
+                self.Recomp = dwt_I_recomp
+                self.nbw_decomp = self.nb
+                self.nbw_recomp = self.nb
+                #self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
+                #print('')
+                #print('DWT+I: tau = ', self.tau)
+                #print('')
             else:
                 self.Decomp = dwt_decomp
                 self.Recomp = dwt_recomp
@@ -317,7 +336,7 @@ class EasyMuffin():
             Spt_cst = self.mu_s*tmp
             cst = Spt_cst + LS_cst
         else:
-            Spc_cst = self.mu_l*np.sum(np.abs(dct(self.xf*self.alpha_l[...,None],axis=2,norm='ortho')))
+            Spc_cst = self.mu_l*np.sum(np.abs(dctt(self.xf*self.alpha_l[...,None],axis=2,norm='ortho',N=self.N_dct)))
             cst = Spc_cst
             
         cst_list = comm.gather(cst)
@@ -416,7 +435,7 @@ class EasyMuffin():
 
         if rank==0:
             # update v
-            self.vtt = self.v + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
+            self.vtt = self.v + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct)
             self.v = sat(self.vtt)
         else:
             self.x = self.xt.copy(order='F')
@@ -470,7 +489,8 @@ class EasyMuffinSURE(EasyMuffin):
                  dirty=[],
                  truesky=[],
                  psf=[],
-                 step_mu = [0,0]):
+                 step_mu = [0,0],
+                 N_dct=-1):
         
         self.step_mu = step_mu
 
@@ -485,7 +505,8 @@ class EasyMuffinSURE(EasyMuffin):
                  dirtyinit,
                  dirty,
                  truesky,
-                 psf)
+                 psf,
+                 N_dct)
 
 
     def init_algo(self):
@@ -701,7 +722,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
-            Jvtt = self.Jv + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
+            Jvtt = self.Jv + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct)
             self.Jv = Rect(self.vtt)*Jvtt
         else:
             self.Jx = self.Jxt.copy(order='F')
@@ -767,7 +788,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
-            self.vtt2 = self.v2 + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
+            self.vtt2 = self.v2 + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct)
             self.v2 = sat(self.vtt2)
         else:
             self.x2 = self.xt2.copy(order='F')    
@@ -807,7 +828,7 @@ class EasyMuffinSURE(EasyMuffin):
 
         if rank==0:
             # update v
-            dvtt_s = self.dv_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
+            dvtt_s = self.dv_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct)
             self.dv_s = Rect(self.vtt)*dvtt_s
         else:
             self.dx_s = self.dxt_s.copy(order='F')
@@ -842,7 +863,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
-            dvtt_l = self.dv_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho') + self.sigma*self.alpha_l[...,None]*dct(2*self.xtf - self.xf, axis=2, norm='ortho')
+            dvtt_l = self.dv_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct) + self.sigma*self.alpha_l[...,None]*dctt(2*self.xtf - self.xf, axis=2, norm='ortho',N=self.N_dct)
             self.dv_l = Rect(self.vtt)*dvtt_l
         else:
             self.dx_l = self.dxt_l.copy(order='F')
@@ -876,7 +897,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
-            dvtt2_s = self.dv2_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
+            dvtt2_s = self.dv2_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct)
             self.dv2_s = Rect(self.vtt2)*dvtt2_s
         else:
             self.dx2_s = self.dxt2_s.copy(order='F')
@@ -906,7 +927,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
-            dvtt2_l = self.dv2_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho') + self.sigma*self.alpha_l[...,None]*dct(2*self.xt2f - self.x2f, axis=2, norm='ortho')
+            dvtt2_l = self.dv2_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct) + self.sigma*self.alpha_l[...,None]*dctt(2*self.xt2f - self.x2f, axis=2, norm='ortho',N=self.N_dct)
             self.dv2_l = Rect(self.vtt2)*dvtt2_l
         else:
             self.dx2_l = self.dxt2_l.copy(order='F')

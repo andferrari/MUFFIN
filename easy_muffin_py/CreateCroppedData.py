@@ -33,12 +33,12 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 skyname = genname+'_sky.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))[128-16:128+16,128-16:128+16,-50:-1]
+CubePSF = checkdim(fits.getdata(psfname, ext=0))[128-16:128+16,128-16:128+16,:]
 #CubePSF[int(np.shape(CubePSF)[0]*0.5),int(np.shape(CubePSF)[1]*0.5)] = 1
 
 sky = fits.getdata(skyname, ext=0) 
 sky = np.transpose(sky)
-sky = sky[116:148,140:172,-50:-1]
+sky = sky[116:148,140:172,:]
 
 # Create dirty image 
 CubeDirtyy = conv(CubePSF,sky)

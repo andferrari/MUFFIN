@@ -9,6 +9,7 @@ Created on Thu Feb  2 16:42:26 2017
 import numpy as np
 from numpy.fft import fft2, ifft2, ifftshift
 import pywt
+from scipy.fftpack import dct 
 
 #==============================================================================
 # Compute tau
@@ -39,6 +40,11 @@ def compute_tau_2D(psf,mu_s,sigma,nbw_decomp):
     tau = 0.9/(beta/2  + sigma*(mu_s**2)*len(nbw_decomp))
     tau = tau
     return tau
+
+def dctt(x,axis=2,norm='ortho',N=5):
+    tmp = dct(x, axis=axis, norm=norm)
+    tmp[:,:,N:] = 0
+    return tmp 
 
 #==============================================================================
 # tools for Jacobians comp.
