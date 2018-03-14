@@ -9,7 +9,8 @@ Created on Thu Feb  2 16:42:26 2017
 import numpy as np
 from numpy.fft import fft2, ifft2, ifftshift
 import pywt
-from scipy.fftpack import dct 
+from scipy.fftpack import dct
+from scipy.fftpack import idct as idctt
 
 #==============================================================================
 # Compute tau
@@ -41,9 +42,22 @@ def compute_tau_2D(psf,mu_s,sigma,nbw_decomp):
     tau = tau
     return tau
 
-def dctt(x,axis=2,norm='ortho',N=5):
-    tmp = dct(x, axis=axis, norm=norm)
-    tmp[:,:,N:] = 0
+#def dctt(x,axis=2,norm='ortho',N=5):
+#    tmp = dct(x, axis=axis, norm=norm)
+#    tmp[:,:,:N] = 0
+#    return tmp 
+
+def dctt(x,axis=2,norm='ortho',N=0):
+    tmp1 = dct(x, axis=axis, norm=norm)
+    tmp2 = N*x
+    tmp = np.append(tmp1,tmp2,axis=2)
+    return tmp 
+
+def idct(coef,axis=2,norm='ortho',N=0):
+    L = coef.shape[2]
+    tmp1 = idctt(coef[:,:,:int(L/2)], axis=axis, norm=norm)
+    tmp2 = N*coef[:,:,int(L/2):]
+    tmp = tmp1+tmp2
     return tmp 
 
 #==============================================================================

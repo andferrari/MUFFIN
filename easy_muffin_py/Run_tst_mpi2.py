@@ -105,7 +105,9 @@ CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:L]
 skyname = genname+'_sky.fits'
 
 if os.path.isfile(skyname):
+    
     if rank==0:
+        print(data_suffix)
         print('')
         print('estimating variance')
         

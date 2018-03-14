@@ -45,7 +45,7 @@ CubeDirtyy = conv(CubePSF,sky)
 CubeDirtyy = CubeDirtyy.real
 
 # Add noise 
-snr = 20
+snr = 50
 var = (np.sum(CubeDirtyy**2)/CubeDirtyy.size)/(10**(snr/10))
 noise = np.random.normal(0,var**.5,np.shape(CubeDirtyy))
 CubeDirtyy_10db = CubeDirtyy + noise 

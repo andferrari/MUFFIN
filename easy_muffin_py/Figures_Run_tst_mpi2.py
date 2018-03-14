@@ -302,8 +302,58 @@ daytime = '2018-03-08 10:30:14.384150'
 
 daytime = '2018-03-08 15:30:35.768490'
 
+daytime = '2018-03-09 11:03:03.474305'
+daytime = '2018-03-09 11:16:43.746557' # good example 
+
+daytime = '2018-03-09 16:39:12.090695'
+
+daytime = '2018-03-12 09:49:17.640110'
+daytime = '2018-03-12 09:59:24.323424'
+
+daytime = '2018-03-12 10:24:19.855358'
+
+daytime = '2018-03-12 11:04:00.441166' # avec I 
+daytime = '2018-03-12 11:40:18.688655' # ss I 
+
+daytime = '2018-03-12 12:00:08.054163' #  dct 30 
+daytime = '2018-03-12 13:13:09.783148' #  dct + I 30 
+daytime = '2018-03-12 12:43:49.692976' #  snr 50 
+
+daytime = '2018-03-12 15:14:36.623128' # dct - snr 30 mu_l 1 
+daytime = '2018-03-12 15:34:41.172984' # dct + I _ snr 30 mu_l 1  
+daytime = '2018-03-12 15:56:54.007417' # dct - snr 50 mu_l 1 
+daytime = '2018-03-12 16:19:39.751469' # dct - snr 30 mu_l adapt
+daytime = '2018-03-12 16:39:53.455804' # dct + I - snr 30 mu_l adapt
+daytime = '2018-03-12 17:02:13.565398' # dct - snr 50 mu_l adapt 
+
+daytime = '2018-03-13 12:08:59.243499' # alpha ss ADAPT 
+daytime = '2018-03-13 12:40:02.927516' # alpha ADAP 
+daytime = '2018-03-13 13:45:14.743660'
+
+daytime = '2018-03-13 13:49:58.254331'
+label = 'alpha - ADAPT'
+
+daytime = '2018-03-14 10:52:55.299586'
+label = 'alpha_s - ADAPT'
+
 #%% 
-pl.close('all')
+from astropy.io import fits
+def checkdim(x):
+    if len(x.shape) == 4:
+        x = np.squeeze(x)
+        x = x.transpose((2, 1, 0))
+    return x
+
+folder = 'data_david'
+file_in = 'M31_skyline2_50db'
+folder = os.path.join(os.getcwd(), folder)
+genname = os.path.join(folder, file_in)
+skyname = genname+'_sky.fits'
+sky = checkdim(fits.getdata(skyname, ext=0))
+dirtyname = genname+'_dirty.fits'
+CubeDirty = checkdim(fits.getdata(dirtyname, ext=0))
+
+#pl.close('all')
 drctry = os.path.join(os.getcwd(),'output/'+daytime)
 os.chdir(drctry)
 
@@ -324,29 +374,71 @@ psnr = np.load('psnrsure.npy')
 
 os.chdir('../..')
 
-pl.figure()
-pl.plot(x0_tst[5,12,:])
+pl.figure(1)
+
+pl.subplot(2,4,1)
+pl.plot(x0_tst[5,12,:],label=label)
 pl.plot(sky[5,12,:])
 #pl.plot(CubeDirty[5,12,:])
+pl.title('Spectre 1')
 
-pl.figure()
-pl.plot(x0_tst[12,12,:])
+pl.subplot(2,4,2)
+pl.plot(x0_tst[12,12,:],label=label)
 pl.plot(sky[12,12,:])
+pl.title('Spectre 2')
 
-pl.figure()
-pl.plot(x0_tst[20,20,:])
+pl.subplot(2,4,3)
+pl.plot(x0_tst[20,20,:],label=label)
 pl.plot(sky[20,20,:])
-#pl.plot(CubeDirty[20,20,:])
+pl.title('Spectre 3')
+
+N = snr_tst.size 
+pl.subplot(2,4,4)
+pl.plot(snr_tst[:N],label=label)
+pl.legend()
+pl.title('SNR')
+
+pl.subplot(2,4,5)
+pl.plot(psnr[:N],label=label)
+pl.legend()
+pl.title('PSNR')
+
+
+pl.subplot(2,4,6)
+pl.plot(mu_s_tst[:N],label=label)
+pl.legend()
+pl.title('mu_s')
+
+pl.subplot(2,4,7)
+pl.plot(mu_l_tst[:N],label=label)
+pl.legend()
+pl.title('mu_l')
+
+pl.subplot(2,4,8)
+pl.plot(wmse_tst,label='wmse')
+pl.plot(wmses_tst,'-*',label='wmses')
+pl.plot(wmsesfdmc_tst,'-^',label='wmses_fdmc')
+pl.legend()
+pl.title('wmse')
+
+#%%pl.plot(CubeDirty[20,20,:])
 
 pl.figure()
-pl.imshow(x0_tst[:,:,0],cmap='nipy_spectral')
+pl.imshow(x0_tst[:,:,235])
 pl.colorbar()
 
 pl.figure()
-pl.plot(wmse_tst,label='wmse_tst')
-pl.plot(wmses_tst,'-*',label='wmses_tst')
-pl.plot(wmsesfdmc_tst,'-^',label='wmses_fdmctst')
-pl.legend()
+pl.imshow(sky[:,:,235])
+pl.colorbar()
+
+pl.figure(1)
+for i in range(60):
+    pl.clf()
+    pl.plot(x0_tst[i,1,:],label='Spectre_{:01d}'.format(i))
+    pl.plot(sky[i,1,:])
+    pl.legend()
+    pl.ylim((x0_tst.min(),x0_tst.max()))
+    pl.savefig('temp_{:03d}.png'.format(i))
 
 N = snr_tst.size 
 pl.figure()
@@ -375,13 +467,6 @@ pl.figure()
 pl.plot(psnr)
 pl.title('psnr')
 
-pl.figure()
-pl.plot(mu_s_tst[:N],label='mu_s')
-pl.legend()
-
-pl.figure()
-pl.plot(mu_l_tst[:N],label='mu_l')
-pl.legend()
 
 #%%#
 
@@ -875,6 +960,7 @@ pl.legend()
 
 #%% test with diff N_dct and mu_l
 from astropy.io import fits
+from scipy.fftpack import dct, idct 
 
 pl.close('all')
 daytime = []
@@ -907,15 +993,22 @@ spc1_ = []
 spc2_ = []
 snr_ = []
 spc3_ = []
+cnt = 0
+n = [5,5,5,50,50,50,256,256,256]
 for day in daytime :
     drctry = os.path.join(os.getcwd(),'output/'+day)
     os.chdir(drctry)
-    tmp = np.load('x0_tst.npy')
-    spc1_.append(tmp[5,12,:])
-    spc2_.append(tmp[20,20,:])
-    spc3_.append(tmp[12,12,:])
+    x0 = np.load('x0_tst.npy')
+    tmp = dct(x0,axis=2,norm='ortho')
+    tmp[:,:,n[cnt]:] = 0
+    x = idct(tmp,axis=2,norm='ortho')
+    spc1_.append(x[5,12,:])
+    spc2_.append(x[20,20,:])
+    spc3_.append(x[12,12,:])
     snr_.append(np.load('snr_tst.npy'))
+    cnt+=1
     os.chdir('../..')
+    
 
 ndct_ = [5,50,256]
 mul_ = [5,10,500]
@@ -965,4 +1058,213 @@ for ndct in ndct_:
         pl.legend()
 
 
+#%% test with diff N_dct and mu_l
+from astropy.io import fits
+from scipy.fftpack import dct, idct 
+
+pl.close('all')
+daytime = []
+daytime.append('2018-03-09 13:24:32.788107') #  
+daytime.append('2018-03-09 13:15:43.589722') # 
+daytime.append('2018-03-09 13:06:43.116365') #  
+daytime.append('2018-03-09 12:57:45.793014') #
+
+daytime.append('2018-03-09 12:48:36.394874') #  
+daytime.append('2018-03-09 12:39:24.875675') #  
+daytime.append('2018-03-09 12:30:34.369622') #  
+daytime.append('2018-03-09 12:21:43.486671') #
+
+daytime.append('2018-03-09 12:12:45.221571') #  
+daytime.append('2018-03-09 12:03:45.689765') #  
+daytime.append('2018-03-09 11:54:56.662672') #  
+daytime.append('2018-03-09 11:46:12.250428') #
+
+def checkdim(x):
+    if len(x.shape) == 4:
+        x = np.squeeze(x)
+        x = x.transpose((2, 1, 0))
+    return x
+
+folder = 'data_david'
+file_in = 'M31_skyline2_20db'
+folder = os.path.join(os.getcwd(), folder)
+genname = os.path.join(folder, file_in)
+skyname = genname+'_sky.fits'
+sky = checkdim(fits.getdata(skyname, ext=0))
+    
+spc1_ = []
+spc2_ = []
+snr_ = []
+spc3_ = []
+cnt = 0
+n = [5,5,5,5,50,50,50,50,256,256,256,256]
+
+for day in daytime :
+    drctry = os.path.join(os.getcwd(),'output/'+day)
+    os.chdir(drctry)
+    x0 = np.load('x0_tst.npy')
+    tmp = dct(x0,axis=2,norm='ortho')
+    tmp[:,:,n[cnt]:] = 0
+    x = idct(tmp,axis=2,norm='ortho')
+    spc1_.append(x[5,12,:])
+    spc2_.append(x[20,20,:])
+    spc3_.append(x[12,12,:])
+    snr_.append(np.load('snr_tst.npy'))
+    cnt+=1
+    os.chdir('../..')
+    
+
+ndct_ = [5,50,256]
+mul_ = [0,0.7,10,100]
+
+pl.figure()
+cnt = 0
+plt = 1
+for ndct in ndct_:
+    for mul in mul_:
+        pl.subplot(3,4,plt)
+        pl.plot(sky[5,12,:])
+        pl.plot(spc1_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        plt+=1
+        pl.legend()
+
+pl.figure()
+cnt = 0
+plt = 1
+for ndct in ndct_:
+    for mul in mul_:
+        pl.subplot(3,4,plt)
+        pl.plot(sky[20,20,:])
+        pl.plot(spc2_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        plt+=1
+        pl.legend()
+
+pl.figure()
+plt = 1
+cnt = 0
+for ndct in ndct_:
+    for mul in mul_:
+        pl.subplot(3,4,plt)
+        pl.plot(sky[12,12,:])
+        pl.plot(spc3_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        plt+=1
+        pl.legend()
+        
+pl.figure()        
+cnt = 0
+for ndct in ndct_:
+    for mul in mul_:
+        pl.plot(snr_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        pl.legend()
+
+#%% test with diff N_dct and mu_l # last coefs put to zero 
+        
+from astropy.io import fits
+from scipy.fftpack import dct, idct 
+
+pl.close('all')
+daytime = []
+daytime.append('2018-03-09 16:50:33.739120') #  
+daytime.append('2018-03-09 16:59:18.228526') # 
+daytime.append('2018-03-09 17:08:13.965910') #  
+daytime.append('2018-03-09 17:17:19.267833') #
+
+daytime.append('2018-03-09 17:26:15.572584') #  
+daytime.append('2018-03-09 17:35:07.147971') #  
+daytime.append('2018-03-09 17:43:57.914184') #  
+daytime.append('2018-03-09 17:52:51.407162') #
+
+daytime.append('2018-03-09 18:02:01.088980') #  
+daytime.append('2018-03-09 18:11:06.897684') #  
+daytime.append('2018-03-09 18:20:13.121178') #  
+daytime.append('2018-03-09 18:29:09.115931') #
+
+def checkdim(x):
+    if len(x.shape) == 4:
+        x = np.squeeze(x)
+        x = x.transpose((2, 1, 0))
+    return x
+
+folder = 'data_david'
+file_in = 'M31_skyline2_20db'
+folder = os.path.join(os.getcwd(), folder)
+genname = os.path.join(folder, file_in)
+skyname = genname+'_sky.fits'
+dirtyname = genname+'_dirty.fits'
+sky = checkdim(fits.getdata(skyname, ext=0))
+dirty = checkdim(fits.getdata(dirtyname, ext=0))
+
+spc1_ = []
+spc2_ = []
+snr_ = []
+spc3_ = []
+cnt = 0
+n = [0,0,0,5,5,5,50,50,50,100,100,100]
+
+for day in daytime :
+    drctry = os.path.join(os.getcwd(),'output/'+day)
+    os.chdir(drctry)
+    x0 = np.load('x0_tst.npy')
+    #tmp = dct(x0,norm='ortho')
+    #tmp[:,:,250:]=0
+    #x = idct(tmp,norm='ortho')
+    x = x0
+    spc1_.append(x[5,12,:])
+    spc2_.append(x[20,20,:])
+    spc3_.append(x[12,12,:])
+    snr_.append(np.load('snr_tst.npy'))
+    cnt+=1
+    os.chdir('../..')
+    
+
+ndct_ = [0,5,50,100]
+mul_ = [1,10,100]
+
+pl.figure()
+cnt = 0
+plt = 1
+for ndct in ndct_:
+    for mul in mul_:
+        pl.subplot(4,3,plt)
+        pl.plot(sky[5,12,:])
+        pl.plot(spc1_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        plt+=1
+        pl.legend()
+
+pl.figure()
+cnt = 0
+plt = 1
+for ndct in ndct_:
+    for mul in mul_:
+        pl.subplot(4,3,plt)
+        pl.plot(sky[20,20,:])
+        pl.plot(spc2_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        plt+=1
+        pl.legend()
+
+pl.figure()
+plt = 1
+cnt = 0
+for ndct in ndct_:
+    for mul in mul_:
+        pl.subplot(4,3,plt)
+        pl.plot(sky[12,12,:])
+        pl.plot(spc3_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        plt+=1
+        pl.legend()
+        
+pl.figure()        
+cnt = 0
+for ndct in ndct_:
+    for mul in mul_:
+        pl.plot(snr_[cnt],label='ndct:'+str(ndct)+'-mul:'+str(mul))
+        cnt+=1
+        pl.legend()
 
