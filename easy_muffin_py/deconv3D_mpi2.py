@@ -57,7 +57,9 @@ class EasyMuffin():
                  dirty=[],
                  truesky=[],
                  psf=[],
-                 N_dct=-1):
+                 N_dct=-1,
+                 pixelweighton = 0,
+                 alpha_l_on = 0):
 
         if idw > nbw:
             comm.MPI_Finalize()
@@ -100,6 +102,8 @@ class EasyMuffin():
         self.dirty=dirty
         self.var = var
         self.mu_wiener = mu_wiener
+        self.pixelweighton = pixelweighton
+        self.bandweighton = bandweighton
 
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
@@ -215,8 +219,7 @@ class EasyMuffin():
                 print('')
                 
             # Compute spatial and spectral scaling parameters
-            test = 1
-            if test ==1:
+            if self.pixelweighton ==1:
                 self.psfadj = defadj(self.psf)
                 tmp = np.asfortranarray(init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener))
                 tmp = dctt(tmp,axis=2,norm='ortho',N=0)
@@ -298,8 +301,7 @@ class EasyMuffin():
                 self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy),order='F') , self.nbw_decomp)
                 
             # Compute spatial and spectral scaling parameters
-            test = 1
-            if test ==1:
+            if self.bandweighton8 ==1:
                 self.alpha_s = 1/(np.sum(np.sum(self.x**2,0),0)+1e-1) # col. vector
                 self.alpha_s = np.convolve(self.alpha_s,np.ones(3),mode='full')
                 self.alpha_s = self.alpha_s/self.alpha_s.max()                
@@ -308,7 +310,7 @@ class EasyMuffin():
                 
             self.alpha_l = np.ones((self.nxy,self.nxy))
 
-        self.alpha_l = comm.bcast(self.alpha_l,root=0)
+        self.alpha_l = comm.bcast(self.alpha_l,root=0) 
         self.tau = comm.bcast(self.tau,root=0) # root bcasts tau to everyone else 
         self.nitertot = 0
         

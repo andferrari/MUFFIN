@@ -66,6 +66,8 @@ parser.add_argument('-stp_s','--step_mu_s',default=0.001,type=float,help='Gradie
 parser.add_argument('-stp_l','--step_mu_l',default=0.001,type=float,help='Gradient step for spectral regularization')
 parser.add_argument('-data','--data_suffix',default='M31_3d_conv_256_10db',help='Suffix of data name')
 parser.add_argument('-N_dct','--N_dct',default=-1,type=int,help='Number of coef for DCT')
+parser.add_argument('-pxl_w','--pixelweight',default=0,type=int,help='Use different weight per pixel')
+parser.add_argument('-bnd_w','--bandweight',default=0,type=int,help='Use different weight per band')
 
 args = parser.parse_args()
 
@@ -79,6 +81,8 @@ step_mu_l = args.step_mu_l
 step_mu = [step_mu_s,step_mu_l]
 data_suffix = args.data_suffix
 N_dct = args.N_dct
+pxl_w = args.pxl_w
+bnd_w = args.bnd_w
 
 # =============================================================================
 # Load data
