@@ -33,19 +33,19 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 skyname = genname+'_sky.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))[128-16:128+16,128-16:128+16,:]
+CubePSF = checkdim(fits.getdata(psfname, ext=0))#[128-16:128+16,128-16:128+16,:]
 #CubePSF[int(np.shape(CubePSF)[0]*0.5),int(np.shape(CubePSF)[1]*0.5)] = 1
 
 sky = fits.getdata(skyname, ext=0) 
 sky = np.transpose(sky)
-sky = sky[116:148,140:172,:]
+sky = sky#[116:148,140:172,:]
 
 # Create dirty image 
 CubeDirtyy = conv(CubePSF,sky)
 CubeDirtyy = CubeDirtyy.real
 
 # Add noise 
-snr = 50
+snr = 20
 var = (np.sum(CubeDirtyy**2)/CubeDirtyy.size)/(10**(snr/10))
 noise = np.random.normal(0,var**.5,np.shape(CubeDirtyy))
 CubeDirtyy_10db = CubeDirtyy + noise 
