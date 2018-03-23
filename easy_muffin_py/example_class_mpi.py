@@ -32,7 +32,7 @@ def checkdim(x):
         x = x.transpose((2, 1, 0))
     return x
 
-folder = 'data'
+folder = 'DataSets/data'
 file_in = 'm31_3d_conv_10db'
 
 folder = os.path.join(os.getcwd(), folder)
@@ -66,7 +66,7 @@ import deconv3d as dcv
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 #nb = (7,0)
-nitermax = 20
+nitermax = 4
 mu_s = 0.5
 mu_l = 0.5
 
@@ -93,7 +93,7 @@ if rank==0:
 #EM.loop(nitermax)
 
 tm.tic()
-step_mu = [1e-3,1e-3]
+step_mu = [0,0]
 EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, var=var, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,step_mu=step_mu)
 #EM.loop(nitermax)
 EM.loop_fdmc(nitermax)

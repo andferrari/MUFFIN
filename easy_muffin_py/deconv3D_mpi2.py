@@ -6,11 +6,11 @@ Created on Fri Dec 15 10:05:32 2017
 @author: rammanouil
 """
 import numpy as np
-#from scipy.fftpack import dct,idct
+from scipy.fftpack import dct,idct
 
 #from scipy.fftpack import idct
-from deconv3d_tools import dctt 
-from deconv3d_tools import idct
+#from deconv3d_tools import dctt 
+#from deconv3d_tools import idct
 
 from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heavy, Rect
 from deconv3d_tools import myfft2, myifft2, myifftshift, conv, optimal_split
@@ -57,9 +57,8 @@ class EasyMuffin():
                  dirty=[],
                  truesky=[],
                  psf=[],
-                 N_dct=-1,
                  pixelweighton = 0,
-                 alpha_l_on = 0):
+                 bandweighton = 0):
 
         if idw > nbw:
             comm.MPI_Finalize()
@@ -107,11 +106,6 @@ class EasyMuffin():
 
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
-        
-        if N_dct < 0:
-            self.N_dct = self.psf.shape[2]
-        else:
-            self.N_dct = N_dct
 
         # Partitioning the frequency bands
         self.lst_nbf = optimal_split(self.nfreq,nbw)
@@ -125,7 +119,6 @@ class EasyMuffin():
             print('')
             print(self.lst_nbf)
             print(self.nf2)
-            print('N_dct :',self.N_dct)
 
         nbsum = 0
         self.sendcounts = [0,]
@@ -181,9 +174,6 @@ class EasyMuffin():
             self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             
-            self.v = np.append(self.v,self.v,axis=2) # add I in dct 
-            self.vtt = np.append(self.vtt,self.vtt,axis=2) # add I in dct 
-            
             self.tf = np.zeros((self.nxy,self.nxy,self.nfreq),dtype=np.float,order='F')
             self.t = np.zeros((0))
             
@@ -222,7 +212,7 @@ class EasyMuffin():
             if self.pixelweighton ==1:
                 self.psfadj = defadj(self.psf)
                 tmp = np.asfortranarray(init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener))
-                tmp = dctt(tmp,axis=2,norm='ortho',N=0)
+                tmp = dct(tmp,axis=2,norm='ortho')
                 self.alpha_l = 1/(np.sum(tmp**2,2)+1e-1) # image
                 self.alpha_l = conv(self.alpha_l,np.ones((3,3)),'max')
                 self.alpha_l = self.alpha_l/self.alpha_l.max()
@@ -301,7 +291,7 @@ class EasyMuffin():
                 self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy),order='F') , self.nbw_decomp)
                 
             # Compute spatial and spectral scaling parameters
-            if self.bandweighton8 ==1:
+            if self.bandweighton ==1:
                 self.alpha_s = 1/(np.sum(np.sum(self.x**2,0),0)+1e-1) # col. vector
                 self.alpha_s = np.convolve(self.alpha_s,np.ones(3),mode='full')
                 self.alpha_s = self.alpha_s/self.alpha_s.max()                
@@ -346,7 +336,7 @@ class EasyMuffin():
             Spt_cst = self.mu_s*tmp
             cst = Spt_cst + LS_cst
         else:
-            Spc_cst = self.mu_l*np.sum(np.abs(dctt(self.xf*self.alpha_l[...,None],axis=2,norm='ortho',N=self.N_dct)))
+            Spc_cst = self.mu_l*np.sum(np.abs(dct(self.xf*self.alpha_l[...,None],axis=2,norm='ortho')))
             cst = Spc_cst
             
         cst_list = comm.gather(cst)
@@ -418,7 +408,7 @@ class EasyMuffin():
         
         if rank ==0:
             # rank 0 computes idct 
-            self.tf = np.asfortranarray(idct(self.v, axis=2, norm='ortho',N=self.N_dct)) # to check
+            self.tf = np.asfortranarray(idct(self.v, axis=2, norm='ortho')) # to check
             
         comm.Scatterv([self.tf,self.sendcounts,self.displacements,MPI.DOUBLE],self.t,root=0)
 
@@ -445,7 +435,7 @@ class EasyMuffin():
 
         if rank==0:
             # update v
-            self.vtt = self.v + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct)
+            self.vtt = self.v + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
             self.v = sat(self.vtt)
         else:
             self.x = self.xt.copy(order='F')
@@ -500,7 +490,8 @@ class EasyMuffinSURE(EasyMuffin):
                  truesky=[],
                  psf=[],
                  step_mu = [0,0],
-                 N_dct=-1):
+                 pixelweighton = 0,
+                 bandweighton = 0):
         
         self.step_mu = step_mu
 
@@ -516,7 +507,8 @@ class EasyMuffinSURE(EasyMuffin):
                  dirty,
                  truesky,
                  psf,
-                 N_dct)
+                 pixelweighton,
+                 bandweighton)
 
 
     def init_algo(self):
@@ -530,8 +522,7 @@ class EasyMuffinSURE(EasyMuffin):
                 self.Jtf = np.zeros((self.nxy,self.nxy,self.nfreq),order='F')
                 self.Jt = np.zeros((0))
                 self.Jx = np.zeros((0))
-                
-                self.Jv = np.append(self.Jv,self.Jv,axis=2) # add I in dct 
+                 
             else:
                 # compute Hn
                 self.Hn = np.zeros((self.nxy,self.nxy,self.nfreq))
@@ -569,13 +560,6 @@ class EasyMuffinSURE(EasyMuffin):
                 self.dv_l = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
                 self.dv2_s = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
                 self.dv2_l = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
-
-                self.v2 = np.append(self.v2,self.v2,axis=2) # add I in dct 
-                self.vtt2 = np.append(self.vtt2,self.vtt2,axis=2) # add I in dct 
-                self.dv_s = np.append(self.dv_s,self.dv_s,axis=2) # add I in dct 
-                self.dv_l = np.append(self.dv_l,self.dv_l,axis=2) # add I in dct 
-                self.dv2_s = np.append(self.dv2_s,self.dv2_s,axis=2) # add I in dct 
-                self.dv2_l = np.append(self.dv2_l,self.dv2_l,axis=2) # add I in dct 
                 
                 self.dx_sf = np.zeros((self.nxy,self.nxy,self.nfreq),order='F')
                 self.dx_lf = np.zeros((self.nxy,self.nxy,self.nfreq),order='F')
@@ -718,7 +702,7 @@ class EasyMuffinSURE(EasyMuffin):
 
     def update_Jacobians(self):
         if rank==0:
-            self.Jtf = np.asfortranarray(idct(self.Jv, axis=2,norm='ortho',N=self.N_dct))
+            self.Jtf = np.asfortranarray(idct(self.Jv, axis=2,norm='ortho'))
         
         comm.Scatterv([self.Jtf,self.sendcounts,self.displacements,MPI.DOUBLE],self.Jt,root=0)
         
@@ -741,7 +725,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
-            Jvtt = self.Jv + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct)
+            Jvtt = self.Jv + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
             self.Jv = Rect(self.vtt)*Jvtt
         else:
             self.Jx = self.Jxt.copy(order='F')
@@ -783,7 +767,7 @@ class EasyMuffinSURE(EasyMuffin):
     # run update with y + eps*delta
     def update2(self):
         if rank==0:
-            self.t2f = np.asfortranarray(idct(self.v2, axis=2, norm='ortho',N=self.N_dct)) # to check
+            self.t2f = np.asfortranarray(idct(self.v2, axis=2, norm='ortho')) # to check
         
         comm.Scatterv([self.t2f,self.sendcounts,self.displacements,MPI.DOUBLE],self.t2,root=0)
         
@@ -807,7 +791,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
-            self.vtt2 = self.v2 + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct)
+            self.vtt2 = self.v2 + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
             self.v2 = sat(self.vtt2)
         else:
             self.x2 = self.xt2.copy(order='F')    
@@ -819,7 +803,7 @@ class EasyMuffinSURE(EasyMuffin):
     def dx_mu(self):
         
         if rank==0:
-            self.dt_sf = np.asfortranarray(idct(self.dv_s, axis=2, norm='ortho',N=self.N_dct))
+            self.dt_sf = np.asfortranarray(idct(self.dv_s, axis=2, norm='ortho'))
             
         comm.Scatterv([self.dt_sf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt_s,root=0)
         
@@ -847,7 +831,7 @@ class EasyMuffinSURE(EasyMuffin):
 
         if rank==0:
             # update v
-            dvtt_s = self.dv_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct)
+            dvtt_s = self.dv_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
             self.dv_s = Rect(self.vtt)*dvtt_s
         else:
             self.dx_s = self.dxt_s.copy(order='F')
@@ -855,7 +839,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.dx_s,[self.dx_sf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
             
         if rank==0:
-            self.dt_lf = np.asfortranarray(idct(self.dv_l*self.mu_l*self.alpha_l[...,None] + self.v*self.alpha_l[...,None], axis=2, norm='ortho',N=self.N_dct))
+            self.dt_lf = np.asfortranarray(idct(self.dv_l*self.mu_l*self.alpha_l[...,None] + self.v*self.alpha_l[...,None], axis=2, norm='ortho'))
 
         comm.Scatterv([self.dt_lf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt_l,root=0)
         
@@ -882,7 +866,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
-            dvtt_l = self.dv_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct) + self.sigma*self.alpha_l[...,None]*dctt(2*self.xtf - self.xf, axis=2, norm='ortho',N=self.N_dct)
+            dvtt_l = self.dv_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho') + self.sigma*self.alpha_l[...,None]*dct(2*self.xtf - self.xf, axis=2, norm='ortho')
             self.dv_l = Rect(self.vtt)*dvtt_l
         else:
             self.dx_l = self.dxt_l.copy(order='F')
@@ -892,7 +876,7 @@ class EasyMuffinSURE(EasyMuffin):
 
     def dx2_mu(self):
         if rank==0:
-            self.dt2_sf = np.asfortranarray(idct(self.dv2_s, axis=2, norm='ortho',N=self.N_dct))
+            self.dt2_sf = np.asfortranarray(idct(self.dv2_s, axis=2, norm='ortho'))
             
         comm.Scatterv([self.dt2_sf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt2_s,root=0)
         
@@ -916,13 +900,13 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
-            dvtt2_s = self.dv2_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct)
+            dvtt2_s = self.dv2_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
             self.dv2_s = Rect(self.vtt2)*dvtt2_s
         else:
             self.dx2_s = self.dxt2_s.copy(order='F')
             
         if rank==0:
-            self.dt2_lf = np.asfortranarray(idct(self.dv2_l*self.mu_l*self.alpha_l[...,None] + self.v2*self.alpha_l[...,None], axis=2, norm='ortho',N=self.N_dct))
+            self.dt2_lf = np.asfortranarray(idct(self.dv2_l*self.mu_l*self.alpha_l[...,None] + self.v2*self.alpha_l[...,None], axis=2, norm='ortho'))
         
         comm.Scatterv([self.dt2_lf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt2_l,root=0)
         
@@ -946,7 +930,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
-            dvtt2_l = self.dv2_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dctt(self.deltaf, axis=2, norm='ortho',N=self.N_dct) + self.sigma*self.alpha_l[...,None]*dctt(2*self.xt2f - self.x2f, axis=2, norm='ortho',N=self.N_dct)
+            dvtt2_l = self.dv2_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho') + self.sigma*self.alpha_l[...,None]*dct(2*self.xt2f - self.x2f, axis=2, norm='ortho')
             self.dv2_l = Rect(self.vtt2)*dvtt2_l
         else:
             self.dx2_l = self.dxt2_l.copy(order='F')

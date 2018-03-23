@@ -407,7 +407,7 @@ class EasyMuffinSURE(EasyMuffin):
         tmp = self.dirty - conv(self.x,self.psf)
         LS_cst = np.linalg.norm(tmp)**2
         tmp = ((conv(self.x2,self.psf) - conv(self.x,self.psf))*self.delta)/self.eps              
-        wmse = LS_cst - self.var*(self.nxy*self.nxy) + 2*self.var*np.sum(tmp)
+        wmse = LS_cst - self.var*(self.nxy*self.nxy*self.nfreq) + 2*self.var*np.sum(tmp)
         
 #       return LS_cst/(self.nxy*self.nxy*self.nfreq) - self.var + 2*(self.var/(self.nxy*self.nxy*self.nfreq))*(np.sum(tmp))
 

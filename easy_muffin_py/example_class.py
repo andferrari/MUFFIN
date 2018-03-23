@@ -22,7 +22,7 @@ def checkdim(x):
     return x
 
 
-folder = 'data256Eusipco'
+folder = 'DataSets/data256Eusipco'
 file_in = 'M31_3d_conv_256_10db'
 
 folder = os.path.join(os.getcwd(), folder)
@@ -51,7 +51,7 @@ from deconv3d import EasyMuffin, EasyMuffinSURE
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 #nb = (7,0)
-nitermax = 5000
+nitermax = 3
 
 mu_s = 1
 mu_l = 1
@@ -132,6 +132,7 @@ pl.plot(wmsesure3,'*',label='wmsesure3')
 pl.plot(wmsesurefdmc,'*',label='wmsesurefdmc')
 pl.legend(loc='best')
 
+#%%
 nitermax = 4000
 EMsfdmc1= EasyMuffinSURE(mu_s=0.5, mu_l = 2, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,step_mu=[5e-1,5e-1])
 EMsfdmc1.loop_fdmc(nitermax)

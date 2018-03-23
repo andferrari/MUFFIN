@@ -65,7 +65,6 @@ parser.add_argument('-mu_w','--mu_wiener',default=5e1,type=float,help='Weiner re
 parser.add_argument('-stp_s','--step_mu_s',default=0.001,type=float,help='Gradient step for spatial regularization')
 parser.add_argument('-stp_l','--step_mu_l',default=0.001,type=float,help='Gradient step for spectral regularization')
 parser.add_argument('-data','--data_suffix',default='M31_3d_conv_256_10db',help='Suffix of data name')
-parser.add_argument('-N_dct','--N_dct',default=-1,type=int,help='Number of coef for DCT')
 parser.add_argument('-pxl_w','--pixelweight',default=0,type=int,help='Use different weight per pixel')
 parser.add_argument('-bnd_w','--bandweight',default=0,type=int,help='Use different weight per band')
 
@@ -80,9 +79,8 @@ step_mu_s = args.step_mu_s
 step_mu_l = args.step_mu_l
 step_mu = [step_mu_s,step_mu_l]
 data_suffix = args.data_suffix
-N_dct = args.N_dct
-pxl_w = args.pxl_w
-bnd_w = args.bnd_w
+pxl_w = args.pixelweight
+bnd_w = args.bandweight
 
 # =============================================================================
 # Load data
@@ -93,9 +91,9 @@ def checkdim(x):
         x = x.transpose((2, 1, 0))
     return x
 
-folder = 'data'
+folder = 'DataSets/data'
 #folder = 'data256Eusipco'
-folder = 'data_david'
+folder = 'DataSets/data_david'
 file_in = data_suffix
 folder = os.path.join(os.getcwd(), folder)
 genname = os.path.join(folder, file_in)
@@ -152,7 +150,7 @@ else:
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 #nb = (7,0)
 
-args = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,'step_mu':step_mu,'N_dct':N_dct}
+args = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,'step_mu':step_mu,'pixelweighton':pxl_w,'bandweighton':bnd_w}
 tic()
 
 EM= dcvMpi.EasyMuffinSURE(**args)
