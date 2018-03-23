@@ -1,6 +1,10 @@
+output_Gradient/*
 output/*
 data/*
 data256/*
+data256Eusipco/*
+data_Mircea/*
+DataCyril/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

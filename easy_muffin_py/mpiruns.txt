@@ -1,0 +1,21 @@
+#!/bin/bash
+
+mpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.2 -mu_l 1 -mu_w 10 -stp_s 0 -stp_l 0 -N_dct 0 -data M31_skyline2_30db
+mpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.2 -mu_l 1 -mu_w 10 -stp_s 0 -stp_l 0 -N_dct 1 -data M31_skyline2_30db
+mpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.2 -mu_l 1 -mu_w 10 -stp_s 0 -stp_l 0 -N_dct 0 -data M31_skyline2_50db
+
+mpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.1 -mu_l 0.1 -mu_w 10 -stp_s 0.3 -stp_l 5 -N_dct 0 -data M31_skyline2_30db
+mpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.1 -mu_l 0.1 -mu_w 10 -stp_s 0.3 -stp_l 5 -N_dct 1 -data M31_skyline2_30db
+mpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.2 -mu_l 0.1 -mu_w 10 -stp_s 0.3 -stp_l 5 -N_dct 0 -data M31_skyline2_50db
+
+#N_dct="0 5 50 100"
+#mu_l="1 10 100"
+
+#for N in $N_dct; do
+#for mu in $mu_l; do 
+#echo " "
+#echo "N_dct,mu_l="$N $mu
+#echo " "
+#mpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 1000 -mu_s 0.025 -mu_l $mu -mu_w 10 -stp_s 0 -stp_l 0 -data M31_skyline2_30db -N_dct $N
+#done
+#done

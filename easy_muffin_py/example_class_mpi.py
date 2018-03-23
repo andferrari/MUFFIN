@@ -12,8 +12,9 @@ Created on Fri Oct 28 10:08:49 2016
 import os
 import numpy as np
 from astropy.io import fits
-import pylab as pl
+import matplotlib.pyplot as pl
 import sys
+from deconv3d_tools import conv
 
 from mpi4py import MPI 
 
@@ -31,7 +32,7 @@ def checkdim(x):
         x = x.transpose((2, 1, 0))
     return x
 
-folder = 'data'
+folder = 'DataSets/data'
 file_in = 'm31_3d_conv_10db'
 
 folder = os.path.join(os.getcwd(), folder)
@@ -39,13 +40,16 @@ genname = os.path.join(folder, file_in)
 psfname = genname+'_psf.fits'
 drtname = genname+'_dirty.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:5]
-CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:5]
+CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:10]
+CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:10]
 
 skyname = genname+'_sky.fits'
 sky = checkdim(fits.getdata(skyname, ext=0))
-sky = np.transpose(sky)[:,:,0:5]
+sky = np.transpose(sky)[:,:,0:10]
 sky2 = np.sum(sky*sky)
+
+Noise = CubeDirty - conv(CubePSF,sky)
+var = np.sum(Noise**2)/Noise.size
 
 #%% ===========================================================================
 # MPI 
@@ -55,12 +59,14 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-import deconv3d_mpi as dcvMpi
+#import deconv3d_mpi2 as dcvMpi
+import deconv3D_mpi2 as dcvMpi
 
 import deconv3d as dcv
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nitermax = 10
+#nb = (7,0)
+nitermax = 4
 mu_s = 0.5
 mu_l = 0.5
 
@@ -82,9 +88,15 @@ if rank==0:
     print('')
 
 # every processor creates EM -- inside each one will do its one part of the job 
+#tm.tic()
+#EM= dcvMpi.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
+#EM.loop(nitermax)
+
 tm.tic()
-EM= dcvMpi.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty)
-EM.loop(nitermax)
+step_mu = [0,0]
+EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, var=var, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,step_mu=step_mu)
+#EM.loop(nitermax)
+EM.loop_fdmc(nitermax)
 
 # Once job done - display results ... 
 if rank == 0: # I look at the results in EM created by master node even though others also created EM instance
