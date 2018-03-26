@@ -11,12 +11,19 @@ mpirun --np 3 python example_class_mpi.py
 mpirun --np 3 python example_class_mpi_sure.py
 ```
 
-## Testing MUFFIN
+## Testing MUFFIN on a node 
 - [Run_test_mpi2.py](easy_muffin_py/Run_test_mpi2.py): executes & saves results of the distributed `muffin` with ability to set the arguments from terminal
 ``` 
 mpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.2 -mu_l 7 -mu_w 10 -stp_s 0.3 -stp_l 10000 -N_dct 0 -data M31_skyline2_30dbmpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.2 -mu_l 7 -mu_w 10 -stp_s 0.3 -stp_l 10000 -N_dct 0 -data M31_skyline2_30dbmpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.2 -mu_l 7 -mu_w 10 -stp_s 0.3 -stp_l 10000 -N_dct 0 -data M31_skyline2_30db
 ```
 - [Figures2_Run_tst_mpi2.py](Run_test_mpi2.py/Figures2_Run_tst_mpi2.py): Loads results saved in `Run_test_mpi2.py` and plots  Figures (SNR, PSNR, MSE, cost, SUGAR, restored image ... )
+
+## Testing MUFFIN on a cluster using SLURM  
+- [Run_test_mpi_sigamm.py](easy_muffin_py/Run_test_mpi_sigamm.py): adapted version of [Run_test_mpi2.py](easy_muffin_py/Run_test_mpi2.py) to run on a cluster using SLURM
+- [Run_batch_test.slurm](easy_muffin_py/Run_batch_test.slurm): sets the number of nodes, wall time for running [Run_test_mpi_sigamm.py](easy_muffin_py/Run_test_mpi_sigamm.py) on a cluster using SLURM 
+```
+sbatch Run_batch_test.slurm 
+```
 
 ## MUFFIN algorithm & related functions 
 - [SuperNiceSpectraDeconv.py](easy_muffin_py/SuperNiceSpectraDeconv.py) : original code with the `muffin` iterative algorithms
