@@ -42,6 +42,7 @@ size = comm.Get_size()
 rank = comm.Get_rank()
 
 nbw = size - 1
+
 idw = rank - 1
 
 class EasyMuffin():
