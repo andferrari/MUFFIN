@@ -1,7 +1,7 @@
 # easy_muffin
 
 ## Small Demos
-- [example_class.py](example_class.py): executes centralized version of  `muffin`
+- [example_class.py](easy_muffin_py/example_class.py): executes centralized version of  `muffin`
 - `example_class_mpi.py`: executes & compares the centralized & distributed versions of `muffin` using MPI
 ```
 mpirun --np 3 python example_class_mpi.py
