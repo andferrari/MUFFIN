@@ -13,7 +13,7 @@ from scipy.fftpack import dct,idct
 #from deconv3d_tools import idct
 
 from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heavy, Rect
-from deconv3d_tools import myfft2, myifft2, myifftshift, conv, optimal_split
+from deconv3d_tools import myifftshift, optimal_split
 from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp, dwt_I_decomp, dwt_I_recomp
 from mpi4py import MPI
 import sys
@@ -59,7 +59,8 @@ class EasyMuffin():
                  truesky=[],
                  psf=[],
                  pixelweighton = 0,
-                 bandweighton = 0):
+                 bandweighton = 0,
+                 fftw = 0):
 
         if idw > nbw:
             comm.MPI_Finalize()
@@ -104,6 +105,7 @@ class EasyMuffin():
         self.mu_wiener = mu_wiener
         self.pixelweighton = pixelweighton
         self.bandweighton = bandweighton
+        self.fftw_flag = fftw
 
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
@@ -157,6 +159,21 @@ class EasyMuffin():
         """Initialization of the algorithm (all intermediate variables)"""
         
         if rank ==0:
+            if self.fftw_flag==0:
+                from deconv3d_tools import myfft2, myifft2
+                self.fft2 = myfft2
+                self.ifft2 = myifft2
+            else:
+                import pyfftw
+                aa = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
+                bb = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
+                cc = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
+                fft_object = pyfftw.FFTW(aa,bb,axes=(0,1),direction='FFTW_FORWARD',flags=('FFTW_MEASURE',),threads=5)
+                ifft_object = pyfftw.FFTW(bb,cc,axes=(0,1),direction='FFTW_BACKWARD',flags=('FFTW_MEASURE',),threads=5)
+
+                self.fft2 = fft_object
+                self.ifft2 = ifft_object
+            
             
             print('psf size ', self.psf.shape)
             print('drt size ', self.dirty.shape)
@@ -215,7 +232,7 @@ class EasyMuffin():
                 tmp = np.asfortranarray(init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener))
                 tmp = dct(tmp,axis=2,norm='ortho')
                 self.alpha_l = 1/(np.sum(tmp**2,2)+1e-1) # image
-                self.alpha_l = conv(self.alpha_l,np.ones((3,3)),'max')
+                self.alpha_l = self.conv(self.alpha_l,np.ones((3,3)),'max')
                 self.alpha_l = self.alpha_l/self.alpha_l.max()
             else:
                 self.alpha_l = np.ones((self.nxy,self.nxy))
@@ -229,6 +246,21 @@ class EasyMuffin():
             if self.truesky is not None:
                 self.truesky = self.truesky[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq]
             
+            if self.fftw_flag==0:
+                from deconv3d_tools import myfft2, myifft2
+                self.fft2 = myfft2
+                self.ifft2 = myifft2
+            else:
+                import pyfftw
+                aa = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
+                bb = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
+                cc = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
+                fft_object = pyfftw.FFTW(aa,bb,axes=(0,1),direction='FFTW_FORWARD',flags=('FFTW_MEASURE',),threads=5)
+                ifft_object = pyfftw.FFTW(bb,cc,axes=(0,1),direction='FFTW_BACKWARD',flags=('FFTW_MEASURE',),threads=5)
+
+                self.fft2 = fft_object
+                self.ifft2 = ifft_object
+                
             self.psfadj = defadj(self.psf)
             
             # x initialization
@@ -240,10 +272,10 @@ class EasyMuffin():
             # initializing alg. variables
             self.hth_fft = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.complex, order='F')
             self.fty = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
-            self.psfadj_fft = myfft2(self.psfadj)
-            self.hth_fft = myfft2( myifftshift( myifft2( self.psfadj_fft * myfft2(self.psf) ) ) )
-            tmp = myifftshift(myifft2(myfft2(self.dirty)*self.psfadj_fft))
-            self.fty = tmp.real
+            self.psfadj_fft = self.fft2(self.psfadj).copy()
+            self.hth_fft = self.fft2( myifftshift( self.ifft2( self.psfadj_fft * self.fft2(self.psf) ) ) ).copy()
+            tmp = myifftshift(self.ifft2(self.fft2(self.dirty)*self.psfadj_fft))
+            self.fty = tmp.real.copy()
             self.wstu = np.zeros((self.nxy,self.nxy), dtype=np.float, order='F')
             self.xtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
             self.xt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
@@ -324,10 +356,16 @@ class EasyMuffin():
                 print('The snr initialization is ',self.snrlist[0])
                 print('')
 
+    def conv(self,x,y):
+        tmp0 = self.fft2(x).copy()
+        tmp = myifftshift(self.ifft2(tmp0*self.fft2(y)))
+        return tmp.real
+    
     def cost(self):
         if not rank==0:
             """Compute cost for current iterate x"""
-            tmp = self.dirty - myifftshift(myifft2(myfft2(self.x)*myfft2(self.psf)))
+            tmp0 = self.fft2(self.x).copy()
+            tmp = self.dirty - myifftshift(self.ifft2(tmp0*self.fft2(self.psf)))
             LS_cst = 0.5*(np.linalg.norm(tmp)**2)
             tmp = 0.
             for freq in range(self.nfreq):
@@ -363,7 +401,7 @@ class EasyMuffin():
 
     def psnr(self):
         if not rank==0:
-            resid = np.linalg.norm(conv(self.psf,self.truesky-self.x))**2
+            resid = np.linalg.norm(self.conv(self.psf,self.truesky-self.x))**2
         else:
             resid = 0
             
@@ -376,7 +414,7 @@ class EasyMuffin():
 
     def wmse(self):
         if not rank == 0:
-            resid = np.linalg.norm(conv(self.psf,self.truesky-self.x))**2
+            resid = np.linalg.norm(self.conv(self.psf,self.truesky-self.x))**2
         else:
             resid = 0
             
@@ -415,7 +453,7 @@ class EasyMuffin():
 
         if not rank==0:
             # compute gradient
-            tmp = myifftshift( myifft2( myfft2(self.x) *self.hth_fft ) )
+            tmp = myifftshift( self.ifft2( self.fft2(self.x) *self.hth_fft ) )
             Delta_freq = tmp.real- self.fty
 
             for freq in range(self.nfreq):
@@ -492,7 +530,8 @@ class EasyMuffinSURE(EasyMuffin):
                  psf=[],
                  step_mu = [0,0],
                  pixelweighton = 0,
-                 bandweighton = 0):
+                 bandweighton = 0,
+                 fftw = 0):
         
         self.step_mu = step_mu
 
@@ -509,7 +548,8 @@ class EasyMuffinSURE(EasyMuffin):
                  truesky,
                  psf,
                  pixelweighton,
-                 bandweighton)
+                 bandweighton,
+                 fftw)
 
 
     def init_algo(self):
@@ -528,7 +568,7 @@ class EasyMuffinSURE(EasyMuffin):
                 # compute Hn
                 self.Hn = np.zeros((self.nxy,self.nxy,self.nfreq))
                 self.n = self.n[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq]
-                self.Hn = conv(self.n,self.psfadj)
+                self.Hn = self.conv(self.n,self.psfadj)
                 # init Jacobians
                 self.Jt = np.zeros((self.nxy,self.nxy,self.nfreq),order='F')
                 self.Jtf = np.zeros((0))
@@ -601,8 +641,8 @@ class EasyMuffinSURE(EasyMuffin):
                 self.x2 = np.asfortranarray(init_dirty_wiener(self.dirty2, self.psf, self.psfadj, self.mu_wiener))
                 self.x2f = np.zeros(0)
                 self.fty2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
-                tmp = myifftshift(myifft2(myfft2(self.dirty2)*self.psfadj_fft))
-                self.fty2 = tmp.real
+                tmp = myifftshift(self.ifft2(self.fft2(self.dirty2)*self.psfadj_fft))
+                self.fty2 = tmp.real.copy()
                 self.xtt2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
                 self.utt2 = {}
                 for freq in range(self.nfreq):
@@ -667,9 +707,9 @@ class EasyMuffinSURE(EasyMuffin):
         if rank==0:
             wmse = 0
         else:
-            tmp = self.dirty - conv(self.x,self.psf)
+            tmp = self.dirty - self.conv(self.x,self.psf)
             LS_cst = np.linalg.norm(tmp)**2
-            tmp = self.n*conv(self.Jx,self.psf)
+            tmp = self.n*self.conv(self.Jx,self.psf)
             wmse = LS_cst + 2*(self.var)*(np.sum(tmp))
         
         wmse_lst = comm.gather(wmse)
@@ -684,9 +724,9 @@ class EasyMuffinSURE(EasyMuffin):
         if rank==0:
             wmse = 0
         else:
-            tmp = self.dirty - conv(self.x,self.psf)
+            tmp = self.dirty - self.conv(self.x,self.psf)
             LS_cst = np.linalg.norm(tmp)**2        
-            wmse = LS_cst + 2*(self.var/self.eps)*np.sum(  ( conv(self.x2,self.psf) - conv(self.x,self.psf) )*self.DeltaSURE  )
+            wmse = LS_cst + 2*(self.var/self.eps)*np.sum(  ( self.conv(self.x2,self.psf) - self.conv(self.x,self.psf) )*self.DeltaSURE  )
         
         wmse_lst = comm.gather(wmse)
         
@@ -708,7 +748,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Scatterv([self.Jtf,self.sendcounts,self.displacements,MPI.DOUBLE],self.Jt,root=0)
         
         if not rank==0:
-            tmp = myifftshift( myifft2( myfft2(self.Jx) * self.hth_fft ) )
+            tmp = myifftshift( self.ifft2( self.fft2(self.Jx) * self.hth_fft ) )
             JDelta_freq = tmp.real- self.Hn
             for freq in range(self.nfreq):
                 # compute iuwt adjoint
@@ -773,7 +813,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Scatterv([self.t2f,self.sendcounts,self.displacements,MPI.DOUBLE],self.t2,root=0)
         
         if not rank==0:
-            tmp = myifftshift( myifft2( myfft2(self.x2) *self.hth_fft ) )
+            tmp = myifftshift( self.ifft2( self.fft2(self.x2) *self.hth_fft ) )
             Delta_freq = tmp.real- self.fty2
             for freq in range(self.nfreq):
                 # compute iuwt adjoint
@@ -809,7 +849,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Scatterv([self.dt_sf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt_s,root=0)
         
         if not rank ==0:
-            tmp = myifftshift( myifft2( myfft2(self.dx_s) *self.hth_fft ) )
+            tmp = myifftshift( self.ifft2( self.fft2(self.dx_s) *self.hth_fft ) )
             Delta_freq = tmp.real #- self.fty
             
             for freq in range(self.nfreq):
@@ -845,7 +885,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Scatterv([self.dt_lf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt_l,root=0)
         
         if not rank ==0:
-            tmp = myifftshift( myifft2( myfft2(self.dx_l) *self.hth_fft ) )
+            tmp = myifftshift( self.ifft2( self.fft2(self.dx_l) *self.hth_fft ) )
             Delta_freq = tmp.real
             for freq in range(self.nfreq):
                 # compute iuwt adjoint
@@ -882,7 +922,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Scatterv([self.dt2_sf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt2_s,root=0)
         
         if not rank==0:
-            tmp = myifftshift( myifft2( myfft2(self.dx2_s) *self.hth_fft ) )
+            tmp = myifftshift( self.ifft2( self.fft2(self.dx2_s) *self.hth_fft ) )
             Delta_freq = tmp.real #- self.fty
             for freq in range(self.nfreq):
                 # compute iuwt adjoint
@@ -912,7 +952,7 @@ class EasyMuffinSURE(EasyMuffin):
         comm.Scatterv([self.dt2_lf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt2_l,root=0)
         
         if not rank==0:
-            tmp = myifftshift( myifft2( myfft2(self.dx2_l) *self.hth_fft ) )
+            tmp = myifftshift( self.ifft2( self.fft2(self.dx2_l) *self.hth_fft ) )
             Delta_freq = tmp.real #- self.fty
             for freq in range(self.nfreq):
                 # compute iuwt adjoint
@@ -942,9 +982,9 @@ class EasyMuffinSURE(EasyMuffin):
             res1 = 0
             res2 = 0
         else:
-            tmp = 2*conv(self.psf,self.dx_s)*(conv(self.psf,self.x)-self.dirty) + 2*self.var*conv(self.psf,self.dx2_s-self.dx_s)*self.DeltaSURE/self.eps
+            tmp = 2*self.conv(self.psf,self.dx_s)*(self.conv(self.psf,self.x)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_s-self.dx_s)*self.DeltaSURE/self.eps
             res1 = np.sum(tmp)/(self.nxy*self.nxy)
-            tmp = 2*conv(self.psf,self.dx_l)*(conv(self.psf,self.x)-self.dirty) + 2*self.var*conv(self.psf,self.dx2_l-self.dx_l)*self.DeltaSURE/self.eps
+            tmp = 2*self.conv(self.psf,self.dx_l)*(self.conv(self.psf,self.x)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_l-self.dx_l)*self.DeltaSURE/self.eps
             res2 = np.sum(tmp)/(self.nxy*self.nxy)
         
         res1_lst = comm.gather(res1)

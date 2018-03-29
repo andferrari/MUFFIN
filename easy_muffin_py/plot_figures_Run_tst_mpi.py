@@ -5,43 +5,26 @@ Created on Fri Mar  2 10:45:05 2018
 
 @author: rammanouil
 """
-#%% ==============================================================================
-# OPEN PSF AND DIRTY CUBE - SKY to check results
-# ==============================================================================
+
 import os
 import numpy as np
 import matplotlib.pyplot as pl 
-
-## ============================================================================
-## Print Figures
-# ==============================================================================
-
-daytime = '1881888'
-label = '256 bands'
-
-daytime = '1881924'
-label = '256 bands'
-
-
-#%% 
 from astropy.io import fits
-def checkdim(x):
-    if len(x.shape) == 4:
-        x = np.squeeze(x)
-        x = x.transpose((2, 1, 0))
-    return x
+from deconv3d_tools import fix_dim
+
+#%% Path to folder 
+day_time = '1881888'
+label = '256 bands'
 
 folder = 'data_david'
-#file_in = 'M31_skyline2_50db'
 file_in = 'M31_skyline2_20db'
 folder = os.path.join(os.getcwd(), folder)
 genname = os.path.join(folder, file_in)
 skyname = genname+'_sky.fits'
-sky = checkdim(fits.getdata(skyname, ext=0))
+sky = fix_dim(fits.getdata(skyname, ext=0))
 dirtyname = genname+'_dirty.fits'
-CubeDirty = checkdim(fits.getdata(dirtyname, ext=0))
+CubeDirty = fix_dim(fits.getdata(dirtyname, ext=0))
 
-#pl.close('all')
 drctry = os.path.join(os.getcwd(),'output/'+daytime)
 os.chdir(drctry)
 
@@ -58,7 +41,6 @@ sugar0=np.load('sugar0.npy')
 sugar1=np.load('sugar1.npy')
 cost=np.load('cost.npy')
 psnr = np.load('psnrsure.npy')
-#psnrsure=np.load('psnrsure.npy')
 
 os.chdir('../..')
 
@@ -67,7 +49,6 @@ pl.figure(1)
 pl.subplot(2,4,1)
 pl.plot(x0_tst[5,12,:],label=label)
 pl.plot(sky[5,12,:])
-#pl.plot(CubeDirty[5,12,:])
 pl.title('Spectre 1')
 
 pl.subplot(2,4,2)
@@ -91,7 +72,6 @@ pl.plot(psnr[:N],label=label)
 pl.legend()
 pl.title('PSNR')
 
-
 pl.subplot(2,4,6)
 pl.plot(mu_s_tst[:N],label=label)
 pl.legend()
@@ -109,7 +89,7 @@ pl.plot(wmsesfdmc_tst,'-^',label='wmses_fdmc')
 pl.legend()
 pl.title('wmse')
 
-#%%pl.plot(CubeDirty[20,20,:])
+#%%
 
 pl.figure()
 pl.imshow(x0_tst[:,:,100])
@@ -126,7 +106,7 @@ for i in range(60):
     pl.plot(sky[i,1,:])
     pl.legend()
     pl.ylim((x0_tst.min(),x0_tst.max()))
-    pl.savefig('temp_{:03d}.png'.format(i))
+    #pl.savefig('temp_{:03d}.png'.format(i))
 
 N = snr_tst.size 
 pl.figure()
@@ -142,10 +122,6 @@ pl.figure()
 pl.plot(sugar1[1:N],label='sugar1')
 pl.plot(0*sugar1[1:N])
 pl.legend()
-
-#pl.figure()
-#pl.plot(psnrsure[:N],label='psnrsure')
-#pl.legend()
 
 pl.figure()
 pl.plot(cost[:N],label='cost')
