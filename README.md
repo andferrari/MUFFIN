@@ -13,7 +13,7 @@ m31_3d_conv_10db
 ```
 
 ## Running Tests of MUFFIN on a node 
-- [Run_test_mpi.py](easy_muffin_py/Run_test_mpi.py): executes & saves results of the distributed `muffin`. You have to set the algorithm parameters from the terminal. 
+- [run_test_mpi.py](easy_muffin_py/run_test_mpi.py): executes & saves results of the distributed `muffin`. You have to set the algorithm parameters from the terminal. 
 ``` 
 mpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.2 -mu_l 7 -mu_w 10 -stp_s 0.3 -stp_l 10000 -N_dct 0 -data m31_3d_conv_10db -fol /home/rammanouil/Bureau/easy_muffin/easy_muffin_py/data
 ```
