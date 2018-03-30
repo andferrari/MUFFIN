@@ -23,7 +23,7 @@ python3 plot_figures_Run_tst_mpi.py -res_fol /home/rammanouil/Bureau/easy_muffin
 ```
 
 ## Testing MUFFIN on a cluster using SLURM  
-- [run_test_mpi_sigamm.py](easy_muffin_py/run_test_mpi_sigamm.py): adapted version of [run_tst_mpi.py](easy_muffin_py/run_tst_mpi.py) to run on a cluster using SLURM
+- [run_tst_mpi_sigamm.py](easy_muffin_py/run_tst_mpi_sigamm.py): adapted version of [run_tst_mpi.py](easy_muffin_py/run_tst_mpi.py) to run on a cluster using SLURM
 - [run_batch_test.slurm](easy_muffin_py/run_batch_test.slurm): sets the number of nodes, wall time for running [run_test_mpi_sigamm.py](easy_muffin_py/run_test_mpi_sigamm.py) on a cluster using SLURM 
 ```
 sbatch Run_batch_test.slurm 
