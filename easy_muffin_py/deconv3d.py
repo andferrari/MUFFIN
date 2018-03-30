@@ -8,7 +8,7 @@ Created on Fri Oct 28 10:07:31 2016
 import numpy as np
 from scipy.fftpack import dct,idct
 from deconv3d_tools import myfft2, myifft2, myifftshift
-from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heavy, Rect
+from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, heavy, rect
 from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp, dwt_I_decomp, dwt_I_recomp
 
 str_cost="| {:5d} | {:6.6e} |"
@@ -440,7 +440,7 @@ class EasyMuffinSURE(EasyMuffin):
     def psnrsure(self):
         return 10*np.log10(self.psnrnum/self.wmsesure())
 
-    def update_Jacobians(self):
+    def update_jacobians(self):
         Jt = idct(self.Jv, axis=2,norm='ortho')
         # compute gradient
         tmp = myifftshift( self.ifft2( self.fft2(self.Jx) * self.hth_fft ) )
@@ -450,15 +450,15 @@ class EasyMuffinSURE(EasyMuffin):
             Js_l = self.Recomp(self.Ju[freq], self.nbw_recomp)
             # compute xt
             Jxtt = self.Jx[:,:,freq] - self.tau*(JDelta_freq[:,:,freq] + self.mu_s*self.alpha_s[freq]*Js_l + self.mu_l*self.alpha_l*Jt[:,:,freq])
-            self.Jxt[:,:,freq] = Heavy(self.xtt[:,:,freq])*Jxtt
+            self.Jxt[:,:,freq] = heavy(self.xtt[:,:,freq])*Jxtt
             # update u
             tmp_spat_scal_J = self.Decomp(2*self.Jxt[:,:,freq] - self.Jx[:,:,freq] , self.nbw_decomp)
             for b in self.nbw_decomp:
                 Jutt = self.Ju[freq][b] + self.sigma*self.mu_s*self.alpha_s[freq]*tmp_spat_scal_J[b]
-                self.Ju[freq][b] = Rect( self.utt[freq][b] )*Jutt
+                self.Ju[freq][b] = rect( self.utt[freq][b] )*Jutt
         # update v
         Jvtt = self.Jv + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.Jxt - self.Jx, axis=2, norm='ortho')
-        self.Jv = Rect(self.vtt)*Jvtt
+        self.Jv = rect(self.vtt)*Jvtt
         self.Jx = self.Jxt.copy()
         # wmsesure
         self.wmselistsure.append(self.wmsesure())
@@ -478,7 +478,7 @@ class EasyMuffinSURE(EasyMuffin):
             self.mu_slist.append(self.mu_s)
             self.mu_llist.append(self.mu_l)
             super(EasyMuffinSURE,self).update()
-            self.update_Jacobians()
+            self.update_jacobians()
             self.nitertot+=1
 
             if self.truesky.any():
@@ -529,7 +529,7 @@ class EasyMuffinSURE(EasyMuffin):
 
             # compute xt
             dxtt_s = self.dx_s[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + self.mu_l*self.alpha_l*dt_s[:,:,freq])
-            self.dxt_s[:,:,freq] = Heavy(self.xtt[:,:,freq] )*dxtt_s
+            self.dxt_s[:,:,freq] = heavy(self.xtt[:,:,freq] )*dxtt_s
 
             # update u
             tmp_spat_scal = self.Decomp((2*self.xt[:,:,freq] - self.x[:,:,freq]) + self.mu_s*self.alpha_s[freq]*(2*self.dxt_s[:,:,freq] - self.dx_s[:,:,freq]), self.nbw_decomp)
@@ -537,7 +537,7 @@ class EasyMuffinSURE(EasyMuffin):
 
             for b in self.nbw_decomp:
                 dutt_s = self.du_s[freq][b] + self.sigma*tmp_spat_scal[b]
-                self.du_s[freq][b] = Rect(self.utt[freq][b])*dutt_s
+                self.du_s[freq][b] = rect(self.utt[freq][b])*dutt_s
 
         # update v
         dvtt_s = self.dv_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.dxt_s - self.dx_s, axis=2, norm='ortho')
@@ -557,14 +557,14 @@ class EasyMuffinSURE(EasyMuffin):
 
             # compute xt
             dxtt_l = self.dx_l[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + dt_l[:,:,freq])
-            self.dxt_l[:,:,freq] = Heavy(self.xtt[:,:,freq] )*dxtt_l
+            self.dxt_l[:,:,freq] = heavy(self.xtt[:,:,freq] )*dxtt_l
 
             # update u
             tmp_spat_scal = self.Decomp(self.mu_s*self.alpha_s[freq]*(2*self.dxt_l[:,:,freq] - self.dx_l[:,:,freq]), self.nbw_decomp)
 
             for b in self.nbw_decomp:
                 dutt_l = self.du_l[freq][b] + self.sigma*tmp_spat_scal[b]
-                self.du_l[freq][b] = Rect(self.utt[freq][b])*dutt_l
+                self.du_l[freq][b] = rect(self.utt[freq][b])*dutt_l
 
         # update v
         dvtt_l = self.dv_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.dxt_l - self.dx_l, axis=2, norm='ortho') + self.sigma*dct(2*self.xt - self.x, axis=2, norm='ortho')
@@ -586,7 +586,7 @@ class EasyMuffinSURE(EasyMuffin):
 
             # compute xt
             dxtt_s = self.dx2_s[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + self.mu_l*self.alpha_l*dt_s[:,:,freq])
-            self.dxt2_s[:,:,freq] = Heavy(self.xtt2[:,:,freq] )*dxtt_s
+            self.dxt2_s[:,:,freq] = heavy(self.xtt2[:,:,freq] )*dxtt_s
 
             # update u
             tmp_spat_scal = self.Decomp((2*self.xt2[:,:,freq] - self.x2[:,:,freq]) + self.mu_s*self.alpha_s[freq]*(2*self.dxt2_s[:,:,freq] - self.dx2_s[:,:,freq]), self.nbw_decomp)
@@ -594,7 +594,7 @@ class EasyMuffinSURE(EasyMuffin):
 
             for b in self.nbw_decomp:
                 dutt_s = self.du2_s[freq][b] + self.sigma*tmp_spat_scal[b]
-                self.du2_s[freq][b] = Rect(self.utt2[freq][b])*dutt_s
+                self.du2_s[freq][b] = rect(self.utt2[freq][b])*dutt_s
 
         # update v
         dvtt2_s = self.dv2_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.dxt2_s - self.dx2_s, axis=2, norm='ortho')
@@ -615,14 +615,14 @@ class EasyMuffinSURE(EasyMuffin):
 
             # compute xt
             dxtt_l = self.dx2_l[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + dt_l[:,:,freq])
-            self.dxt2_l[:,:,freq] = Heavy(self.xtt2[:,:,freq] )*dxtt_l
+            self.dxt2_l[:,:,freq] = heavy(self.xtt2[:,:,freq] )*dxtt_l
 
             # update u
             tmp_spat_scal = self.Decomp(self.mu_s*self.alpha_s[freq]*(2*self.dxt2_l[:,:,freq] - self.dx2_l[:,:,freq]), self.nbw_decomp)
 
             for b in self.nbw_decomp:
                 dutt_l = self.du2_l[freq][b] + self.sigma*tmp_spat_scal[b]
-                self.du2_l[freq][b] = Rect(self.utt2[freq][b])*dutt_l
+                self.du2_l[freq][b] = rect(self.utt2[freq][b])*dutt_l
 
         # update v
         dvtt2_l = self.dv2_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.dxt2_l - self.dx2_l, axis=2, norm='ortho') + self.sigma*dct(2*self.xt2 - self.x, axis=2, norm='ortho')
@@ -652,7 +652,7 @@ class EasyMuffinSURE(EasyMuffin):
             self.mu_slist.append(self.mu_s)
             self.mu_llist.append(self.mu_l)
             super(EasyMuffinSURE,self).update()
-            self.update_Jacobians()
+            self.update_jacobians()
             
             self.update2() # 
             self.dx_mu() # 
@@ -660,7 +660,7 @@ class EasyMuffinSURE(EasyMuffin):
             self.sugarfdmc()
             
             if niter>1 and niter%10==0:
-                self.GradDes_mu(self.step_mu) 
+                self.graddes_mu(self.step_mu) 
                 if niter>1000 and niter%100==0:
                     self.step_mu = [tmp/1.2 for tmp in self.step_mu]
                 
@@ -675,7 +675,7 @@ class EasyMuffinSURE(EasyMuffin):
                     print(str_cost_wmsesure_mu_title.format('It.','Cost','WMSES','mu_s','mu_l'))
                 print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsurefdmc[-1],self.mu_slist[-1],self.mu_llist[-1]))
 
-    def GradDes_mu(self,step=[1e-3,1e-3]):
+    def graddes_mu(self,step=[1e-3,1e-3]):
         self.mu_s = np.maximum(self.mu_s - step[0]*self.sugarfdmclist[0][-1],0)
         self.mu_l = np.maximum(self.mu_l - step[1]*self.sugarfdmclist[1][-1],0)
         

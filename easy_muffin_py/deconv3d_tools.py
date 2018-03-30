@@ -70,11 +70,11 @@ def compute_tau_2D(psf,mu_s,sigma,nbw_decomp):
 #==============================================================================
 # tools for Jacobians comp.
 #==============================================================================
-def Heavy(x):
+def heavy(x):
     return (np.sign(x)+1)/2
 
-def Rect(x):
-    return Heavy(x+1)-Heavy(x-1)
+def rect(x):
+    return heavy(x+1)-heavy(x-1)
 
 #==============================================================================
 # TOOLS

@@ -8,7 +8,7 @@ Created on Fri Oct 28 10:07:31 2016
 import numpy as np
 from scipy.fftpack import dct,idct
 import copy
-from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heavy, Rect
+from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, heavy, rect
 from deconv3d_tools import myfft2, myifft2, myifftshift, conv
 from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp
 
@@ -432,7 +432,7 @@ def easy_muffin_sure(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=0,t
             xtt = x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu + mu_l*t[:,:,freq])
             xt[:,:,freq] = np.maximum(xtt, 0.0 )
             Jxtt = Jx[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l + mu_l*Jt[:,:,freq])
-            Jxt[:,:,freq] = Heavy(xtt)*Jxtt
+            Jxt[:,:,freq] = heavy(xtt)*Jxtt
 
             # update u
             tmp_spat_scal = Decomp(2*xt[:,:,freq] - x[:,:,freq] , nbw_decomp)
@@ -441,14 +441,14 @@ def easy_muffin_sure(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=0,t
                 utt = u[freq][b] + sigma*mu_s*tmp_spat_scal[b]
                 u[freq][b] = sat( utt )
                 Jutt = Ju[freq][b] + sigma*mu_s*tmp_spat_scal_J[b]
-                Ju[freq][b] = Rect( utt )*Jutt
+                Ju[freq][b] = rect( utt )*Jutt
 
 
         # update v
         vtt = v + sigma*mu_l*dct(2*xt - x, axis=2, norm='ortho')
         v = sat(vtt)
         Jvtt = Jv + sigma*mu_l*dct(2*Jxt - Jx, axis=2, norm='ortho')
-        Jv = Rect(vtt)*Jvtt
+        Jv = rect(vtt)*Jvtt
 
         x = xt.copy()
         Jx = Jxt.copy()
@@ -658,7 +658,7 @@ def easy_muffin_sure_gs(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=
             xtt = x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu + mu_l*t[:,:,freq])
             xt[:,:,freq] = np.maximum(xtt, 0.0 )
             Jxtt = Jx[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l + mu_l*Jt[:,:,freq])
-            Jxt[:,:,freq] = Heavy(xtt)*Jxtt
+            Jxt[:,:,freq] = heavy(xtt)*Jxtt
 
             # update u
             tmp_spat_scal = Decomp(2*xt[:,:,freq] - x[:,:,freq] , nbw_decomp)
@@ -667,14 +667,14 @@ def easy_muffin_sure_gs(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var=
                 utt = u[freq][b] + sigma*mu_s*tmp_spat_scal[b]
                 u[freq][b] = sat( utt )
                 Jutt = Ju[freq][b] + sigma*mu_s*tmp_spat_scal_J[b]
-                Ju[freq][b] = Rect( utt )*Jutt
+                Ju[freq][b] = rect( utt )*Jutt
 
 
         # update v
         vtt = v + sigma*mu_l*dct(2*xt - x, axis=2, norm='ortho')
         v = sat(vtt)
         Jvtt = Jv + sigma*mu_l*dct(2*Jxt - Jx, axis=2, norm='ortho')
-        Jv = Rect(vtt)*Jvtt
+        Jv = rect(vtt)*Jvtt
 
         x = xt.copy()
         Jx = Jxt.copy()
@@ -893,7 +893,7 @@ def easy_muffin_sure_gs2(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var
             xtt = x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu + mu_l*t[:,:,freq])
             xt[:,:,freq] = np.maximum(xtt, 0.0 )
             Jxtt = Jx[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l + mu_l*Jt[:,:,freq])
-            Jxt[:,:,freq] = Heavy(xtt)*Jxtt
+            Jxt[:,:,freq] = heavy(xtt)*Jxtt
 
             # update u
             tmp_spat_scal = Decomp(2*xt[:,:,freq] - x[:,:,freq] , nbw_decomp)
@@ -902,14 +902,14 @@ def easy_muffin_sure_gs2(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,var
                 utt = u[freq][b] + sigma*mu_s*tmp_spat_scal[b]
                 u[freq][b] = sat( utt )
                 Jutt = Ju[freq][b] + sigma*mu_s*tmp_spat_scal_J[b]
-                Ju[freq][b] = Rect( utt )*Jutt
+                Ju[freq][b] = rect( utt )*Jutt
 
 
         # update v
         vtt = v + sigma*mu_l*dct(2*xt - x, axis=2, norm='ortho')
         v = sat(vtt)
         Jvtt = Jv + sigma*mu_l*dct(2*Jxt - Jx, axis=2, norm='ortho')
-        Jv = Rect(vtt)*Jvtt
+        Jv = rect(vtt)*Jvtt
 
         x = xt.copy()
         Jx = Jxt.copy()
@@ -1121,7 +1121,7 @@ def easy_muffin_sure_gs_la(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,v
             xtt = x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu + mu_l*t[:,:,freq])
             xt[:,:,freq] = np.maximum(xtt, 0.0 )
             Jxtt = Jx[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l + mu_l*Jt[:,:,freq])
-            Jxt[:,:,freq] = Heavy(xtt)*Jxtt
+            Jxt[:,:,freq] = heavy(xtt)*Jxtt
 
             # update u
             tmp_spat_scal = Decomp(2*xt[:,:,freq] - x[:,:,freq] , nbw_decomp)
@@ -1130,7 +1130,7 @@ def easy_muffin_sure_gs_la(psf,dirty,nitermax,nb,mu_s,mu_l,tau,sigma,dirtyinit,v
                 utt = u[freq][b] + sigma*mu_s*tmp_spat_scal[b]
                 u[freq][b] = sat( utt )
                 Jutt = Ju[freq][b] + sigma*mu_s*tmp_spat_scal_J[b]
-                Ju[freq][b] = Rect( utt )*Jutt
+                Ju[freq][b] = rect( utt )*Jutt
 
 
         # update v
@@ -1225,7 +1225,7 @@ def One_MUFFIN_iter(mu_s,t,Jt,Delta_freq,JDelta_freq,u,Ju,x,tau,mu_l,Jx,xt,nbw_r
             xtt_ = x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu_ + mu_l*t[:,:,freq])
             xt_[:,:,freq] = np.maximum(xtt_, 0.0 ) ###
             Jxtt_ = Jx[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l_ + mu_l*Jt[:,:,freq])
-            Jxt_[:,:,freq] = Heavy(xtt_)*Jxtt_ ##
+            Jxt_[:,:,freq] = heavy(xtt_)*Jxtt_ ##
 
             # update u
             tmp_spat_scal_ = Decomp(2*xt_[:,:,freq] - x[:,:,freq] , nbw_decomp)
@@ -1234,14 +1234,14 @@ def One_MUFFIN_iter(mu_s,t,Jt,Delta_freq,JDelta_freq,u,Ju,x,tau,mu_l,Jx,xt,nbw_r
                  utt_ = u_[freq][b] + sigma*mu_s*tmp_spat_scal_[b]
                  u_[freq][b] = sat( utt_ ) ##
                  Jutt_ = Ju_[freq][b] + sigma*mu_s*tmp_spat_scal_J_[b]
-                 Ju_[freq][b] = Rect( utt_ )*Jutt_ ##
+                 Ju_[freq][b] = rect( utt_ )*Jutt_ ##
 
 
     # update v
     vtt_ = v + sigma*mu_l*dct(2*xt_ - x, axis=2, norm='ortho')
     v = sat(vtt_)
     Jvtt_ = Jv + sigma*mu_l*dct(2*Jxt_ - Jx, axis=2, norm='ortho')
-    Jv = Rect(vtt_)*Jvtt_
+    Jv = rect(vtt_)*Jvtt_
 
     # wmse_est (wmse given by SURE)
     tmp = dirty - conv(xt_,psf)
@@ -1271,7 +1271,7 @@ def One_MUFFIN_iter_mu_l(mu_l,t,Jt,Delta_freq,JDelta_freq,u,Ju,x,tau,mu_s,Jx,xt,
             xtt_ = x[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu_ + mu_l*t[:,:,freq])
             xt_[:,:,freq] = np.maximum(xtt_, 0.0 ) ###
             Jxtt_ = Jx[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l_ + mu_l*Jt[:,:,freq])
-            Jxt_[:,:,freq] = Heavy(xtt_)*Jxtt_ ##
+            Jxt_[:,:,freq] = heavy(xtt_)*Jxtt_ ##
 
             # update u
             tmp_spat_scal_ = Decomp(2*xt_[:,:,freq] - x[:,:,freq] , nbw_decomp)
@@ -1280,14 +1280,14 @@ def One_MUFFIN_iter_mu_l(mu_l,t,Jt,Delta_freq,JDelta_freq,u,Ju,x,tau,mu_s,Jx,xt,
                  utt_ = u_[freq][b] + sigma*mu_s*tmp_spat_scal_[b]
                  u_[freq][b] = sat( utt_ ) ##
                  Jutt_ = Ju_[freq][b] + sigma*mu_s*tmp_spat_scal_J_[b]
-                 Ju_[freq][b] = Rect( utt_ )*Jutt_ ##
+                 Ju_[freq][b] = rect( utt_ )*Jutt_ ##
 
 
     # update v
     vtt_ = v + sigma*mu_l*dct(2*xt_ - x, axis=2, norm='ortho')
     v = sat(vtt_)
     Jvtt_ = Jv + sigma*mu_l*dct(2*Jxt_ - Jx, axis=2, norm='ortho')
-    Jv = Rect(vtt_)*Jvtt_
+    Jv = rect(vtt_)*Jvtt_
 
     # wmse_est (wmse given by SURE)
     tmp = dirty - conv(xt_,psf)
@@ -1334,7 +1334,7 @@ def One_MUFFIN_iter_la(mu_s,u,Ju,x,tau,mu_l,Jx,xt,nbw_recomp,nbw_decomp,Recomp,D
                 xtt = x_[:,:,freq] - tau*(Delta_freq[:,:,freq] + mu_s*wstu + mu_l*t[:,:,freq])
                 xt_[:,:,freq] = np.maximum(xtt, 0.0 ) ###
                 Jxtt = Jx_[:,:,freq] - tau*(JDelta_freq[:,:,freq] + mu_s*Js_l + mu_l*Jt[:,:,freq])
-                Jxt_[:,:,freq] = Heavy(xtt)*Jxtt ##
+                Jxt_[:,:,freq] = heavy(xtt)*Jxtt ##
 
                 # update u
                 tmp_spat_scal = Decomp(2*xt_[:,:,freq] - x_[:,:,freq] , nbw_decomp)
@@ -1343,14 +1343,14 @@ def One_MUFFIN_iter_la(mu_s,u,Ju,x,tau,mu_l,Jx,xt,nbw_recomp,nbw_decomp,Recomp,D
                     utt = u_[freq][b] + sigma*mu_s*tmp_spat_scal[b]
                     u_[freq][b] = sat( utt ) ##
                     Jutt = Ju_[freq][b] + sigma*mu_s*tmp_spat_scal_J[b]
-                    Ju_[freq][b] = Rect( utt )*Jutt ##
+                    Ju_[freq][b] = rect( utt )*Jutt ##
 
 
         # update v
         vtt = v_ + sigma*mu_l*dct(2*xt_ - x_, axis=2, norm='ortho')
         v_ = sat(vtt)
         Jvtt = Jv_ + sigma*mu_l*dct(2*Jxt_ - Jx_, axis=2, norm='ortho')
-        Jv_ = Rect(vtt)*Jvtt
+        Jv_ = rect(vtt)*Jvtt
 
         x_ = xt_.copy()
         Jx_ = Jxt_.copy()

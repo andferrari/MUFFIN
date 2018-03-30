@@ -12,7 +12,7 @@ from scipy.fftpack import dct,idct
 #from deconv3d_tools import dctt 
 #from deconv3d_tools import idct
 
-from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, Heavy, Rect
+from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, heavy, rect
 from deconv3d_tools import myifftshift, optimal_split
 from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp, dwt_I_decomp, dwt_I_recomp
 from mpi4py import MPI
@@ -741,7 +741,7 @@ class EasyMuffinSURE(EasyMuffin):
         else:
             return 0
 
-    def update_Jacobians(self):
+    def update_jacobians(self):
         if rank==0:
             self.Jtf = np.asfortranarray(idct(self.Jv, axis=2,norm='ortho'))
         
@@ -755,19 +755,19 @@ class EasyMuffinSURE(EasyMuffin):
                 self.Js_l = self.Recomp(self.Ju[freq], self.nbw_recomp)
                 # compute xt
                 Jxtt = self.Jx[:,:,freq] - self.tau*(JDelta_freq[:,:,freq] + self.mu_s*self.alpha_s[freq]*self.Js_l + self.mu_l*self.alpha_l*self.Jt[:,:,freq])
-                self.Jxt[:,:,freq] = Heavy(self.xtt[:,:,freq])*Jxtt
+                self.Jxt[:,:,freq] = heavy(self.xtt[:,:,freq])*Jxtt
                 # update u
                 tmp_spat_scal_J = self.Decomp(2*self.Jxt[:,:,freq] - self.Jx[:,:,freq] , self.nbw_decomp)
                 for b in self.nbw_decomp:
                     Jutt = self.Ju[freq][b] + self.sigma*self.mu_s*self.alpha_s[freq]*tmp_spat_scal_J[b]
-                    self.Ju[freq][b] = Rect( self.utt[freq][b] )*Jutt
+                    self.Ju[freq][b] = rect( self.utt[freq][b] )*Jutt
             self.delta = np.asfortranarray(2*self.Jxt-self.Jx)
             
         comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if rank==0:
             Jvtt = self.Jv + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
-            self.Jv = Rect(self.vtt)*Jvtt
+            self.Jv = rect(self.vtt)*Jvtt
         else:
             self.Jx = self.Jxt.copy(order='F')
         
@@ -790,7 +790,7 @@ class EasyMuffinSURE(EasyMuffin):
             self.mu_slist.append(self.mu_s)
             self.mu_llist.append(self.mu_l)
             super(EasyMuffinSURE,self).update()
-            self.update_Jacobians()
+            self.update_jacobians()
             self.nitertot+=1
 
             if rank==0:
@@ -858,13 +858,13 @@ class EasyMuffinSURE(EasyMuffin):
                 wstu = self.alpha_s[freq]*self.Recomp(self.u[freq], self.nbw_recomp) + self.mu_s*self.alpha_s[freq]*self.Recomp(self.du_s[freq], self.nbw_recomp)
                 # compute xt
                 dxtt_s = self.dx_s[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + self.mu_l*self.alpha_l*self.dt_s[:,:,freq])
-                self.dxt_s[:,:,freq] = Heavy(self.xtt[:,:,freq] )*dxtt_s
+                self.dxt_s[:,:,freq] = heavy(self.xtt[:,:,freq] )*dxtt_s
                 # update u
                 tmp_spat_scal = self.Decomp(self.alpha_s[freq]*(2*self.xt[:,:,freq] - self.x[:,:,freq]) + self.mu_s*self.alpha_s[freq]*(2*self.dxt_s[:,:,freq] - self.dx_s[:,:,freq]), self.nbw_decomp)
     
                 for b in self.nbw_decomp:
                     dutt_s = self.du_s[freq][b] + self.sigma*tmp_spat_scal[b]
-                    self.du_s[freq][b] = Rect(self.utt[freq][b])*dutt_s
+                    self.du_s[freq][b] = rect(self.utt[freq][b])*dutt_s
                     
             self.delta = np.asfortranarray(2*self.dxt_s-self.dx_s)
             
@@ -873,7 +873,7 @@ class EasyMuffinSURE(EasyMuffin):
         if rank==0:
             # update v
             dvtt_s = self.dv_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
-            self.dv_s = Rect(self.vtt)*dvtt_s
+            self.dv_s = rect(self.vtt)*dvtt_s
         else:
             self.dx_s = self.dxt_s.copy(order='F')
         
@@ -893,14 +893,14 @@ class EasyMuffinSURE(EasyMuffin):
     
                 # compute xt
                 dxtt_l = self.dx_l[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + self.dt_l[:,:,freq])
-                self.dxt_l[:,:,freq] = Heavy(self.xtt[:,:,freq] )*dxtt_l
+                self.dxt_l[:,:,freq] = heavy(self.xtt[:,:,freq] )*dxtt_l
     
                 # update u
                 tmp_spat_scal = self.Decomp(self.mu_s*self.alpha_s[freq]*(2*self.dxt_l[:,:,freq] - self.dx_l[:,:,freq]), self.nbw_decomp)
     
                 for b in self.nbw_decomp:
                     dutt_l = self.du_l[freq][b] + self.sigma*tmp_spat_scal[b]
-                    self.du_l[freq][b] = Rect(self.utt[freq][b])*dutt_l
+                    self.du_l[freq][b] = rect(self.utt[freq][b])*dutt_l
                     
             self.delta = np.asfortranarray(2*self.dxt_l - self.dx_l)
                 
@@ -908,7 +908,7 @@ class EasyMuffinSURE(EasyMuffin):
         
         if rank==0:
             dvtt_l = self.dv_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho') + self.sigma*self.alpha_l[...,None]*dct(2*self.xtf - self.xf, axis=2, norm='ortho')
-            self.dv_l = Rect(self.vtt)*dvtt_l
+            self.dv_l = rect(self.vtt)*dvtt_l
         else:
             self.dx_l = self.dxt_l.copy(order='F')
             
@@ -929,12 +929,12 @@ class EasyMuffinSURE(EasyMuffin):
                 wstu = self.alpha_s[freq]*self.Recomp(self.u2[freq], self.nbw_recomp) + self.mu_s*self.alpha_s[freq]*self.Recomp(self.du2_s[freq], self.nbw_recomp)
                 # compute xt
                 dxtt_s = self.dx2_s[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + self.mu_l*self.alpha_l*self.dt2_s[:,:,freq])
-                self.dxt2_s[:,:,freq] = Heavy(self.xtt2[:,:,freq] )*dxtt_s
+                self.dxt2_s[:,:,freq] = heavy(self.xtt2[:,:,freq] )*dxtt_s
                 # update u
                 tmp_spat_scal = self.Decomp(self.alpha_s[freq]*(2*self.xt2[:,:,freq] - self.x2[:,:,freq]) + self.mu_s*self.alpha_s[freq]*(2*self.dxt2_s[:,:,freq] - self.dx2_s[:,:,freq]), self.nbw_decomp)   
                 for b in self.nbw_decomp:
                     dutt_s = self.du2_s[freq][b] + self.sigma*tmp_spat_scal[b]
-                    self.du2_s[freq][b] = Rect(self.utt2[freq][b])*dutt_s
+                    self.du2_s[freq][b] = rect(self.utt2[freq][b])*dutt_s
                     
             self.delta = np.asfortranarray(2*self.dxt2_s-self.dx2_s)
             
@@ -942,7 +942,7 @@ class EasyMuffinSURE(EasyMuffin):
         
         if rank==0:
             dvtt2_s = self.dv2_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
-            self.dv2_s = Rect(self.vtt2)*dvtt2_s
+            self.dv2_s = rect(self.vtt2)*dvtt2_s
         else:
             self.dx2_s = self.dxt2_s.copy(order='F')
             
@@ -959,12 +959,12 @@ class EasyMuffinSURE(EasyMuffin):
                 wstu = self.mu_s*self.alpha_s[freq]*self.Recomp(self.du2_l[freq], self.nbw_recomp)
                 # compute xt
                 dxtt_l = self.dx2_l[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + self.dt2_l[:,:,freq])
-                self.dxt2_l[:,:,freq] = Heavy(self.xtt2[:,:,freq] )*dxtt_l
+                self.dxt2_l[:,:,freq] = heavy(self.xtt2[:,:,freq] )*dxtt_l
                 # update u
                 tmp_spat_scal = self.Decomp(self.mu_s*self.alpha_s[freq]*(2*self.dxt2_l[:,:,freq] - self.dx2_l[:,:,freq]), self.nbw_decomp)
                 for b in self.nbw_decomp:
                     dutt_l = self.du2_l[freq][b] + self.sigma*tmp_spat_scal[b]
-                    self.du2_l[freq][b] = Rect(self.utt2[freq][b])*dutt_l
+                    self.du2_l[freq][b] = rect(self.utt2[freq][b])*dutt_l
                 
             self.delta = np.asfortranarray(2*self.dxt2_l-self.dx2_l)
             
@@ -972,7 +972,7 @@ class EasyMuffinSURE(EasyMuffin):
         
         if rank==0:
             dvtt2_l = self.dv2_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho') + self.sigma*self.alpha_l[...,None]*dct(2*self.xt2f - self.x2f, axis=2, norm='ortho')
-            self.dv2_l = Rect(self.vtt2)*dvtt2_l
+            self.dv2_l = rect(self.vtt2)*dvtt2_l
         else:
             self.dx2_l = self.dxt2_l.copy(order='F')
             
@@ -1012,7 +1012,7 @@ class EasyMuffinSURE(EasyMuffin):
             self.mu_slist.append(self.mu_s)
             self.mu_llist.append(self.mu_l)
             super(EasyMuffinSURE,self).update()
-            self.update_Jacobians()
+            self.update_jacobians()
 
             self.update2() #
             self.dx_mu() #
@@ -1020,7 +1020,7 @@ class EasyMuffinSURE(EasyMuffin):
             self.sugarfdmc()
             
             if niter>1 and niter%30==0:
-                self.GradDes_mu(self.step_mu)
+                self.graddes_mu(self.step_mu)
                 if niter>4000 and niter%1000==0:
                     self.step_mu = [tmp/1.1 for tmp in self.step_mu]
 
@@ -1037,7 +1037,7 @@ class EasyMuffinSURE(EasyMuffin):
                     print(str_cost_wmsesure_mu.format(niter,self.costlist[-1],self.wmselistsurefdmc[-1],self.mu_slist[-1],self.mu_llist[-1]))
 
 
-    def GradDes_mu(self,step=[1e-3,1e-3]):
+    def graddes_mu(self,step=[1e-3,1e-3]):
         self.mu_s = np.maximum(self.mu_s - step[0]*self.sugarfdmclist[0][-1],0)
         self.mu_l = np.maximum(self.mu_l - step[1]*self.sugarfdmclist[1][-1],0)
         

@@ -20,10 +20,10 @@ import deconv3d_mpi as dcvMpi
 import deconv3d as dcv
 
 # =============================================================================
-# Input
+# Terminal Input
 # =============================================================================
 parser = argparse.ArgumentParser(description='Awesome Argument Parser')
-parser.add_argument('-fol','--folder',help='Path to data')
+parser.add_argument('-fol','--folder',help='Path to data folder')
 parser.add_argument('-nam','--file_in',help='Data Prefix')
 
 args = parser.parse_args()
@@ -31,34 +31,43 @@ args = parser.parse_args()
 folder = args.folder
 file_in = args.file_in
 
+# ==============================================================================
+# OPEN PSF AND DIRTY CUBE - SKY to check results
+# ==============================================================================
+
 genname = os.path.join(folder, file_in)
-psfname = genname+'_psf.fits'
-drtname = genname+'_dirty.fits'
+psf_name = genname+'_psf.fits'
+drt_name = genname+'_dirty.fits'
 
-CubePSF = fix_dim(fits.getdata(psfname, ext=0))[:,:,0:5]
-CubeDirty = fix_dim(fits.getdata(drtname, ext=0))[:,:,0:5]
+L = 5 
+cube_psf = fix_dim(fits.getdata(psf_name, ext=0))[:,:,0:L]
+cube_dirty = fix_dim(fits.getdata(drt_name, ext=0))[:,:,0:L]
 
-skyname = genname+'_sky.fits'
-sky = fits.getdata(skyname, ext=0)
-sky = np.transpose(sky)[:,:,0:5]
+sky_name = genname+'_sky.fits'
+sky = fits.getdata(sky_name, ext=0)
+sky = np.transpose(sky)[:,:,0:L]
 sky2 = np.sum(sky*sky)
 
-Noise = CubeDirty - conv(CubePSF,sky)
+Noise = cube_dirty - conv(cube_psf,sky)
 var = np.sum(Noise**2)/Noise.size
 
 #%% ===========================================================================
-# MPI 
+# MPI Setting 
 # =============================================================================
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
+#%% ==============================================================================
+# Tsts EM and EMSURE 
+# ==============================================================================
+
 #nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 nb=(7,0)
-nitermax = 4
-mu_s = 0.
-mu_l = 0.5
+nitermax = 3
+mu_s = 1
+mu_l = 1
 fftw = 1
 
 if rank==0:
@@ -68,7 +77,7 @@ if rank==0:
     print('----------------------------------------------------------')
     print('')
     tm.tic()
-    EM00= dcv.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,fftw=fftw)
+    EM00= dcv.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw)
     EM00.loop(nitermax)
     tm.toc()
     
@@ -78,7 +87,7 @@ if rank==0:
     print('----------------------------------------------------------')
     print('')
     tm.tic()
-    EM0= dcv.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,fftw=fftw)
+    EM0= dcv.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw)
     EM0.loop(nitermax)
     tm.toc()
 
@@ -90,7 +99,7 @@ if rank==0:
     
 # every processor creates EM -- inside each one will do its one part of the job 
 tm.tic()
-EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var,fftw=fftw)
+EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw)
 EM.loop(nitermax)
 
 
