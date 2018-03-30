@@ -17,7 +17,7 @@ m31_3d_conv_10db
 ``` 
 mpirun --np 44  python3 Run_tst_mpi2.py -L 256 -N 2000 -mu_s 0.2 -mu_l 7 -mu_w 10 -stp_s 0.3 -stp_l 10000 -N_dct 0 -data m31_3d_conv_10db -fol /home/rammanouil/Bureau/easy_muffin/easy_muffin_py/data
 ```
-- [plot_figures_Run_tst_mpi.py](Run_test_mpi2.py/plot_figures_Run_tst_mpi.py): Loads results saved in `run_test_mpi.py` and plots  Figures (SNR, PSNR, MSE, cost, SUGAR, ... )
+- [plot_figures_Run_tst_mpi.py](easy_muffin_py/plot_figures_Run_tst_mpi.py): Loads results saved in `run_test_mpi.py` and plots  Figures (SNR, PSNR, MSE, cost, SUGAR, ... )
 ```
 python3 plot_figures_Run_tst_mpi.py -res_fol /home/rammanouil/Bureau/easy_muffin/easy_muffin_py/output/1881888
 ```
