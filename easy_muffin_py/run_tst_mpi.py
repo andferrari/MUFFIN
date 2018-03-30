@@ -113,7 +113,7 @@ if os.path.isfile(sky_name):
         
     #sky = checkdim(fits.getdata(skyname, ext=0))[:,:,0:L]
     sky = checkdim(fits.getdata(sky_name, ext=0))
-    #sky = np.transpose(sky)[:,:,0:L]
+    sky = np.transpose(sky)[:,:,0:L]
     
     sky = sky[:,:,0:L]
     #sky = sky[:,:,-L:]

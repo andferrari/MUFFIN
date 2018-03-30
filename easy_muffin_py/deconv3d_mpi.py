@@ -14,6 +14,7 @@ from scipy.fftpack import dct,idct
 from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, heavy, rect
 from deconv3d_tools import myifftshift, optimal_split
 from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp, dwt_I_decomp, dwt_I_recomp
+from deconv3d_tools import conv as convolve 
 from mpi4py import MPI
 import sys
 
@@ -231,7 +232,7 @@ class EasyMuffin():
                 tmp = np.asfortranarray(init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener))
                 tmp = dct(tmp,axis=2,norm='ortho')
                 self.alpha_l = 1/(np.sum(tmp**2,2)+1e-1) # image
-                self.alpha_l = self.conv(self.alpha_l,np.ones((3,3)),'max')
+                self.alpha_l = convolve(self.alpha_l,np.ones((3,3)),'max')
                 self.alpha_l = self.alpha_l/self.alpha_l.max()
             else:
                 self.alpha_l = np.ones((self.nxy,self.nxy))
