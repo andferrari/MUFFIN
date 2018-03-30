@@ -10,6 +10,15 @@ from numpy.fft import fft2, ifft2, ifftshift
 import pywt
 
 #==============================================================================
+# fix dim for fits file 
+#==============================================================================
+def fix_dim(x):
+    if len(x.shape) == 4:
+        x = np.squeeze(x)
+        x = x.transpose((2, 1, 0))
+    return x
+
+#==============================================================================
 # Compute tau
 #==============================================================================
 def compute_tau_DWT(psf,mu_s,mu_l,sigma,nbw_decomp):
@@ -60,11 +69,11 @@ def compute_tau_2D(psf,mu_s,sigma,nbw_decomp):
 #==============================================================================
 # tools for Jacobians comp.
 #==============================================================================
-def Heavy(x):
+def heavy(x):
     return (np.sign(x)+1)/2
 
-def Rect(x):
-    return Heavy(x+1)-Heavy(x-1)
+def rect(x):
+    return heavy(x+1)-heavy(x-1)
 
 #==============================================================================
 # TOOLS

@@ -6,69 +6,69 @@ Created on Fri Oct 28 10:08:49 2016
 @author: antonyschutz
 """
 # ==============================================================================
-# OPEN PSF AND DIRTY CUBE - SKY to check results
+# Imports
 # ==============================================================================
-
 import os
 import numpy as np
 from astropy.io import fits
-import pylab as pl
-import sys
-from deconv3d_tools import conv
-
+from deconv3d_tools import conv, fix_dim
+import argparse
 from mpi4py import MPI 
-
 import tictoc as tm
 
+import deconv3d_mpi as dcvMpi
+import deconv3d as dcv
 
-if len(sys.argv)>1:
-    visu=int(sys.argv[1])
-else:
-    visu=1
+# =============================================================================
+# Terminal Input
+# =============================================================================
+parser = argparse.ArgumentParser(description='Awesome Argument Parser')
+parser.add_argument('-fol','--folder',help='Path to data folder')
+parser.add_argument('-nam','--file_in',help='Data Prefix')
 
-def checkdim(x):
-    if len(x.shape) == 4:
-        x = np.squeeze(x)
-        x = x.transpose((2, 1, 0))
-    return x
+args = parser.parse_args()
 
-folder = 'DataSets/data'
-file_in = 'm31_3d_conv_10db'
+folder = args.folder
+file_in = args.file_in
 
-folder = os.path.join(os.getcwd(), folder)
+# ==============================================================================
+# OPEN PSF AND DIRTY CUBE - SKY to check results
+# ==============================================================================
+
 genname = os.path.join(folder, file_in)
-psfname = genname+'_psf.fits'
-drtname = genname+'_dirty.fits'
+psf_name = genname+'_psf.fits'
+drt_name = genname+'_dirty.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,0:5]
-CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,0:5]
+L = 5 
+cube_psf = fix_dim(fits.getdata(psf_name, ext=0))[:,:,0:L]
+cube_dirty = fix_dim(fits.getdata(drt_name, ext=0))[:,:,0:L]
 
-skyname = genname+'_sky.fits'
-sky = checkdim(fits.getdata(skyname, ext=0))
-sky = np.transpose(sky)[:,:,0:5]
+sky_name = genname+'_sky.fits'
+sky = fits.getdata(sky_name, ext=0)
+sky = np.transpose(sky)[:,:,0:L]
 sky2 = np.sum(sky*sky)
 
-Noise = CubeDirty - conv(CubePSF,sky)
+Noise = cube_dirty - conv(cube_psf,sky)
 var = np.sum(Noise**2)/Noise.size
 
 #%% ===========================================================================
-# MPI 
+# MPI Setting 
 # =============================================================================
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-#import deconv3d_mpi as dcvMpi
-import deconv3D_mpi2 as dcvMpi
-
-import deconv3d as dcv
+#%% ==============================================================================
+# Tsts EM and EMSURE 
+# ==============================================================================
 
 #nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 nb=(7,0)
-nitermax = 4
-mu_s = 0.
-mu_l = 0.5
+nitermax = 3
+mu_s = 1
+mu_l = 1
+fftw = 1
 
 if rank==0:
     print('')
@@ -77,7 +77,7 @@ if rank==0:
     print('----------------------------------------------------------')
     print('')
     tm.tic()
-    EM00= dcv.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+    EM00= dcv.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw)
     EM00.loop(nitermax)
     tm.toc()
     
@@ -87,7 +87,7 @@ if rank==0:
     print('----------------------------------------------------------')
     print('')
     tm.tic()
-    EM0= dcv.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+    EM0= dcv.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw)
     EM0.loop(nitermax)
     tm.toc()
 
@@ -99,7 +99,7 @@ if rank==0:
     
 # every processor creates EM -- inside each one will do its one part of the job 
 tm.tic()
-EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=CubePSF,dirty=CubeDirty,var=var)
+EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw)
 EM.loop(nitermax)
 
 
