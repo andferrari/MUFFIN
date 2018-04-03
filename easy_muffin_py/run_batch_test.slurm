@@ -7,7 +7,7 @@
 #SBATCH -p fdr
 
 module purge
-module load python/3.6.3_anaconda3
+module load python/3.6.3_anaconda3 intel/mpi/64/2017.4.196
 
 echo "I am here"
 
