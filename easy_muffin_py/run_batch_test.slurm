@@ -4,7 +4,7 @@
 #SBATCH -t 2:00:00
 #SBATCH --output testing-%j.out
 #SBATCH -N 1
-##SBATCH -p fdr
+#SBATCH -p fdr,qdr,qdr-gpu
 
 module purge
 module load python/3.6.3_anaconda3 intel/mpi/64/2017.4.196
