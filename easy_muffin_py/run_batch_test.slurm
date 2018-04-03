@@ -11,6 +11,7 @@ module load python/3.6.3_anaconda3 intel/mpi/64/2017.4.196
 
 echo "I am here"
 
+export PYTHONPATH=.:$PYTHONPATH
 mkdir -p output_sigamm/$SLURM_JOB_ID
 
 MAINPY=$SLURM_SUBMIT_DIR/run_tst_mpi_sigamm.py" -L 99 -N 4000 -mu_s 1 -mu_l 10 -mu_w 10 -stp_s 0.5 -stp_l 100 -N_dct 0 -pxl_w 1 -bnd_w 1 -data M31_skyline2_20db"
