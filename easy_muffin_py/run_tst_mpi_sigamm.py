@@ -15,7 +15,7 @@ from astropy.io import fits
 import sys
 from deconv3d_tools import conv
 from mpi4py import MPI
-import deconv3D_mpi2 as dcvMpi
+import deconv3d_mpi as dcvMpi
 from tictoc import tic, toc
 from datetime import datetime
 import argparse
