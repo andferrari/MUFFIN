@@ -15,7 +15,7 @@ from astropy.io import fits
 import sys
 from deconv3d_tools import conv, fix_dim
 from mpi4py import MPI
-import deconv3D_mpi as dcvMpi
+import deconv3d_mpi as dcvMpi
 from tictoc import tic, toc
 from datetime import datetime
 import argparse
@@ -73,14 +73,14 @@ sky_name = genname+'_sky.fits'
 cube_psf = fix_dim(fits.getdata(psf_name, ext=0))[:,:,-L:]
 cube_dirty = fix_dim(fits.getdata(drt_name, ext=0))[:,:,-L:]
 
-if os.path.isfile(skyname):
+if os.path.isfile(sky_name):
 
     if rank==0:
         print(data_suffix)
         print('')
         print('estimating variance')
 
-    sky = fix_dim(fits.getdata(skyname, ext=0))
+    sky = fix_dim(fits.getdata(sky_name, ext=0))
     sky = sky[:,:,-L:]
 
     sky2 = np.sum(sky*sky)
