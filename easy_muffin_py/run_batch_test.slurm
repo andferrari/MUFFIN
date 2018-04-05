@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name Run_tst_mpi2
+#SBATCH --job-name run_batch_test_slurm
 #SBATCH -t 2:00:00
 #SBATCH --output testing-%j.out
 #SBATCH -N 5
