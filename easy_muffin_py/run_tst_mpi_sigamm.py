@@ -13,7 +13,7 @@ import os
 import numpy as np
 from astropy.io import fits
 import sys
-from deconv3d_tools import conv
+from deconv3d_tools import conv, fix_dim
 from mpi4py import MPI
 import deconv3D_mpi as dcvMpi
 from tictoc import tic, toc
@@ -62,11 +62,6 @@ folder = args.folder
 # =============================================================================
 # Load data
 # =============================================================================
-def checkdim(x):
-    if len(x.shape) == 4:
-        x = np.squeeze(x)
-        x = x.transpose((2, 1, 0))
-    return x
 
 file_in = data_suffix
 folder = os.path.join(os.getcwd(), folder)
@@ -75,8 +70,8 @@ psf_name = genname+'_psf.fits'
 drt_name = genname+'_dirty.fits'
 sky_name = genname+'_sky.fits'
 
-cube_psf = checkdim(fits.getdata(psf_name, ext=0))[:,:,-L:]
-cube_dirty = checkdim(fits.getdata(drt_name, ext=0))[:,:,-L:]
+cube_psf = fix_dim(fits.getdata(psf_name, ext=0))[:,:,-L:]
+cube_dirty = fix_dim(fits.getdata(drt_name, ext=0))[:,:,-L:]
 
 if os.path.isfile(skyname):
 
@@ -85,12 +80,8 @@ if os.path.isfile(skyname):
         print('')
         print('estimating variance')
 
-    #sky = checkdim(fits.getdata(skyname, ext=0))[:,:,0:L]
-    sky = checkdim(fits.getdata(skyname, ext=0))
-    #sky = np.transpose(sky)[:,:,0:L]
-
+    sky = fix_dim(fits.getdata(skyname, ext=0))
     sky = sky[:,:,-L:]
-    #sky = sky[:,:,-L:]
 
     sky2 = np.sum(sky*sky)
     Noise = cube_dirty - conv(cube_psf,sky)
@@ -122,7 +113,7 @@ else:
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 #nb = (7,0)
 
-args = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf’:cube_psf,’dirty’:cube_dirty,'var':var,'step_mu':step_mu,'pixelweighton':pxl_w,'bandweighton':pxl_w}
+args = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'step_mu':step_mu,'pixelweighton':pxl_w,'bandweighton':pxl_w}
 tic()
 
 EM= dcvMpi.EasyMuffinSURE(**args)
