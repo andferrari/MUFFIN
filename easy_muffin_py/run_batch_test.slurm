@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name run_batch_test_slurm
-#SBATCH -t 2:00:00
+#SBATCH -t 0:02:00
 #SBATCH --output testing-%j.out
 #SBATCH -N 2
 #SBATCH -p fdr
@@ -10,12 +10,14 @@ module load python/3.6.3_anaconda3
 
 echo "I am here"
 
+echo $((10*$SLURM_NNODES))
+
 mkdir -p output_sigamm/$SLURM_JOB_ID
 
-MAINPY=$SLURM_SUBMIT_DIR/run_tst_mpi_sigamm.py" -L 19 -N 4 -mu_s 1 -mu_l 10 -mu_w 10 -stp_s 0.5 -stp_l 100 -pxl_w 1 -bnd_w 1 -data M31_skyline2_20db -fol ./data"
+MAINPY=$SLURM_SUBMIT_DIR/run_tst_mpi_sigamm.py" -L 19 -N 2 -mu_s 1 -mu_l 10 -mu_w 10 -stp_s 0.5 -stp_l 100 -pxl_w 1 -bnd_w 1 -data M31_skyline2_20db -fol ./data"
 
 echo "============= MPI RUN ============="
-mpirun --np 10*$SLURM_NNODES python $MAINPY
+mpirun --np $((10*$SLURM_NNODES)) python $MAINPY
 echo "==================================="
 
 cp $SLURM_SUBMIT_DIR/testing-$SLURM_JOB_ID.out $SLURM_SUBMIT_DIR/output_sigamm/testing-$SLURM_JOB_ID.out
