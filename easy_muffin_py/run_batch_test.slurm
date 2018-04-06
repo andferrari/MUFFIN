@@ -2,8 +2,8 @@
 #SBATCH --job-name run_batch_test_slurm
 #SBATCH -t 0:02:00
 #SBATCH --output testing-%j.out
-#SBATCH -N 1
-#SBATCH -p fdr,qdr
+#SBATCH -N 2
+#SBATCH -p fdr,qdr,qdr-gpu
 
 module purge
 module load python/3.6.3_anaconda3 intel/mpi/64/2017.4.196 intel/compiler/64/2017.4.196
@@ -16,18 +16,19 @@ then
     exit -1
 fi
 
-echo -n "I am here: " $SLURM_SUBMIT_DIR
+echo "Launched from: $SLURM_SUBMIT_DIR"
 
 nbproc=$(grep -i processor /proc/cpuinfo |wc -l)
 
-numberofnodes=$(($nbproc*$SLURM_NNODES))
-echo $numberofnodes
+numberofcores=$(($nbproc*$SLURM_NNODES))
+echo "Will use $numberofcores MPI processes."
 
 mkdir -p output_sigamm/$SLURM_JOB_ID
+
 MAINPY="$prog -L 19 -N 2 -mu_s 1 -mu_l 10 -mu_w 10 -stp_s 0.5 -stp_l 100 -pxl_w 1 -bnd_w 1 -data M31_skyline2_20db -fol ./data"
 
 echo "============= MPI RUN ============="
-mpirun --np $numberofnodes python $MAINPY
+mpirun --np $numberofcores python $MAINPY
 echo "==================================="
 
 cp -v ./testing-$SLURM_JOB_ID.out ./output_sigamm/testing-$SLURM_JOB_ID.out

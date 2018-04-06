@@ -13,7 +13,7 @@ import os
 import numpy as np
 from astropy.io import fits
 import sys
-from deconv3d_tools import conv
+from deconv3d_tools import conv, fix_dim
 from mpi4py import MPI
 import deconv3d_mpi as dcvMpi
 from tictoc import tic, toc
@@ -39,9 +39,9 @@ parser.add_argument('-mu_w','--mu_wiener',default=5e1,type=float,help='Weiner re
 parser.add_argument('-stp_s','--step_mu_s',default=0.001,type=float,help='Gradient step for spatial regularization')
 parser.add_argument('-stp_l','--step_mu_l',default=0.001,type=float,help='Gradient step for spectral regularization')
 parser.add_argument('-data','--data_suffix',default='M31_3d_conv_256_10db',help='Suffix of data name')
-parser.add_argument('-N_dct','--N_dct',default=-1,type=int,help='Number of coef for DCT')
 parser.add_argument('-pxl_w','--pixelweight',default=0,type=int,help='Use different weight per pixel')
 parser.add_argument('-bnd_w','--bandweight',default=0,type=int,help='Use different weight per band')
+parser.add_argument('-fol','--folder',help='Path to data folder')
 
 args = parser.parse_args()
 
@@ -54,50 +54,37 @@ step_mu_s = args.step_mu_s
 step_mu_l = args.step_mu_l
 step_mu = [step_mu_s,step_mu_l]
 data_suffix = args.data_suffix
-N_dct = args.N_dct
 pxl_w = args.pixelweight
 bnd_w = args.bandweight
+
+folder = args.folder
 
 # =============================================================================
 # Load data
 # =============================================================================
-def checkdim(x):
-    if len(x.shape) == 4:
-        x = np.squeeze(x)
-        x = x.transpose((2, 1, 0))
-    return x
 
-folder = 'data'
-#folder = 'data256Eusipco'
-#folder = 'data_david'
 file_in = data_suffix
 folder = os.path.join(os.getcwd(), folder)
 genname = os.path.join(folder, file_in)
-psfname = genname+'_psf.fits'
-drtname = genname+'_dirty.fits'
+psf_name = genname+'_psf.fits'
+drt_name = genname+'_dirty.fits'
+sky_name = genname+'_sky.fits'
 
-CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,-L:]
-CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,-L:]
-#CubePSF = checkdim(fits.getdata(psfname, ext=0))[:,:,-L:]
-#CubeDirty = checkdim(fits.getdata(drtname, ext=0))[:,:,-L:]
-skyname = genname+'_sky.fits'
+cube_psf = fix_dim(fits.getdata(psf_name, ext=0))[:,:,-L:]
+cube_dirty = fix_dim(fits.getdata(drt_name, ext=0))[:,:,-L:]
 
-if os.path.isfile(skyname):
+if os.path.isfile(sky_name):
 
     if rank==0:
         print(data_suffix)
         print('')
         print('estimating variance')
 
-    #sky = checkdim(fits.getdata(skyname, ext=0))[:,:,0:L]
-    sky = checkdim(fits.getdata(skyname, ext=0))
-    #sky = np.transpose(sky)[:,:,0:L]
-
+    sky = fix_dim(fits.getdata(sky_name, ext=0))
     sky = sky[:,:,-L:]
-    #sky = sky[:,:,-L:]
 
     sky2 = np.sum(sky*sky)
-    Noise = CubeDirty - conv(CubePSF,sky)
+    Noise = cube_dirty - conv(cube_psf,sky)
     var = np.sum(Noise**2)/Noise.size
     if rank==0:
         print('')
@@ -126,7 +113,7 @@ else:
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 #nb = (7,0)
 
-args = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':CubePSF,'dirty':CubeDirty,'var':var,'step_mu':step_mu,'N_dct':N_dct,'pixelweighton':pxl_w,'bandweighton':pxl_w}
+args = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'step_mu':step_mu,'pixelweighton':pxl_w,'bandweighton':pxl_w}
 tic()
 
 EM= dcvMpi.EasyMuffinSURE(**args)
