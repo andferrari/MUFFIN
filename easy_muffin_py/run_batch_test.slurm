@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name run_batch_test_slurm
-#SBATCH -t 0:02:00
+#SBATCH -t 19:10:00
 #SBATCH --output testing-%j.out
-#SBATCH -N 2
+#SBATCH -N 10
 #SBATCH -p fdr,qdr,qdr-gpu
 
 module purge
@@ -17,7 +17,7 @@ echo "Number of processes for mpi: $nbproc"
 
 mkdir -p output_sigamm/$SLURM_JOB_ID
 
-MAINPY=$SLURM_SUBMIT_DIR/run_tst_mpi_sigamm.py" -L 39 -N 2 -mu_s 1 -mu_l 10 -mu_w 10 -stp_s 0.5 -stp_l 100 -pxl_w 1 -bnd_w 1 -data M31_skyline2_20db -fol data"
+MAINPY=$SLURM_SUBMIT_DIR/run_tst_mpi_sigamm.py" -L 256 -N 400 -mu_s 0 -mu_l 0 -mu_w 10 -stp_s 0 -stp_l 0 -pxl_w 1 -bnd_w 1 -data M31_skyline2_20db -fol data"
 
 echo "============= MPI RUN ============="
 mpirun --np $nbproc python $MAINPY
