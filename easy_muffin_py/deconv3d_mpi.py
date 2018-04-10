@@ -135,7 +135,7 @@ class EasyMuffin():
         if nbw > self.nfreq:
             if rank==0:
                 print('----------------------------------------------------------------')
-                print('   mpi: !!!! You cannoy have more workers than bands !!!!')
+                print('   mpi: !!!! You cannot have more workers than bands !!!!')
                 print('----------------------------------------------------------------')
                 sys.exit()
             else:
