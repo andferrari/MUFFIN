@@ -39,7 +39,6 @@ str_cst_snr_wmse_wmsesure_mu_title="-"*99+"\n"+"| {:5s} | {:12s} | {:12s} | {:12
 #Global variable -
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
-rank = comm.Get_rank()
 
 nbw = size - 1
 
@@ -115,7 +114,7 @@ class EasyMuffin():
         self.nf2 = self.nf2.tolist()
         self.nf2[0:0] = [0]
 
-        if rank ==0:
+        if self.master:
             print('')
             print(self.lst_nbf)
             print(self.nf2)
@@ -236,7 +235,7 @@ class EasyMuffin():
             
         else:
             
-            self.nfreq = self.lst_nbf[rank]
+            self.nfreq = self.lst_nbf[comm.Get_rank()]
             self.psf = np.asfortranarray(self.psf[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
             self.dirty = np.asfortranarray(self.dirty[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
             
@@ -1037,6 +1036,4 @@ class EasyMuffinSURE(EasyMuffin):
     def graddes_mu(self,step=[1e-3,1e-3]):
         self.mu_s = np.maximum(self.mu_s - step[0]*self.sugarfdmclist[0][-1],0)
         self.mu_l = np.maximum(self.mu_l - step[1]*self.sugarfdmclist[1][-1],0)
-        
-        #print(rank,' ',self.mu_l)
 
