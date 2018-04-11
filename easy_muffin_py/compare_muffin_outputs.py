@@ -19,7 +19,6 @@ args = parser.parse_args()
 
 passed=True
 if args.golddir:
-    print("Blob")
     for f in os.listdir(args.golddir):
         gpath = path.join(args.golddir, f)
         opath = path.join(args.outdir, f)
