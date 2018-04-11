@@ -25,9 +25,10 @@ nbproc=$(grep -i processor /proc/cpuinfo |wc -l)
 numberofcores=$(($nbproc*$SLURM_NNODES))
 echo "Will use $numberofcores MPI processes."
 
-mkdir -p output_sigamm/$SLURM_JOB_ID
+odir=output_sigamm/$SLURM_JOB_ID
+mkdir -p $odir
 
-MAINPY="$prog -L 19 -N 2 -mu_s 1 -mu_l 10 -mu_w 10 -stp_s 0.5 -stp_l 100 -pxl_w 1 -bnd_w 1 -data M31_skyline2_20db -fol ./data"
+MAINPY="$prog -L 19 -N 2 -mu_s 1 -mu_l 10 -mu_w 10 -stp_s 0.5 -stp_l 100 -pxl_w 1 -bnd_w 1 -data M31_skyline2_20db -fol ./data -o $odir"
 
 echo "============= MPI RUN ============="
 mpirun --np $numberofcores python $MAINPY

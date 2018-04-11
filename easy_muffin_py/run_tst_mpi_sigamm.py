@@ -10,6 +10,7 @@ Created on Mon Jan 22 16:00:55 2018
 # OPEN PSF AND DIRTY CUBE - SKY to check results
 # ==============================================================================
 import os
+import errno
 import numpy as np
 from astropy.io import fits
 import sys
@@ -24,8 +25,7 @@ import argparse
 # MPI
 # =============================================================================
 comm = MPI.COMM_WORLD
-size = comm.Get_size()
-rank = comm.Get_rank()
+master=comm.Get_rank()==0
 
 # =============================================================================
 # Input
@@ -42,9 +42,16 @@ parser.add_argument('-data','--data_suffix',default='M31_3d_conv_256_10db',help=
 parser.add_argument('-pxl_w','--pixelweight',default=0,type=int,help='Use different weight per pixel')
 parser.add_argument('-bnd_w','--bandweight',default=0,type=int,help='Use different weight per band')
 parser.add_argument('-fol','--folder',help='Path to data folder')
+parser.add_argument('-o','--odir', type=str, dest='output_dir', default='.', help='Output directory, must exist.')
 
 args = parser.parse_args()
 
+if os.path.isdir(args.output_dir):
+    if master: print(f'Data will be generated in {args.output_dir}.')
+else:
+    if master: print(f'Ouput directory {args.output_dir} does not exist.')
+    sys.exit(errno.ENOTDIR)
+        
 L = args.L
 nitermax = args.nitermax
 mu_s = args.mu_s
@@ -74,8 +81,7 @@ cube_psf = fix_dim(fits.getdata(psf_name, ext=0))[:,:,-L:]
 cube_dirty = fix_dim(fits.getdata(drt_name, ext=0))[:,:,-L:]
 
 if os.path.isfile(sky_name):
-
-    if rank==0:
+    if master:
         print(data_suffix)
         print('')
         print('estimating variance')
@@ -86,25 +92,15 @@ if os.path.isfile(sky_name):
     sky2 = np.sum(sky*sky)
     Noise = cube_dirty - conv(cube_psf,sky)
     var = np.sum(Noise**2)/Noise.size
-    if rank==0:
+    if master:
         print('')
         print('setting var to ', var)
 else:
     var = 0.0
     sky = None
-    if rank==0:
+    if master:
         print('')
         print('setting var to ', var)
-
-#pl.figure()
-#pl.imshow(sky[:,:,1])
-#
-#pl.figure()
-#pl.imshow(CubePSF[:,:,1])
-#
-#pl.figure()
-#pl.imshow(CubeDirty[:,:,1])
-
 
 #%% ===========================================================================
 # Run
@@ -113,11 +109,11 @@ else:
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 #nb = (7,0)
 
-args = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'step_mu':step_mu,'pixelweighton':pxl_w,'bandweighton':pxl_w}
+flavor = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'step_mu':step_mu,'pixelweighton':pxl_w,'bandweighton':pxl_w}
 tic()
 
-EM= dcvMpi.EasyMuffinSURE(**args)
-if rank==0:
+EM= dcvMpi.EasyMuffinSURE(**flavor)
+if master:
     print('using tau: ',EM.tau)
     print('')
 
@@ -126,11 +122,8 @@ EM.loop_fdmc(nitermax)
 #%% ===========================================================================
 # Save results
 # =============================================================================
-if rank==0:
-    drctry = os.path.join(os.getcwd(), 'output_sigamm/'+os.getenv('SLURM_JOB_ID'))
-    print(drctry)
-    #os.mkdir(drctry)
-    os.chdir(drctry)
+if master:
+    os.chdir(args.output_dir)
 
     toc()
 
