@@ -43,8 +43,6 @@ rank = comm.Get_rank()
 
 nbw = size - 1
 
-idw = rank - 1
-
 class EasyMuffin():
     def __init__(self,
                  mu_s=0.5,
@@ -62,9 +60,7 @@ class EasyMuffin():
                  bandweighton = 0,
                  fftw = 0):
 
-        if idw > nbw:
-            comm.MPI_Finalize()
-
+        self.idw = comm.Get_rank()-1
         if type(nb) is not tuple:
             print('nb must be a tuple of wavelets for dwt ')
             print('or a list of 2 integer for IUWT')
@@ -240,11 +236,11 @@ class EasyMuffin():
         else:
             
             self.nfreq = self.lst_nbf[rank]
-            self.psf = np.asfortranarray(self.psf[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq])
-            self.dirty = np.asfortranarray(self.dirty[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq])
+            self.psf = np.asfortranarray(self.psf[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
+            self.dirty = np.asfortranarray(self.dirty[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
             
             if self.truesky is not None:
-                self.truesky = self.truesky[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq]
+                self.truesky = self.truesky[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq]
             
             if self.fftw_flag==0:
                 from deconv3d_tools import myfft2, myifft2
@@ -567,7 +563,7 @@ class EasyMuffinSURE(EasyMuffin):
             else:
                 # compute Hn
                 self.Hn = np.zeros((self.nxy,self.nxy,self.nfreq))
-                self.n = self.n[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq]
+                self.n = self.n[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq]
                 self.Hn = self.conv(self.n,self.psfadj)
                 # init Jacobians
                 self.Jt = np.zeros((self.nxy,self.nxy,self.nfreq),order='F')
@@ -630,8 +626,8 @@ class EasyMuffinSURE(EasyMuffin):
                 self.xt2 = np.zeros(0)
                 
             else:
-                self.DeltaSURE  = np.asfortranarray(self.DeltaSURE[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq])
-                self.dirty2 = np.asfortranarray(self.dirty2[:,:,self.nf2[idw]:self.nf2[idw]+self.nfreq])
+                self.DeltaSURE  = np.asfortranarray(self.DeltaSURE[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
+                self.dirty2 = np.asfortranarray(self.dirty2[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
                 self.xt2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
                 self.xt2f = np.zeros(0)
                 self.u2 = {}
