@@ -28,6 +28,22 @@ args = parser.parse_args()
 
 passed=True
 
+def compare_file(gpath, opath, max_diff, max_ratio, verbosity):
+    gdata = np.load(gpath)
+    odata = np.load(opath)
+    gavrg = np.average(abs(gdata))
+    oavrg = np.average(abs(odata))
+    delta = abs(gdata-odata)
+    max_delta = np.amax(delta)
+    if   verbosity > 1: print(f"Max delta is {max_delta} (with average = {(gavrg+oavrg)/2})->", end="")
+    elif verbosity > 0: print(f"delta: {max_delta}", end="")
+    if max_delta > max_diff:
+        if verbosity > 0: print(" KO")
+        return False
+    else:
+        if verbosity > 0: print(" OK")
+        return True
+
 if args.golddir:
     for f in os.listdir(args.golddir):
         gpath = path.join(args.golddir, f)
@@ -42,19 +58,8 @@ if args.golddir:
                 continue
             else:
                 if args.verbosity > 1: print(f"with {opath}.")
-            gdata = np.load(gpath)
-            odata = np.load(opath)
-            gavrg = np.average(abs(gdata))
-            oavrg = np.average(abs(odata))
-            delta = abs(gdata-odata)
-            max_delta = np.amax(delta)
-            if   args.verbosity > 1: print(f"Max delta is {max_delta} (with average = {(gavrg+oavrg)/2})->", end="")
-            elif args.verbosity > 0: print(f"delta: {max_delta}", end="")
-            if max_delta > args.max_diff:
+            if not compare_file(gpath, opath, args.max_diff, args.max_ratio, args.verbosity):
                 passed = False
-                if args.verbosity > 0: print(" KO")
-            else:
-                if args.verbosity > 0: print(" OK")
 
 if passed:
     if args.verbosity > 0: print("PASSED")
