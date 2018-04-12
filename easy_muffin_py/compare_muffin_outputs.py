@@ -20,6 +20,7 @@ parser.add_argument('--quiet','-q', dest='verbosity', action='store_const',
 parser.add_argument('--diff','-d', metavar='DIFF', type=float, dest='max_diff',
                     default=1e-15,
                     help='tolerance (as a delta).')
+parser.add_argument('--cool', dest='cool', action='store_true', help='either diff OR ratio is OK.')
 parser.add_argument('--ratio','-r', metavar='RATIO', type=float, dest='max_ratio',
                     default=1e-15,
                     help='tolerance (as a ratio).')
@@ -28,21 +29,38 @@ args = parser.parse_args()
 
 passed=True
 
-def compare_file(gpath, opath, max_diff, max_ratio, verbosity):
+def compare_file(gpath, opath, diff_limit, ratio_limit, both, verbosity = 1):
     gdata = np.load(gpath)
     odata = np.load(opath)
+    same  = gdata != odata
+    gdiff = np.extract(same, gdata)
+    odiff = np.extract(same, odata)
     gavrg = np.average(abs(gdata))
     oavrg = np.average(abs(odata))
-    delta = abs(gdata-odata)
-    max_delta = np.amax(delta)
-    if   verbosity > 1: print(f"Max delta is {max_delta} (with average = {(gavrg+oavrg)/2})->", end="")
-    elif verbosity > 0: print(f"delta: {max_delta}", end="")
-    if max_delta > max_diff:
-        if verbosity > 0: print(" KO")
-        return False
-    else:
-        if verbosity > 0: print(" OK")
-        return True
+    diff  = abs(gdiff-odiff)
+    ratio = abs(diff/np.where(abs(gdiff)>abs(odiff), gdiff, odiff))
+    max_diff  = np.amax(diff)  if diff.size  > 0 else 0;
+    max_ratio = np.amax(ratio) if ratio.size > 0 else 0;
+    
+    passed = diff.size == 0
+    ko_count = 0
+    if not passed:
+        diff_ok  = diff  <= diff_limit
+        ratio_ok = ratio <= ratio_limit
+        comb     = np.logical_and if both else np.logical_or
+        ok       = comb(diff_ok,ratio_ok)
+        ko_count = diff.size - sum(ok) 
+        passed   =  np.all(ok)
+    if verbosity > 1: 
+        print(f"Max delta is {max_diff} ({max_ratio/100}%) (with average = {(gavrg+oavrg)/2})", end="")
+        if ko_count > 0:
+            print(f", screwed {ko_count} out of {gdata.size}", end="")
+        
+    elif verbosity > 0: print(f"delta: {max_diff} ({max_ratio/100}%)", end="")
+    
+    if verbosity > 0: print(" OK" if passed else " KO")
+
+    return passed
 
 if args.golddir:
     for f in os.listdir(args.golddir):
@@ -58,7 +76,7 @@ if args.golddir:
                 continue
             else:
                 if args.verbosity > 1: print(f"with {opath}.")
-            if not compare_file(gpath, opath, args.max_diff, args.max_ratio, args.verbosity):
+            if not compare_file(gpath, opath, args.max_diff, args.max_ratio, not args.cool, args.verbosity):
                 passed = False
 
 if passed:
