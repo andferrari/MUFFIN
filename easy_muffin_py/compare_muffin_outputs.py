@@ -32,6 +32,12 @@ passed=True
 def compare_file(gpath, opath, diff_limit, ratio_limit, both, verbosity = 1):
     gdata = np.load(gpath)
     odata = np.load(opath)
+    passed = True
+    if gdata.shape != odata.shape:
+        if verbosity > 0: print(f"Wrong shape: {gdata.shape} vs {odata.shape}. KO")
+        passed = False
+    else:
+        if verbosity > 1: print(f"{gdata.shape} ", end="")
     same  = gdata != odata
     gdiff = np.extract(same, gdata)
     odiff = np.extract(same, odata)
