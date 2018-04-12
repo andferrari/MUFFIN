@@ -6,7 +6,9 @@
 #SBATCH -p fdr,qdr,qdr-gpu
 
 module purge
-module load python/3.6.3_anaconda3 intel/mpi/64/2017.4.196 intel/compiler/64/2017.4.196
+module load python/3.6.3_anaconda3 
+module load intel/mpi/64/2017.4.196 intel/compiler/64/2017.4.196
+module load fftw3-intel17/3.3.7
 
 prog=./run_tst_mpi_sigamm.py
 
