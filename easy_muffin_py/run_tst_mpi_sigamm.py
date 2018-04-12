@@ -112,7 +112,7 @@ nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 flavor = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'step_mu':step_mu,'pixelweighton':pxl_w,'bandweighton':pxl_w}
 tic()
 
-EM= dcvMpi.EasyMuffinSURE(**flavor)
+EM= dcvMpi.EasyMuffinSURE(comm,**flavor)
 if master:
     print('using tau: ',EM.tau)
     print('')

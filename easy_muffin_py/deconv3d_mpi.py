@@ -37,11 +37,10 @@ str_cst_snr_wmse_wmsesure_mu = "| {:5d} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} 
 str_cst_snr_wmse_wmsesure_mu_title="-"*99+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {:12s} | {:12s} | {:12s} |\n"+"-"*99
 
 #Global variable -
-comm = MPI.COMM_WORLD
-size = comm.Get_size()
 
 class EasyMuffin():
     def __init__(self,
+                 comm,
                  mu_s=0.5,
                  mu_l=0.0,
                  mu_wiener = 5e1,
@@ -56,9 +55,10 @@ class EasyMuffin():
                  pixelweighton = 0,
                  bandweighton = 0,
                  fftw = 0):
-        self.nbw = comm.Get_size() - 1
-        self.idw = comm.Get_rank()-1
-        self.master = comm.Get_rank() == 0
+        self.comm = comm
+        self.nbw = self.comm.Get_size() - 1
+        self.idw = self.comm.Get_rank() - 1
+        self.master = self.comm.Get_rank() == 0
         if type(nb) is not tuple:
             print('nb must be a tuple of wavelets for dwt ')
             print('or a list of 2 integer for IUWT')
@@ -233,7 +233,7 @@ class EasyMuffin():
             
         else:
             
-            self.nfreq = self.lst_nbf[comm.Get_rank()]
+            self.nfreq = self.lst_nbf[self.comm.Get_rank()]
             self.psf = np.asfortranarray(self.psf[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
             self.dirty = np.asfortranarray(self.dirty[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
             
@@ -327,12 +327,12 @@ class EasyMuffin():
                 
             self.alpha_l = np.ones((self.nxy,self.nxy))
 
-        self.alpha_l = comm.bcast(self.alpha_l,root=0) 
-        self.tau = comm.bcast(self.tau,root=0) # root bcasts tau to everyone else 
+        self.alpha_l = self.comm.bcast(self.alpha_l,root=0) 
+        self.tau = self.comm.bcast(self.tau,root=0) # root bcasts tau to everyone else 
         self.nitertot = 0
         
         self.costlist = []
-        comm.Gatherv(self.x,[self.xf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.x,[self.xf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         self.costlist.append(self.cost())
         
         # compute snr, psnr, wmse
@@ -372,7 +372,7 @@ class EasyMuffin():
             Spc_cst = self.mu_l*np.sum(np.abs(dct(self.xf*self.alpha_l[...,None],axis=2,norm='ortho')))
             cst = Spc_cst
             
-        cst_list = comm.gather(cst)
+        cst_list = self.comm.gather(cst)
         
         if self.master:
             return sum(cst_list)/(self.nxy*self.nxy*self.nfreq)
@@ -386,7 +386,7 @@ class EasyMuffin():
         else:
             resid = 0
             
-        rlist = comm.gather(resid)
+        rlist = self.comm.gather(resid)
         
         if self.master:
             return 10*np.log10(self.truesky2 / np.sum(rlist))
@@ -399,7 +399,7 @@ class EasyMuffin():
         else:
             resid = 0
             
-        rlist = comm.gather(resid)
+        rlist = self.comm.gather(resid)
         
         if self.master:
             return 10*np.log10(self.psnrnum / (np.sum(rlist)/(self.nxy*self.nxy*self.nfreq)))
@@ -412,7 +412,7 @@ class EasyMuffin():
         else:
             resid = 0
             
-        rlist = comm.gather(resid)
+        rlist = self.comm.gather(resid)
         
         if self.master:
             return np.sum(rlist)/(self.nxy*self.nxy*self.nfreq)
@@ -425,7 +425,7 @@ class EasyMuffin():
         else:
             resid = 0
             
-        rlist = comm.gather(resid)
+        rlist = self.comm.gather(resid)
         
         if self.master:
             return np.sum(rlist)/(self.nxy*self.nxy*self.nfreq)
@@ -443,7 +443,7 @@ class EasyMuffin():
             # rank 0 computes idct 
             self.tf = np.asfortranarray(idct(self.v, axis=2, norm='ortho')) # to check
             
-        comm.Scatterv([self.tf,self.sendcounts,self.displacements,MPI.DOUBLE],self.t,root=0)
+        self.comm.Scatterv([self.tf,self.sendcounts,self.displacements,MPI.DOUBLE],self.t,root=0)
 
         if not self.master:
             # compute gradient
@@ -464,7 +464,7 @@ class EasyMuffin():
                     
             self.delta = np.asfortranarray(2*self.xt-self.x)
 
-        comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
 
         if self.master:
             # update v
@@ -473,8 +473,8 @@ class EasyMuffin():
         else:
             self.x = self.xt.copy(order='F')
 
-        comm.Gatherv(self.x,[self.xf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
-        comm.Gatherv(self.xt,[self.xtf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.x,[self.xf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.xt,[self.xtf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
 
         # compute cost snr, psnr, wmse if truesky given
         self.costlist.append(self.cost())
@@ -511,6 +511,7 @@ class EasyMuffin():
 class EasyMuffinSURE(EasyMuffin):
 
     def __init__(self,
+                 comm = MPI.COMM_WORLD,
                  mu_s=0.5,
                  mu_l=0.0,
                  mu_wiener = 5e1,
@@ -530,6 +531,7 @@ class EasyMuffinSURE(EasyMuffin):
         self.step_mu = step_mu
 
         super(EasyMuffinSURE,self).__init__(
+                 comm,
                  mu_s,
                  mu_l,
                  mu_wiener,
@@ -680,7 +682,7 @@ class EasyMuffinSURE(EasyMuffin):
                 self.t2 = np.zeros((self.nxy,self.nxy,self.nfreq),order='F') 
             
             
-            comm.Gatherv(self.x2,[self.x2f,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+            self.comm.Gatherv(self.x2,[self.x2f,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
             
             self.sugarfdmclist = {}
             self.sugarfdmclist[0] = []
@@ -706,7 +708,7 @@ class EasyMuffinSURE(EasyMuffin):
             tmp = self.n*self.conv(self.Jx,self.psf)
             wmse = LS_cst + 2*(self.var)*(np.sum(tmp))
         
-        wmse_lst = comm.gather(wmse)
+        wmse_lst = self.comm.gather(wmse)
         
         if self.master:
             return sum(wmse_lst)/(self.nxy*self.nxy*self.nfreq) - self.var
@@ -722,7 +724,7 @@ class EasyMuffinSURE(EasyMuffin):
             LS_cst = np.linalg.norm(tmp)**2        
             wmse = LS_cst + 2*(self.var/self.eps)*np.sum(  ( self.conv(self.x2,self.psf) - self.conv(self.x,self.psf) )*self.DeltaSURE  )
         
-        wmse_lst = comm.gather(wmse)
+        wmse_lst = self.comm.gather(wmse)
         
         if self.master:
             return sum(wmse_lst)/(self.nxy*self.nxy*self.nfreq) - self.var
@@ -739,7 +741,7 @@ class EasyMuffinSURE(EasyMuffin):
         if self.master:
             self.Jtf = np.asfortranarray(idct(self.Jv, axis=2,norm='ortho'))
         
-        comm.Scatterv([self.Jtf,self.sendcounts,self.displacements,MPI.DOUBLE],self.Jt,root=0)
+        self.comm.Scatterv([self.Jtf,self.sendcounts,self.displacements,MPI.DOUBLE],self.Jt,root=0)
         
         if not self.master:
             tmp = myifftshift( self.ifft2( self.fft2(self.Jx) * self.hth_fft ) )
@@ -757,7 +759,7 @@ class EasyMuffinSURE(EasyMuffin):
                     self.Ju[freq][b] = rect( self.utt[freq][b] )*Jutt
             self.delta = np.asfortranarray(2*self.Jxt-self.Jx)
             
-        comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if self.master:
             Jvtt = self.Jv + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
@@ -804,7 +806,7 @@ class EasyMuffinSURE(EasyMuffin):
         if self.master:
             self.t2f = np.asfortranarray(idct(self.v2, axis=2, norm='ortho')) # to check
         
-        comm.Scatterv([self.t2f,self.sendcounts,self.displacements,MPI.DOUBLE],self.t2,root=0)
+        self.comm.Scatterv([self.t2f,self.sendcounts,self.displacements,MPI.DOUBLE],self.t2,root=0)
         
         if not self.master:
             tmp = myifftshift( self.ifft2( self.fft2(self.x2) *self.hth_fft ) )
@@ -823,7 +825,7 @@ class EasyMuffinSURE(EasyMuffin):
                     
             self.delta = np.asfortranarray(2*self.xt2-self.x2)
         
-        comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if self.master:
             self.vtt2 = self.v2 + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
@@ -831,16 +833,16 @@ class EasyMuffinSURE(EasyMuffin):
         else:
             self.x2 = self.xt2.copy(order='F')    
             
-        comm.Gatherv(self.x2,[self.x2f,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.x2,[self.x2f,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         self.wmselistsurefdmc.append(self.wmsesurefdmc())
-        comm.Gatherv(self.xt2,[self.xt2f,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)   
+        self.comm.Gatherv(self.xt2,[self.xt2f,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)   
         
     def dx_mu(self):
         
         if self.master:
             self.dt_sf = np.asfortranarray(idct(self.dv_s, axis=2, norm='ortho'))
             
-        comm.Scatterv([self.dt_sf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt_s,root=0)
+        self.comm.Scatterv([self.dt_sf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt_s,root=0)
         
         if not self.master:
             tmp = myifftshift( self.ifft2( self.fft2(self.dx_s) *self.hth_fft ) )
@@ -862,7 +864,7 @@ class EasyMuffinSURE(EasyMuffin):
                     
             self.delta = np.asfortranarray(2*self.dxt_s-self.dx_s)
             
-        comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
 
         if self.master:
             # update v
@@ -871,12 +873,12 @@ class EasyMuffinSURE(EasyMuffin):
         else:
             self.dx_s = self.dxt_s.copy(order='F')
         
-        comm.Gatherv(self.dx_s,[self.dx_sf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.dx_s,[self.dx_sf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
             
         if self.master:
             self.dt_lf = np.asfortranarray(idct(self.dv_l*self.mu_l*self.alpha_l[...,None] + self.v*self.alpha_l[...,None], axis=2, norm='ortho'))
 
-        comm.Scatterv([self.dt_lf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt_l,root=0)
+        self.comm.Scatterv([self.dt_lf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt_l,root=0)
         
         if not self.master:
             tmp = myifftshift( self.ifft2( self.fft2(self.dx_l) *self.hth_fft ) )
@@ -898,7 +900,7 @@ class EasyMuffinSURE(EasyMuffin):
                     
             self.delta = np.asfortranarray(2*self.dxt_l - self.dx_l)
                 
-        comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if self.master:
             dvtt_l = self.dv_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho') + self.sigma*self.alpha_l[...,None]*dct(2*self.xtf - self.xf, axis=2, norm='ortho')
@@ -906,14 +908,14 @@ class EasyMuffinSURE(EasyMuffin):
         else:
             self.dx_l = self.dxt_l.copy(order='F')
             
-        comm.Gatherv(self.dx_l,[self.dx_lf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.dx_l,[self.dx_lf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
             
 
     def dx2_mu(self):
         if self.master:
             self.dt2_sf = np.asfortranarray(idct(self.dv2_s, axis=2, norm='ortho'))
             
-        comm.Scatterv([self.dt2_sf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt2_s,root=0)
+        self.comm.Scatterv([self.dt2_sf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt2_s,root=0)
         
         if not self.master:
             tmp = myifftshift( self.ifft2( self.fft2(self.dx2_s) *self.hth_fft ) )
@@ -932,7 +934,7 @@ class EasyMuffinSURE(EasyMuffin):
                     
             self.delta = np.asfortranarray(2*self.dxt2_s-self.dx2_s)
             
-        comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if self.master:
             dvtt2_s = self.dv2_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho')
@@ -943,7 +945,7 @@ class EasyMuffinSURE(EasyMuffin):
         if self.master:
             self.dt2_lf = np.asfortranarray(idct(self.dv2_l*self.mu_l*self.alpha_l[...,None] + self.v2*self.alpha_l[...,None], axis=2, norm='ortho'))
         
-        comm.Scatterv([self.dt2_lf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt2_l,root=0)
+        self.comm.Scatterv([self.dt2_lf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dt2_l,root=0)
         
         if not self.master:
             tmp = myifftshift( self.ifft2( self.fft2(self.dx2_l) *self.hth_fft ) )
@@ -962,7 +964,7 @@ class EasyMuffinSURE(EasyMuffin):
                 
             self.delta = np.asfortranarray(2*self.dxt2_l-self.dx2_l)
             
-        comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        self.comm.Gatherv(self.delta,[self.deltaf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
         if self.master:
             dvtt2_l = self.dv2_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(self.deltaf, axis=2, norm='ortho') + self.sigma*self.alpha_l[...,None]*dct(2*self.xt2f - self.x2f, axis=2, norm='ortho')
@@ -981,15 +983,15 @@ class EasyMuffinSURE(EasyMuffin):
             tmp = 2*self.conv(self.psf,self.dx_l)*(self.conv(self.psf,self.x)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_l-self.dx_l)*self.DeltaSURE/self.eps
             res2 = np.sum(tmp)/(self.nxy*self.nxy)
         
-        res1_lst = comm.gather(res1)
-        res2_lst = comm.gather(res2)
+        res1_lst = self.comm.gather(res1)
+        res2_lst = self.comm.gather(res2)
         
         if self.master:
             res1 = sum(res1_lst)/self.nfreq
             res2 = sum(res2_lst)/self.nfreq
             
-        res1 = comm.bcast(res1,root=0) # root bcasts res1 to everyone else
-        res2 = comm.bcast(res2,root=0) # root bcasts res2 to everyone else
+        res1 = self.comm.bcast(res1,root=0) # root bcasts res1 to everyone else
+        res2 = self.comm.bcast(res2,root=0) # root bcasts res2 to everyone else
         
         self.sugarfdmclist[0].append(res1)
         self.sugarfdmclist[1].append(res2)
