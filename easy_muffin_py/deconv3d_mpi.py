@@ -40,8 +40,6 @@ str_cst_snr_wmse_wmsesure_mu_title="-"*99+"\n"+"| {:5s} | {:12s} | {:12s} | {:12
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 
-nbw = size - 1
-
 class EasyMuffin():
     def __init__(self,
                  mu_s=0.5,
@@ -58,7 +56,7 @@ class EasyMuffin():
                  pixelweighton = 0,
                  bandweighton = 0,
                  fftw = 0):
-
+        self.nbw = comm.Get_size() - 1
         self.idw = comm.Get_rank()-1
         self.master = comm.Get_rank() == 0
         if type(nb) is not tuple:
@@ -107,7 +105,7 @@ class EasyMuffin():
         self.nxy = self.dirty.shape[0]
 
         # Partitioning the frequency bands
-        self.lst_nbf = optimal_split(self.nfreq,nbw)
+        self.lst_nbf = optimal_split(self.nfreq,self.nbw)
         self.lst_nbf[0:0] = [self.nfreq]
         self.nf2 = self.lst_nbf[1:-1:1]
         self.nf2 = np.cumsum(self.nf2)
@@ -122,13 +120,13 @@ class EasyMuffin():
         nbsum = 0
         self.sendcounts = [0,]
         self.displacements = [0,]
-        for i in range(nbw):
+        for i in range(self.nbw):
             self.displacements.append(nbsum)
             taille = self.nxy*self.nxy*self.lst_nbf[i+1]
             self.sendcounts.append(taille)
             nbsum+=taille
 
-        if nbw > self.nfreq:
+        if self.nbw > self.nfreq:
             if self.master:
                 print('----------------------------------------------------------------')
                 print('   mpi: !!!! You cannot have more workers than bands !!!!')
