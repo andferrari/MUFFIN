@@ -168,8 +168,8 @@ class EasyMuffin():
                 aa = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
                 bb = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
                 cc = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
-                fft_object = pyfftw.FFTW(aa,bb,axes=(0,1),direction='FFTW_FORWARD',flags=('FFTW_MEASURE',),threads=5)
-                ifft_object = pyfftw.FFTW(bb,cc,axes=(0,1),direction='FFTW_BACKWARD',flags=('FFTW_MEASURE',),threads=5)
+                fft_object = pyfftw.FFTW(aa,bb,axes=(0,1),direction='FFTW_FORWARD',flags=('FFTW_MEASURE',),sads=1)
+                ifft_object = pyfftw.FFTW(bb,cc,axes=(0,1),direction='FFTW_BACKWARD',flags=('FFTW_MEASURE',),threads=1)
 
                 self.fft2 = fft_object
                 self.ifft2 = ifft_object
@@ -255,8 +255,8 @@ class EasyMuffin():
                 aa = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
                 bb = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
                 cc = pyfftw.empty_aligned(self.psf.shape,dtype='complex128')
-                fft_object = pyfftw.FFTW(aa,bb,axes=(0,1),direction='FFTW_FORWARD',flags=('FFTW_MEASURE',),threads=5)
-                ifft_object = pyfftw.FFTW(bb,cc,axes=(0,1),direction='FFTW_BACKWARD',flags=('FFTW_MEASURE',),threads=5)
+                fft_object = pyfftw.FFTW(aa,bb,axes=(0,1),direction='FFTW_FORWARD',flags=('FFTW_MEASURE',),threads=1)
+                ifft_object = pyfftw.FFTW(bb,cc,axes=(0,1),direction='FFTW_BACKWARD',flags=('FFTW_MEASURE',),threads=1)
 
                 self.fft2 = fft_object
                 self.ifft2 = ifft_object
