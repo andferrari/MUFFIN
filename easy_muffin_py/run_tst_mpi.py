@@ -113,7 +113,7 @@ if os.path.isfile(sky_name):
         
     #sky = checkdim(fits.getdata(skyname, ext=0))[:,:,0:L]
     sky = checkdim(fits.getdata(sky_name, ext=0))
-    sky = np.transpose(sky)[:,:,0:L]
+    #sky = np.transpose(sky)[:,:,0:L]
     
     sky = sky[:,:,0:L]
     #sky = sky[:,:,-L:]
@@ -136,8 +136,8 @@ else:
 # Run
 # =============================================================================
 # DWT parameters
-nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-#nb = (7,0)
+#nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+nb = (7,0)
 
 args = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'step_mu':step_mu,'pixelweighton':pxl_w,'bandweighton':bnd_w}
 tic()

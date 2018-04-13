@@ -42,7 +42,7 @@ psnr = np.load('psnrsure.npy')
 
 os.chdir('../..')
 
-pl.figure(1)
+pl.figure()
 N = snr_tst.size 
 
 pl.subplot(2,4,1)
