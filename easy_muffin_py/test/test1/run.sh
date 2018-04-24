@@ -2,7 +2,7 @@
 
 nbproc=8
 mydir=$(dirname $(realpath $0))
-golddir=$mydir/gold
+golddir=$mydir/gold0
 
 while getopts "n:cvg:" opt
 do
