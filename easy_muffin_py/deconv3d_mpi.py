@@ -54,22 +54,10 @@ class EasyMuffin():
         self.idw = self.comm.Get_rank() - 1
         self.master = self.comm.Get_rank() == 0
         assert(type(nb) is tuple)
-        
-        if mu_s< 0 :
-            print('mu_s must be non negative, mu_s=.5')
-            mu_s=0.5
-
-        if mu_l< 0 :
-            print('mu_l must be non negative, mu_l=0.')
-            mu_s=0.0
-
-        if tau< 0 :
-            print('tau must be non negative, tau=1e-4')
-            tau=1e-4
-
-        if sigma< 0 :
-            print('sigma must be positive, sigma=10.')
-            sigma=10.
+        assert(mu_s >= 0)
+        assert(mu_l >= 0)
+        assert(tau >= 0)
+        assert(sigma >= 0)
 
         #======================================================================
         # INITIALIZATION and INITIALIZATION FUNCTION
