@@ -7,10 +7,6 @@ Created on Fri Dec 15 10:05:32 2017
 import numpy as np
 from scipy.fftpack import dct,idct
 
-#from scipy.fftpack import idct
-#from deconv3d_tools import dctt 
-#from deconv3d_tools import idct
-
 from deconv3d_tools import compute_tau_DWT, defadj, init_dirty_wiener, sat, heavy, rect
 from deconv3d_tools import myifftshift, optimal_split
 from deconv3d_tools import iuwt_decomp, iuwt_decomp_adj, dwt_decomp, dwt_recomp, dwt_I_decomp, dwt_I_recomp
@@ -35,8 +31,6 @@ str_cost_wmsesure_mu_title = "-"*69+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {
 
 str_cst_snr_wmse_wmsesure_mu = "| {:5d} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} | {:6.6e} |"
 str_cst_snr_wmse_wmsesure_mu_title="-"*99+"\n"+"| {:5s} | {:12s} | {:12s} | {:12s} | {:12s} | {:12s} | {:12s} |\n"+"-"*99
-
-#Global variable -
 
 class EasyMuffin():
     def __init__(self,
@@ -140,7 +134,6 @@ class EasyMuffin():
         self.n[self.n==0] = -1
         
         # fdmc variables
-        #self.eps = 20*(self.var**0.5)*((self.nxy**2)**(-0.3)) # à verifier
         self.eps = 4*(self.var**0.5)*((self.nxy**2)**(-0.3)) # à verifier
         np.random.seed(1)
         
@@ -285,28 +278,16 @@ class EasyMuffin():
                 self.Recomp = iuwt_decomp_adj ### adjoint pas recomp
                 self.nbw_decomp = [f for f in range(self.nb[0])]
                 self.nbw_recomp = self.nb[-1]
-                #self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
-                #print('')
-                #print('IUWT: tau = ', self.tau)
-                #print('')
             elif self.nb[-1] == 'I':
                 self.Decomp = dwt_I_decomp
                 self.Recomp = dwt_I_recomp
                 self.nbw_decomp = self.nb
                 self.nbw_recomp = self.nb
-                #self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
-                #print('')
-                #print('DWT+I: tau = ', self.tau)
-                #print('')
             else:
                 self.Decomp = dwt_decomp
                 self.Recomp = dwt_recomp
                 self.nbw_decomp =self.nb
                 self.nbw_recomp = self.nb
-                #self.tau = compute_tau_DWT(self.psf,self.mu_s,self.mu_l,self.sigma,self.nbw_decomp)
-                #print('')
-                #print('DWT: tau = ', self.tau)
-                #print('')
                 
             self.tau = 0
     
@@ -566,8 +547,6 @@ class EasyMuffinSURE(EasyMuffin):
                 # init Jacobians
                 self.Jt = np.zeros((self.nxy,self.nxy,self.nfreq),order='F')
                 self.Jtf = np.zeros((0))
-                #self.Jdelta = np.zeros((self.nxy,self.nxy,self.nfreq),order='F') 
-                #self.Jdeltaf = np.zeros((0))
                 self.Jx = np.asfortranarray(init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener))
                 self.Jxt = np.zeros((self.nxy,self.nxy,self.nfreq),order='F')
                 self.Ju = {}
@@ -791,7 +770,6 @@ class EasyMuffinSURE(EasyMuffin):
                 if self.truesky.any():
                     if (niter % 20) ==0:
                         print(str_cst_snr_wmse_wmsesure_title.format('It.','Cost','SNR','WMSE','WMSES'))
-                        #print(str_cst_snr_wmse_wmsesure.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1]))
                     print(str_cst_snr_wmse_wmsesure.format(niter,self.costlist[-1],self.snrlist[-1],self.wmselist[-1],self.wmselistsure[-1]))
                 else:
                     if (niter % 20) ==0:
