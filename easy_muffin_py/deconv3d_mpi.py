@@ -53,13 +53,8 @@ class EasyMuffin():
         self.nbw = self.comm.Get_size() - 1
         self.idw = self.comm.Get_rank() - 1
         self.master = self.comm.Get_rank() == 0
-        if type(nb) is not tuple:
-            print('nb must be a tuple of wavelets for dwt ')
-            print('or a list of 2 integer for IUWT')
-            print('first integer is the scale of decomposition (default:8)')
-            print('second integer the scale or recomposition (default:0)')
-            nb = (8,0)
-
+        assert(type(nb) is tuple)
+        
         if mu_s< 0 :
             print('mu_s must be non negative, mu_s=.5')
             mu_s=0.5
