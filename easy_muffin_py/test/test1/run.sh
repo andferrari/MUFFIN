@@ -4,9 +4,22 @@ nbproc=8
 mydir=$(dirname $(realpath $0))
 golddir=$mydir/gold1
 
-while getopts "n:cvg:" opt
+function usage {
+    echo "usage: $0 [-n <nbproc>] [-c] [-h] [-v] [-g <dir>]"
+    echo " -n <nbproc> : number of MPI process (default $nbproc)."
+    echo " -c          : ask for coverage."
+    echo " -h          : this message"
+    echo " -v          : verbose"
+    echo " -g <gold>   : gold directory (default $golddir)"
+}
+
+while getopts "n:cvg:h" opt
 do
     case $opt in
+    	h) 
+	    usage
+	    exit -1
+	    ;;
 	n)
 	    nbproc=$OPTARG
 	    ;;
