@@ -320,12 +320,8 @@ class EasyMuffin():
             # Compute spatial and spectral scaling parameters
             if self.bandweighton ==1:
                 self.alpha_s = 1/(np.sum(np.sum(self.x**2,0),0)+1e-1) # col. vector
-                print('')
-                print('weight: ',self.alpha_s)
             else:
                 self.alpha_s = np.ones(self.nfreq)
-                print('')
-                print('weight: ',self.alpha_s)
                 
             self.alpha_l = np.ones((self.nxy,self.nxy))
 
