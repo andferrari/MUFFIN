@@ -27,7 +27,6 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-
 #%% ===========================================================================
 # Saving output results
 # =============================================================================
@@ -109,6 +108,8 @@ if os.path.isfile(sky_name):
     if rank==0:
         print(data_suffix)
         print('')
+        print(sys.argv[:])
+        print('')
         print('estimating variance')
         
     #sky = checkdim(fits.getdata(skyname, ext=0))[:,:,0:L]
@@ -128,7 +129,6 @@ else:
     var = 0.0
     sky = None
     if rank==0:
-        print('')
         print('setting var to ', var)
 
 
@@ -136,14 +136,15 @@ else:
 # Run
 # =============================================================================
 # DWT parameters
-#nb=('db1','db2','db3','db4','db5','db6','db7','db8')
-nb = (7,0)
+nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+#nb = (7,0)
 
 args = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'step_mu':step_mu,'pixelweighton':pxl_w,'bandweighton':bnd_w}
 tic()
 
 EM= dcvMpi.EasyMuffinSURE(**args)
 if rank==0:
+    print()
     print('using tau: ',EM.tau)
     print('')
 

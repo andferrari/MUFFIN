@@ -976,8 +976,8 @@ class EasyMuffinSURE(EasyMuffin):
             
             if niter>1 and niter%30==0:
                 self.graddes_mu(self.step_mu)
-                if niter>4000 and niter%1000==0:
-                    self.step_mu = [tmp/1.1 for tmp in self.step_mu]
+                if niter>4000 and niter%500==0:
+                    self.step_mu = [tmp/1.4 for tmp in self.step_mu]
 
             self.nitertot+=1
 
