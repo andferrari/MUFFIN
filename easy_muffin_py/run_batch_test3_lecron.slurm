@@ -3,14 +3,14 @@
 #SBATCH -t 19:10:00
 #SBATCH --output testing-%j.out
 #SBATCH -N 2
-#SBATCH -p fdr,qdr,qdr-gpu
+#SBATCH -p rita
 
 module purge
 module load python/3.6.3_anaconda3 
 module load intel/mpi/64/2017.4.196 intel/compiler/64/2017.4.196
 module load fftw3-intel17/3.3.7
 
-prog=./run_tst_mpi_sigamm.py
+prog=./run_tst_mpi_sigamm2.py
 
 if [ ! -x $prog ]
 then 
@@ -30,8 +30,10 @@ echo "Will use $numberofcores MPI processes."
 odir=output_sigamm/$SLURM_JOB_ID
 mkdir -p $odir
 
-MAINPY="$prog -L 41 -N 10 -mu_s 1 -mu_l 10 -mu_w 10 -stp_s 0.5 -stp_l 100 -pxl_w 1 -bnd_w 1 -data M31_skyline2_30db -fol data/data_david -o $odir"
-echo $MAINPY
+MAINPY=$prog${arguments}
+MAINPY="$MAINPY -o $odir"
+
+echo $MAINPY 
 
 echo "============= MPI RUN ============="
 mpirun --np $numberofcores python $MAINPY
