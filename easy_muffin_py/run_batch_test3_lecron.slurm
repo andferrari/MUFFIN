@@ -3,6 +3,8 @@
 #SBATCH -t 19:10:00
 #SBATCH --output testing-%j.out
 #SBATCH -N 2
+# Number of MPI tasks
+#SBATCH -n 40
 #SBATCH -p rita
 
 module purge
@@ -25,6 +27,7 @@ echo "Launched from: $SLURM_SUBMIT_DIR"
 nbproc=$(grep -i processor /proc/cpuinfo |wc -l)
 
 numberofcores=$(($nbproc*$SLURM_NNODES))
+
 echo "Will use $numberofcores MPI processes."
 
 odir=output_sigamm/$SLURM_JOB_ID
@@ -36,7 +39,8 @@ MAINPY="$MAINPY -o $odir"
 echo $MAINPY 
 
 echo "============= MPI RUN ============="
-mpirun --np $numberofcores python $MAINPY
+#mpirun --np $numberofcores python $MAINPY
+srun --mpi=pmi2 python $MAINPY
 echo "==================================="
 
 cp -v ./testing-$SLURM_JOB_ID.out ./output_sigamm/testing-$SLURM_JOB_ID.out
