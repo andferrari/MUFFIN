@@ -46,26 +46,26 @@ for day in daytime:
     
     os.chdir('../..')
 
-for i in range(3):
-    pl.subplot(3,5,1+i*5)
+for i in range(2):
+    pl.subplot(1,5,1)
     pl.plot(sugar0[i],label='sugar0')
     pl.plot(0*sugar0[i])
     pl.legend()
     
-    pl.subplot(3,5,2+i*5)
+    pl.subplot(1,5,2)
     pl.plot(sugar1[i],label='sugar1')
     pl.plot(0*sugar1[i])
     pl.legend()
     
-    pl.subplot(3,5,3+i*5)
+    pl.subplot(1,5,3)
     pl.plot(snr[i],label='snr')
     pl.legend()
     
-    pl.subplot(3,5,4+i*5)
+    pl.subplot(1,5,4)
     pl.plot(psnr[i],label='psnr')
     pl.legend()
     
-    pl.subplot(3,5,5+i*5)
+    pl.subplot(1,5,5)
     pl.plot(wmse1[i],label='wmse')
     pl.plot(wmse3[i],label='wmses_fdmc')
     pl.legend()
