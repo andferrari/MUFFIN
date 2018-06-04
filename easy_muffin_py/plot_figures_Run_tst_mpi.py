@@ -86,17 +86,19 @@ pl.plot(wmsesfdmc_tst,'-^',label='wmses_fdmc')
 pl.legend()
 pl.title('wmse')
 
+pl.show()
+
 #%%
 
-#pl.figure()
-#pl.imshow(x0_tst[:,:,100])
-#pl.colorbar()
-#
-#pl.figure()
-#pl.imshow(sky[:,:,100])
-#pl.colorbar()
-#
-#
+i = 219
+pl.figure()
+pl.imshow(x0_tst[:,:,i])
+pl.colorbar()
+
+pl.figure()
+pl.imshow(sky[:,:,i])
+pl.colorbar()
+
 #pl.figure(1)
 #for i in range(60):
 #    pl.clf()
@@ -105,5 +107,27 @@ pl.title('wmse')
 #    pl.legend()
 #    pl.ylim((x0_tst.min(),x0_tst.max()))
 #    #pl.savefig('temp_{:03d}.png'.format(i))
+#
+#pl.show()
 
-pl.show()
+i = 121
+j = 152
+pl.figure()
+pl.plot(sky[i,j,:])
+pl.legend()
+
+pl.figure()
+pl.plot(x0_tst[i,j,:],label='Spectre_{:01d}'.format(i))
+pl.legend()
+
+
+i = 121
+j = 152
+pl.figure()
+pl.plot(x0_tst[i,j,:],label='Spectre_{:01d}'.format(i))
+pl.plot(sky[i,j,:])
+pl.legend()
+
+
+
+
