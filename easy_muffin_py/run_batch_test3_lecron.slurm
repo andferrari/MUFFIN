@@ -1,16 +1,19 @@
 #!/bin/bash
 #SBATCH --job-name run_batch_test_slurm
-#SBATCH -t 19:10:00
+#SBATCH -t 1:10:00
 #SBATCH --output testing-%j.out
-#SBATCH -N 2
+#SBATCH -N 1
 # Number of MPI tasks
-#SBATCH -n 40
-#SBATCH -p rita
+#SBATCH -n 20
+#SBATCH -p fdr,qdr
 
 module purge
 module load python/3.6.3_anaconda3 
 module load intel/mpi/64/2017.4.196 intel/compiler/64/2017.4.196
 module load fftw3-intel17/3.3.7
+
+#export I_MPI_DAPL_TRANSLATION_CACHE=off
+export I_MPI_OFA_TRANSLATION_CACHE=off
 
 prog=./run_tst_mpi_sigamm2.py
 

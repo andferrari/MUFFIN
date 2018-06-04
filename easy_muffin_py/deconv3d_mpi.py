@@ -333,7 +333,7 @@ class EasyMuffin():
         else:
             Spc_cst = self.mu_l*np.sum(np.abs(dct(self.xf*self.alpha_l[...,None],axis=2,norm='ortho')))
             cst = Spc_cst
-            
+
         cst_list = self.comm.gather(cst)
         
         if self.master:

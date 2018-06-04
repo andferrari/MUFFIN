@@ -1,14 +1,16 @@
 #!/bin/bash
 #SBATCH --job-name run_batch_test_slurm
-#SBATCH -t 19:10:00
+#SBATCH -t 24:00:00
 #SBATCH --output testing-%j.out
-#SBATCH -N 1
+#SBATCH -N 4
 #SBATCH -p fdr,qdr,qdr-gpu
 
 module purge
 module load python/3.6.3_anaconda3 
 module load intel/mpi/64/2017.4.196 intel/compiler/64/2017.4.196
 module load fftw3-intel17/3.3.7
+
+export I_MPI_DAPL_TRANSLATION_CACHE=off
 
 prog=./run_tst_mpi_sigamm2.py
 
