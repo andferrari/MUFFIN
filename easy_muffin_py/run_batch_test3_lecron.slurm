@@ -1,10 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name run_batch_test_slurm
-#SBATCH -t 1:10:00
+#SBATCH -t 24:00:00
 #SBATCH --output testing-%j.out
-#SBATCH -N 1
-# Number of MPI tasks
-#SBATCH -n 20
+#SBATCH -N 4
 #SBATCH -p fdr,qdr
 
 module purge
@@ -12,10 +10,10 @@ module load python/3.6.3_anaconda3
 module load intel/mpi/64/2017.4.196 intel/compiler/64/2017.4.196
 module load fftw3-intel17/3.3.7
 
-#export I_MPI_DAPL_TRANSLATION_CACHE=off
+export I_MPI_DAPL_TRANSLATION_CACHE=off
 export I_MPI_OFA_TRANSLATION_CACHE=off
 
-prog=./run_tst_mpi_sigamm2.py
+prog=./run_tst_mpi_sigamm3.py
 
 if [ ! -x $prog ]
 then 
@@ -42,8 +40,7 @@ MAINPY="$MAINPY -o $odir"
 echo $MAINPY 
 
 echo "============= MPI RUN ============="
-#mpirun --np $numberofcores python $MAINPY
-srun --mpi=pmi2 python $MAINPY
+mpirun --np $numberofcores python $MAINPY
 echo "==================================="
 
 cp -v ./testing-$SLURM_JOB_ID.out ./output_sigamm/testing-$SLURM_JOB_ID.out

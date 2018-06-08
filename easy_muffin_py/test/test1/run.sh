@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-nbproc=8
+nbproc=10
 mydir=$(dirname $(realpath $0))
 golddir=$mydir/gold1
 
