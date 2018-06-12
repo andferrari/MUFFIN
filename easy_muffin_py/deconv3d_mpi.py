@@ -48,7 +48,10 @@ class EasyMuffin():
                  psf=[],
                  pixelweighton = 0,
                  bandweighton = 0,
-                 fftw = 0):
+                 fftw = 0,
+                 init=0,
+                 fol_init=0):
+        
         self.comm = comm
         self.nbw = self.comm.Get_size() - 1
         self.idw = self.comm.Get_rank() - 1
@@ -77,7 +80,9 @@ class EasyMuffin():
         self.pixelweighton = pixelweighton
         self.bandweighton = bandweighton
         self.fftw_flag = fftw
-
+        self.init = init
+        self.fol_init = fol_init
+        
         self.nfreq = self.dirty.shape[2]
         self.nxy = self.dirty.shape[0]
 
@@ -158,9 +163,11 @@ class EasyMuffin():
             self.x = np.zeros((0))
             self.xtf = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.xt = np.zeros(0)
-            
+                
             self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+            if self.init:
+                self.v = np.load(self.fol_init+'/v.npy')
             
             self.tf = np.zeros((self.nxy,self.nxy,self.nfreq),dtype=np.float,order='F')
             self.t = np.zeros((0))
@@ -196,6 +203,9 @@ class EasyMuffin():
                 print('DWT: tau = ', self.tau)
                 print('')
                 
+            self.uf = {}
+            self.u = {}
+            
             # Compute spatial and spectral scaling parameters
             if self.pixelweighton ==1:
                 self.psfadj = defadj(self.psf)
@@ -236,6 +246,11 @@ class EasyMuffin():
             # x initialization
             if self.dirtyinit:
                 self.x = np.asfortranarray(self.dirtyinit)
+            elif self.init:
+                #print('')
+                #print('process ',self.comm.Get_rank(),'loading x_init from ',self.fol_init,' ... ')
+                self.x = np.load(self.fol_init+'/x0_tst.npy') 
+                self.x = np.asfortranarray(self.x[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
             else:
                 self.x = np.asfortranarray(init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener))
             
@@ -280,7 +295,12 @@ class EasyMuffin():
             self.u = {}
             for freq in range(self.nfreq):
                 self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy),order='F') , self.nbw_decomp)
-                
+            if self.init:
+                tmp = np.ndarray.tolist(np.load(self.fol_init+'/u.npy'))
+                for freq in range(self.nfreq) :
+                    self.u[freq] = tmp[self.nf2[self.idw]+freq]
+            self.uf = np.zeros((0))
+                   
             # Compute spatial and spectral scaling parameters
             if self.bandweighton ==1:
                 self.alpha_s = 1/(np.sum(np.sum(self.x**2,0),0)+1e-1) # col. vector
@@ -289,6 +309,18 @@ class EasyMuffin():
                 
             self.alpha_l = np.ones((self.nxy,self.nxy))
 
+        #self.sendcountsu = [ i*(self.nbw_decomp[-1]+1) for i in self.sendcounts]
+        self.sendcountsu = [ i*np.size(self.nbw_decomp) for i in self.sendcounts]
+        #self.displacementsu =[ i*(self.nbw_decomp[-1]+1) for i in self.displacements]
+        self.displacementsu =[ i*np.size(self.nbw_decomp) for i in self.displacements]
+        
+        if self.master:
+            self.uf_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F')
+        else:
+            # empty uf recv buffer at each worker node
+            self.uf_ = np.zeros((0))
+                
+                
         self.alpha_l = self.comm.bcast(self.alpha_l,root=0) 
         self.tau = self.comm.bcast(self.tau,root=0) # root bcasts tau to everyone else 
         self.nitertot = 0
@@ -468,7 +500,39 @@ class EasyMuffin():
                     if (niter % 20) ==0:
                         print(str_cost_title.format('It.','Cost'))
                     print(str_cost.format(niter,self.costlist[-1]))
-
+                    
+                    
+    def saveu(self):
+ 
+        self.u_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
+        
+        i = 0
+        for val1 in self.u.values():
+            for j in self.nbw_decomp:
+                self.u_[:,:,i]=val1[j].copy()
+                i+=1
+         
+        if self.master:
+            self.u_ = np.zeros((0))
+        
+        #self.u_ = np.array(self.u_,dtype=np.float,order='F').T # shape as 3D array 256*256*nbw 
+        
+        #print('proc:',self.idw,' u_ shape:',self.u_.shape)
+        #print('proc:',self.idw,' uf_ shape:',self.uf_.shape)
+       
+        self.comm.Gatherv(self.u_, [self.uf_,self.sendcountsu,self.displacementsu,MPI.DOUBLE], root=0)
+        
+        if self.master:
+            # re-ranger u en dictionnaire
+            udicti = {}
+            nfreqi = 0
+             
+            for i in range(self.nfreq):
+                for j in self.nbw_decomp:
+                    udicti[j]=self.uf_[:,:,nfreqi]
+                    nfreqi+=1
+                self.uf[i] = udicti.copy()
+                
 
 class EasyMuffinSURE(EasyMuffin):
 
@@ -488,7 +552,9 @@ class EasyMuffinSURE(EasyMuffin):
                  step_mu = [0,0],
                  pixelweighton = 0,
                  bandweighton = 0,
-                 fftw = 0):
+                 fftw = 0,
+                 init=0,
+                 fol_init=0):
         
         self.step_mu = step_mu
 
@@ -507,7 +573,9 @@ class EasyMuffinSURE(EasyMuffin):
                  psf,
                  pixelweighton,
                  bandweighton,
-                 fftw)
+                 fftw,
+                 init,
+                 fol_init)
 
 
     def init_algo(self):
@@ -535,7 +603,6 @@ class EasyMuffinSURE(EasyMuffin):
                 self.Ju = {}
                 for freq in range(self.nfreq):
                     self.Ju[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
-
 
             # mu_s list
             self.mu_slist = []
@@ -758,7 +825,8 @@ class EasyMuffinSURE(EasyMuffin):
                     if (niter % 20) ==0:
                         print(str_cost_wmsesure_title.format('It.','Cost','WMSES'))
                     print(str_cost_wmsesure.format(niter,self.costlist[-1],self.wmselistsure[-1]))
-
+         
+        self.saveu()                
 
     # run update with y + eps*delta
     def update2(self):
