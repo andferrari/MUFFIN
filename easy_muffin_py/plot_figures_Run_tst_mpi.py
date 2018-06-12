@@ -28,22 +28,25 @@ os.chdir(drctry)
 
 x0_tst =np.load('x0_tst.npy')
 wmse_tst=np.load('wmse_tst.npy')
+snr_tst=np.load('snr_tst.npy')
+cost=np.load('cost.npy')
+
 wmses_tst=np.load('wmses_tst.npy')
 wmsesfdmc_tst=np.load('wmsesfdmc_tst.npy')
-snr_tst=np.load('snr_tst.npy')
 mu_s_tst=np.load('mu_s_tst.npy')
 mu_l_tst=np.load('mu_l_tst.npy')
 dxs=np.load('dxs.npy')
 dxl=np.load('dxl.npy')
 sugar0=np.load('sugar0.npy')
 sugar1=np.load('sugar1.npy')
-cost=np.load('cost.npy')
 psnr = np.load('psnrsure.npy')
 
 os.chdir('../..')
 
-pl.figure(1)
 N = snr_tst.size 
+#%%
+
+pl.figure(1)
 
 pl.subplot(2,4,1)
 pl.plot(sugar0[1:N],label='sugar0')
@@ -88,22 +91,49 @@ pl.title('wmse')
 
 #%%
 
-#pl.figure()
-#pl.imshow(x0_tst[:,:,100])
-#pl.colorbar()
-#
-#pl.figure()
-#pl.imshow(sky[:,:,100])
-#pl.colorbar()
-#
-#
-#pl.figure(1)
-#for i in range(60):
-#    pl.clf()
-#    pl.plot(x0_tst[i,1,:],label='Spectre_{:01d}'.format(i))
-#    pl.plot(sky[i,1,:])
-#    pl.legend()
-#    pl.ylim((x0_tst.min(),x0_tst.max()))
-#    #pl.savefig('temp_{:03d}.png'.format(i))
+pl.figure()
+pl.imshow(x0_tst[:,:,100],cmap='nipy_spectral')
+pl.colorbar()
+
+pl.figure()
+pl.imshow(sky[:,:,100],cmap='nipy_spectral')
+pl.colorbar()
+
+i=186
+j=101
+pl.figure()
+pl.plot(sky[i,j,:])
+pl.plot(x0_tst[i,j,:])
+
+i=121
+j=152
+pl.figure()
+pl.plot(sky[i,j,:])
+pl.plot(x0_tst[i,j,:])
+
+i=140
+j=112
+pl.figure()
+pl.plot(sky[i,j,:])
+pl.plot(x0_tst[i,j,:])
+
+pl.figure(1)
+for i in range(60):
+    pl.clf()
+    pl.plot(x0_tst[i,1,:],label='Spectre_{:01d}'.format(i))
+    pl.plot(sky[i,1,:])
+    pl.legend()
+    pl.ylim((x0_tst.min(),x0_tst.max()))
+    #pl.savefig('temp_{:03d}.png'.format(i))
 
 pl.show()
+
+
+
+
+
+
+
+
+
+

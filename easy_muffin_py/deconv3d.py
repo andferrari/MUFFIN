@@ -2,7 +2,7 @@
 """
 Created on Fri Oct 28 10:07:31 2016
 
-@author: antonyschutz
+@author: rammanouil
 """
 import numpy as np
 from scipy.fftpack import dct,idct
@@ -41,7 +41,9 @@ class EasyMuffin():
                  dirty=[],
                  truesky=[],
                  psf=[],
-                 fftw=0):
+                 fftw=0,
+                 init=0,
+                 fol_init=0):
 
         if type(nb) is not tuple:
             print('nb must be a tuple of wavelets for dwt ')
@@ -82,6 +84,8 @@ class EasyMuffin():
         self.var = var
         self.mu_wiener = mu_wiener
         self.fftw_flag = fftw
+        self.init = init
+        self.fol_init = fol_init
 
         self.init_algo()
 
@@ -115,6 +119,10 @@ class EasyMuffin():
         # x initialization 
         if self.dirtyinit:
             self.x = self.dirtyinit
+        elif self.init:
+            print('')
+            print('loading x_init from ',self.fol_init,' ... ')
+            self.x = np.load(self.fol_init+'/x0_tst.npy')
         else:
             self.x = init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener)
 
@@ -161,11 +169,17 @@ class EasyMuffin():
         self.utt = {}
         for freq in range(self.nfreq):
             self.utt[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
+        
         self.u = {}
         for freq in range(self.nfreq):
             self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
+        if self.init:
+            self.u = np.ndarray.tolist(np.load(self.fol_init+'/u.npy'))
+        
         self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
         self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
+        if self.init:
+            self.v = np.load(self.fol_init+'/v.npy')
 
         self.nitertot = 0
         
@@ -304,7 +318,9 @@ class EasyMuffinSURE(EasyMuffin):
                  truesky=[],
                  psf=[],
                  step_mu = [0,0],
-                 fftw = 0):
+                 fftw = 0,
+                 init=0,
+                 fol_init=0):
 
         super(EasyMuffinSURE,self).__init__(
                  mu_s,
@@ -318,7 +334,9 @@ class EasyMuffinSURE(EasyMuffin):
                  dirty,
                  truesky,
                  psf,
-                 fftw = 0)
+                 fftw,
+                 init,
+                 fol_init)
         
         self.step_mu = step_mu
 

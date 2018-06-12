@@ -25,11 +25,17 @@ import deconv3d as dcv
 parser = argparse.ArgumentParser(description='Awesome Argument Parser')
 parser.add_argument('-fol','--folder',help='Path to data folder')
 parser.add_argument('-nam','--file_in',help='Data Prefix')
+parser.add_argument('-sav','--save',default=0,help='Save Output Variables')
+parser.add_argument('-init','--init',default=0,type=int,help='Init with Saved Variables')
+parser.add_argument('-fol_init','--folder_init',help='Path to init data folder')
 
 args = parser.parse_args()
 
 folder = args.folder
 file_in = args.file_in
+save = args.save
+init = args.init
+folder_init = args.folder_init
 
 # ==============================================================================
 # OPEN PSF AND DIRTY CUBE - SKY to check results
@@ -63,9 +69,9 @@ rank = comm.Get_rank()
 # Tsts EM and EMSURE 
 # ==============================================================================
 
-#nb=('db1','db2','db3','db4','db5','db6','db7','db8')
+nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 nb=(7,0)
-nitermax = 3
+nitermax = 6
 mu_s = 1
 mu_l = 1
 fftw = 1
@@ -77,7 +83,8 @@ if rank==0:
     print('----------------------------------------------------------')
     print('')
     tm.tic()
-    EM00= dcv.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw)
+    EM00= dcv.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw,init=init,
+               fol_init=folder_init)
     EM00.loop(nitermax)
     tm.toc()
     
@@ -87,7 +94,8 @@ if rank==0:
     print('----------------------------------------------------------')
     print('')
     tm.tic()
-    EM0= dcv.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw)
+    EM0= dcv.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw,init=init,
+               fol_init=folder_init)
     EM0.loop(nitermax)
     tm.toc()
 
@@ -99,7 +107,8 @@ if rank==0:
     
 # every processor creates EM -- inside each one will do its one part of the job 
 tm.tic()
-EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw)
+EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw,init=init,
+               fol_init=folder_init)
 EM.loop(nitermax)
 
 
@@ -143,3 +152,9 @@ if rank == 0: # I look at the results in EM created by master node even though o
     print('')
     print('Error with Muffin: ',(np.linalg.norm(EM.xf -EM0.x)))
     print('')    
+
+if rank==0 and save:
+    np.save('x0_tst.npy',EM.xf)
+    np.save('u.npy',EM.uf)
+    np.save('v.npy',EM.v)
+    
