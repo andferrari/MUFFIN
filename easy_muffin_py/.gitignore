@@ -1,6 +1,10 @@
-ExplorDataSets.py
-SUGARFDMC_CheckGradient*
 create_cropped_data.py
+output2/*
+output3/*
+output4/*
+output5/*
+ExplorDataSets.py
+OutputSigamm/*
 output_Gradient/*
 output/*
 data/*

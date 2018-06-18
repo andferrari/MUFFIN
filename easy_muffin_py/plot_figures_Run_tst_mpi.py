@@ -28,22 +28,25 @@ os.chdir(drctry)
 
 x0_tst =np.load('x0_tst.npy')
 wmse_tst=np.load('wmse_tst.npy')
+snr_tst=np.load('snr_tst.npy')
+cost=np.load('cost.npy')
+
 wmses_tst=np.load('wmses_tst.npy')
 wmsesfdmc_tst=np.load('wmsesfdmc_tst.npy')
-snr_tst=np.load('snr_tst.npy')
 mu_s_tst=np.load('mu_s_tst.npy')
 mu_l_tst=np.load('mu_l_tst.npy')
 dxs=np.load('dxs.npy')
 dxl=np.load('dxl.npy')
 sugar0=np.load('sugar0.npy')
 sugar1=np.load('sugar1.npy')
-cost=np.load('cost.npy')
 psnr = np.load('psnrsure.npy')
 
 os.chdir('../..')
 
-pl.figure()
 N = snr_tst.size 
+#%%
+
+pl.figure(1)
 
 pl.subplot(2,4,1)
 pl.plot(sugar0[1:N],label='sugar0')
@@ -127,7 +130,5 @@ pl.figure()
 pl.plot(x0_tst[i,j,:],label='Spectre_{:01d}'.format(i))
 pl.plot(sky[i,j,:])
 pl.legend()
-
-
 
 
