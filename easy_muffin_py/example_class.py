@@ -73,44 +73,44 @@ mu_s = 1
 mu_l = 1
 fftw = 1
 
-tic()
-DM = SNSD(mu_s=mu_s, mu_l = mu_l, nb=nb,nitermax=nitermax,truesky=sky)
-DM.parameters()
-DM.setSpectralPSF(cube_psf)
-DM.setSpectralDirty(cube_dirty)
-(SpectralSkyModel , cost, snr, psnr) = DM.main()
-toc()
-
-tic()
-EM= EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,fftw=fftw,init=init,
-               fol_init=folder_init)
-EM.loop(nitermax)
-SpectralSkyModel2 = EM.xt
-cost2 = EM.costlist
-snr2 = EM.snrlist
-psnr2 = EM.psnrlist
-wmse2 = EM.wmselist
-toc()
-
-tic()
-Noise = cube_dirty - conv(cube_psf,sky)
-var = np.sum(Noise**2)/Noise.size
-EMs= EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,mu_wiener=5e1,fftw=fftw,init=init,
-               fol_init=folder_init)
-EMs.loop(nitermax)
-SpectralSkyModel3 = EMs.xt
-cost3 = EMs.costlist
-snr3 = EMs.snrlist
-psnr3 = EMs.psnrlist
-psnrsure3 = EMs.psnrlistsure
-wmse3 = EMs.wmselist
-wmsesure3 = EMs.wmselistsure
-toc()
+#tic()
+#DM = SNSD(mu_s=mu_s, mu_l = mu_l, nb=nb,nitermax=nitermax,truesky=sky)
+#DM.parameters()
+#DM.setSpectralPSF(cube_psf)
+#DM.setSpectralDirty(cube_dirty)
+#(SpectralSkyModel , cost, snr, psnr) = DM.main()
+#toc()
+#
+#tic()
+#EM= EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,fftw=fftw,init=init,
+#               fol_init=folder_init, save=0)
+#EM.loop(nitermax)
+#SpectralSkyModel2 = EM.xt
+#cost2 = EM.costlist
+#snr2 = EM.snrlist
+#psnr2 = EM.psnrlist
+#wmse2 = EM.wmselist
+#toc()
+#
+#tic()
+#Noise = cube_dirty - conv(cube_psf,sky)
+#var = np.sum(Noise**2)/Noise.size
+#EMs= EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,mu_wiener=5e1,fftw=fftw,init=init,
+#               fol_init=folder_init,save=0)
+#EMs.loop(nitermax)
+#SpectralSkyModel3 = EMs.xt
+#cost3 = EMs.costlist
+#snr3 = EMs.snrlist
+#psnr3 = EMs.psnrlist
+#psnrsure3 = EMs.psnrlistsure
+#wmse3 = EMs.wmselist
+#wmsesure3 = EMs.wmselistsure
+#toc()
 
 Noise = cube_dirty - conv(cube_psf,sky)
 var = np.sum(Noise**2)/Noise.size
 EMsfdmc= EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,step_mu=[5e-1,5e-1],fftw=fftw,init=init,
-               fol_init=folder_init)
+               fol_init=folder_init,save=save)
 EMsfdmc.loop_fdmc(nitermax)
 SpectralSkyModel4 = EMsfdmc.xt
 cost4 = EMsfdmc.costlist
@@ -160,8 +160,29 @@ wmsesurefdmc = EMsfdmc.wmselistsurefdmc
 #
 #pl.show()
 
-if save:
-    np.save('x0_tst.npy',EM.x)
-    np.save('u.npy',EM.u)
-    np.save('v.npy',EM.v)
+
+print('')
+print('EMsfdmc.dx_s: ',np.linalg.norm(EMsfdmc.dx_s))
+print('')    
+
+print('')
+print('EMsfdmc.dx_l: ',np.linalg.norm(EMsfdmc.dx_l))
+print('')    
+
+print('')
+print('EMsfdmc.dx2_s: ',np.linalg.norm(EMsfdmc.dx2_s))
+print('')    
+
+print('')
+print('EMsfdmc.dx2_s: ',np.linalg.norm(EMsfdmc.dx2_l))
+print('')    
+
     
+print('')
+print('EMsfdmc.sugarfdmclist: ',EMsfdmc.sugarfdmclist[0][:])
+print('')    
+
+print('')
+print('EMsfdmc.sugarfdmclist: ',EMsfdmc.sugarfdmclist[1][:])
+print('')    
+

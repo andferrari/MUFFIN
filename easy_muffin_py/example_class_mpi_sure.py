@@ -76,41 +76,41 @@ mu_s = 1
 mu_l = 1
 fftw = 1
 
-if rank==0:
-    print('')
-    print('----------------------------------------------------------')
-    print('                       Easy MUFFIN')
-    print('----------------------------------------------------------')
-    print('')
-    tm.tic()
-    EM00= dcv.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw,init=init,
-               fol_init=folder_init)
-    EM00.loop(nitermax)
-    tm.toc()
-    
-    print('')
-    print('----------------------------------------------------------')
-    print('                       Easy MUFFIN SURE')
-    print('----------------------------------------------------------')
-    print('')
-    tm.tic()
-    EM0= dcv.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw,init=init,
-               fol_init=folder_init)
-    EM0.loop(nitermax)
-    tm.toc()
-
-    print('')
-    print('----------------------------------------------------------')
-    print('                      MPI: Easy MUFFIN SURE')
-    print('----------------------------------------------------------')
-    print('')
+#if rank==0:
+#    print('')
+#    print('----------------------------------------------------------')
+#    print('                       Easy MUFFIN')
+#    print('----------------------------------------------------------')
+#    print('')
+#    tm.tic()
+#    EM00= dcv.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw,init=init,
+#               fol_init=folder_init,save=0)
+#    EM00.loop(nitermax)
+#    tm.toc()
+#    
+#    print('')
+#    print('----------------------------------------------------------')
+#    print('                       Easy MUFFIN SURE')
+#    print('----------------------------------------------------------')
+#    print('')
+#    tm.tic()
+#    EM0= dcv.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw,init=init,
+#               fol_init=folder_init,save=0)
+#    EM0.loop(nitermax)
+#    tm.toc()
+#
+#    print('')
+#    print('----------------------------------------------------------')
+#    print('                      MPI: Easy MUFFIN SURE')
+#    print('----------------------------------------------------------')
+#    print('')
     
 # every processor creates EM -- inside each one will do its one part of the job 
 tm.tic()
-EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw,init=init,
-               fol_init=folder_init)
-EM.loop(nitermax)
-
+EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,step_mu=[5e-1,5e-1],fftw=fftw,init=init,
+               fol_init=folder_init,save=save)
+#EM.loop(nitermax)
+EM.loop_fdmc(nitermax)
 
 #%% ===========================================================================
 # Validating results  
@@ -126,35 +126,54 @@ if rank == 0: # I look at the results in EM created by master node even though o
     print('----------------------------------------------------------')
     print('')
 
+#    print('')
+#    
+#    print('snr: ',np.linalg.norm(np.asarray(EM.snrlist)-np.asarray(EM0.snrlist),np.inf))
+#    
+#    print('')
+#    
+#    print('cost: ',np.linalg.norm(np.asarray(EM.costlist)-np.asarray(EM0.costlist),np.inf))
+#    
+#    print('')
+#    
+#    print('psnr: ',np.linalg.norm(np.asarray(EM.psnrlist)-np.asarray(EM0.psnrlist),np.inf))
+#    
+#    print('')
+#    
+#    print('wmsem: ',np.linalg.norm(np.asarray(EM.wmselist)-np.asarray(EM0.wmselist),np.inf))
+#    
+#    print('')
+#    
+#    print('v-v0: ',np.linalg.norm(EM.v-EM0.v))
+#    
+#    print('')    
+#    print('vtt-vtt0: ',np.linalg.norm(EM.vtt-EM0.vtt))
+#    
+#    print('')
+#    print('Error with Muffin: ',(np.linalg.norm(EM.xf -EM0.x)))
+#    print('')    
+    
     print('')
-    
-    print('snr: ',np.linalg.norm(np.asarray(EM.snrlist)-np.asarray(EM0.snrlist),np.inf))
-    
-    print('')
-    
-    print('cost: ',np.linalg.norm(np.asarray(EM.costlist)-np.asarray(EM0.costlist),np.inf))
-    
-    print('')
-    
-    print('psnr: ',np.linalg.norm(np.asarray(EM.psnrlist)-np.asarray(EM0.psnrlist),np.inf))
-    
-    print('')
-    
-    print('wmsem: ',np.linalg.norm(np.asarray(EM.wmselist)-np.asarray(EM0.wmselist),np.inf))
-    
-    print('')
-    
-    print('v-v0: ',np.linalg.norm(EM.v-EM0.v))
-    
-    print('')    
-    print('vtt-vtt0: ',np.linalg.norm(EM.vtt-EM0.vtt))
-    
-    print('')
-    print('Error with Muffin: ',(np.linalg.norm(EM.xf -EM0.x)))
+    print('EM.dx_s: ',np.linalg.norm(EM.dx_sf))
     print('')    
 
-if rank==0 and save:
-    np.save('x0_tst.npy',EM.xf)
-    np.save('u.npy',EM.uf)
-    np.save('v.npy',EM.v)
-    
+    print('')
+    print('EM.dx_l: ',np.linalg.norm(EM.dx_lf))
+    print('')    
+
+    print('')
+    print('EM.dx2_s: ',np.linalg.norm(EM.dx2_sf))
+    print('')    
+
+    print('')
+    print('EM.dx2_s: ',np.linalg.norm(EM.dx2_lf))
+    print('')    
+
+    print('')
+    print('EMsfdmc.sugarfdmclist: ',EM.sugarfdmclist[0][:])
+    print('')    
+
+    print('')
+    print('EMsfdmc.sugarfdmclist: ',EM.sugarfdmclist[1][:])
+    print('')    
+
