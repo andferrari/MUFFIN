@@ -12,7 +12,7 @@ module load fftw3-intel17/3.3.7
 
 export I_MPI_DAPL_TRANSLATION_CACHE=off
 
-prog=./run_tst_mpi_sigamm2.py
+prog=./run_sigamm.py
 
 if [ ! -x $prog ]
 then 

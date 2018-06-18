@@ -3,7 +3,7 @@
 #SBATCH -t 24:00:00
 #SBATCH --output testing-%j.out
 #SBATCH -N 4
-#SBATCH -p fdr,qdr
+#SBATCH -p fdr,qdr,qdr-gpu
 
 module purge
 module load python/3.6.3_anaconda3 
@@ -11,7 +11,6 @@ module load intel/mpi/64/2017.4.196 intel/compiler/64/2017.4.196
 module load fftw3-intel17/3.3.7
 
 export I_MPI_DAPL_TRANSLATION_CACHE=off
-export I_MPI_OFA_TRANSLATION_CACHE=off
 
 prog=./run_tst_mpi_sigamm3.py
 
@@ -28,7 +27,6 @@ echo "Launched from: $SLURM_SUBMIT_DIR"
 nbproc=$(grep -i processor /proc/cpuinfo |wc -l)
 
 numberofcores=$(($nbproc*$SLURM_NNODES))
-
 echo "Will use $numberofcores MPI processes."
 
 odir=output_sigamm/$SLURM_JOB_ID

@@ -43,6 +43,7 @@ parser.add_argument('-pxl_w','--pixelweight',default=0,type=int,help='Use differ
 parser.add_argument('-bnd_w','--bandweight',default=0,type=int,help='Use different weight per band')
 parser.add_argument('-fol','--folder',help='Path to data folder')
 parser.add_argument('-o','--odir', type=str, dest='output_dir', default='.', help='Output directory, must exist.')
+parser.add_argument('-s','--sure', type=int, default=0, help='0: EasyMuffin and 1: EasyMuffinSure')
 
 args = parser.parse_args()
 
@@ -63,6 +64,7 @@ step_mu = [step_mu_s,step_mu_l]
 data_suffix = args.data_suffix
 pxl_w = args.pixelweight
 bnd_w = args.bandweight
+sure = args.sure
 
 folder = args.folder
 
@@ -109,15 +111,16 @@ else:
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 #nb = (7,0)
 
-flavor = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'pixelweighton':pxl_w,'bandweighton':bnd_w}
-tic()
+if sure:
+    flavor = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'pixelweighton':pxl_w,'bandweighton':bnd_w}
+    tic()
 
-EM= dcvMpi.EasyMuffin(comm,**flavor)
-if master:
-    print('using tau: ',EM.tau)
-    print('')
+    EM= dcvMpi.EasyMuffin(comm,**flavor)
+    if master:
+        print('using tau: ',EM.tau)
+        print('')
 
-EM.loop(nitermax)
+    EM.loop(nitermax)
 
 #%% ===========================================================================
 # Save results
