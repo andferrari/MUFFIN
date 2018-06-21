@@ -1230,19 +1230,19 @@ class EasyMuffinSURE(EasyMuffin):
                     nfreqi+=1
                 self.u2f[i] = udicti.copy()
         ##########        
-        self.u3_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
-        self.u3f_ = np.zeros((0))
+        self.u2_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
+        self.u2f_ = np.zeros((0))
         if self.master:
-            self.u3_ = np.zeros((0))
-            self.u3f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
+            self.u2_ = np.zeros((0))
+            self.u2f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
 
         i = 0
         for val1 in self.du_s.values():
             for j in self.nbw_decomp:
-                self.u3_[:,:,i]=val1[j].copy(order='F')
+                self.u2_[:,:,i]=val1[j].copy(order='F')
                 i+=1
                
-        self.comm.Gatherv(self.u3_, [self.u3f_,self.sendcountsu,self.displacementsu,MPI.DOUBLE], root=0)
+        self.comm.Gatherv(self.u2_, [self.u2f_,self.sendcountsu,self.displacementsu,MPI.DOUBLE], root=0)
         
         if self.master:
             # re-ranger u en dictionnaire
@@ -1251,23 +1251,23 @@ class EasyMuffinSURE(EasyMuffin):
              
             for i in range(self.nfreq):
                 for j in self.nbw_decomp:
-                    udicti[j]=self.u3f_[:,:,nfreqi]
+                    udicti[j]=self.u2f_[:,:,nfreqi]
                     nfreqi+=1
                 self.du_sf[i] = udicti.copy()
         #############
-        self.u4_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
-        self.u4f_ = np.zeros((0))
+        self.u2_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
+        self.u2f_ = np.zeros((0))
         if self.master:
-            self.u4_ = np.zeros((0))
-            self.u4f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
+            self.u2_ = np.zeros((0))
+            self.u2f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
 
         i = 0
         for val1 in self.du_l.values():
             for j in self.nbw_decomp:
-                self.u4_[:,:,i]=val1[j].copy(order='F')
+                self.u2_[:,:,i]=val1[j].copy(order='F')
                 i+=1
                
-        self.comm.Gatherv(self.u4_, [self.u4f_,self.sendcountsu,self.displacementsu,MPI.DOUBLE], root=0)
+        self.comm.Gatherv(self.u2_, [self.u2f_,self.sendcountsu,self.displacementsu,MPI.DOUBLE], root=0)
         
         if self.master:
             # re-ranger u en dictionnaire
@@ -1276,23 +1276,23 @@ class EasyMuffinSURE(EasyMuffin):
              
             for i in range(self.nfreq):
                 for j in self.nbw_decomp:
-                    udicti[j]=self.u4f_[:,:,nfreqi]
+                    udicti[j]=self.u2f_[:,:,nfreqi]
                     nfreqi+=1
                 self.du_lf[i] = udicti.copy()
         ############### 
-        self.u5_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
-        self.u5f_ = np.zeros((0))
+        self.u2_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
+        self.u2f_ = np.zeros((0))
         if self.master:
-            self.u5_ = np.zeros((0))
-            self.u5f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
+            self.u2_ = np.zeros((0))
+            self.u2f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
 
         i = 0
         for val1 in self.du2_s.values():
             for j in self.nbw_decomp:
-                self.u5_[:,:,i]=val1[j].copy(order='F')
+                self.u2_[:,:,i]=val1[j].copy(order='F')
                 i+=1
                
-        self.comm.Gatherv(self.u5_, [self.u5f_,self.sendcountsu,self.displacementsu,MPI.DOUBLE], root=0)
+        self.comm.Gatherv(self.u2_, [self.u2f_,self.sendcountsu,self.displacementsu,MPI.DOUBLE], root=0)
         
         if self.master:
             # re-ranger u en dictionnaire
@@ -1301,23 +1301,23 @@ class EasyMuffinSURE(EasyMuffin):
              
             for i in range(self.nfreq):
                 for j in self.nbw_decomp:
-                    udicti[j]=self.u5f_[:,:,nfreqi]
+                    udicti[j]=self.u2f_[:,:,nfreqi]
                     nfreqi+=1
                 self.du2_sf[i] = udicti.copy()
         ################
-        self.u6_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
-        self.u6f_ = np.zeros((0))
+        self.u2_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
+        self.u2f_ = np.zeros((0))
         if self.master:
-            self.u6_ = np.zeros((0))
-            self.u6f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
+            self.u2_ = np.zeros((0))
+            self.u2f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
 
         i = 0
         for val1 in self.du2_l.values():
             for j in self.nbw_decomp:
-                self.u6_[:,:,i]=val1[j].copy()
+                self.u2_[:,:,i]=val1[j].copy()
                 i+=1
                
-        self.comm.Gatherv(self.u6_, [self.u6f_,self.sendcountsu,self.displacementsu,MPI.DOUBLE], root=0)
+        self.comm.Gatherv(self.u2_, [self.u2f_,self.sendcountsu,self.displacementsu,MPI.DOUBLE], root=0)
         
         if self.master:
             # re-ranger u en dictionnaire
@@ -1326,7 +1326,7 @@ class EasyMuffinSURE(EasyMuffin):
              
             for i in range(self.nfreq):
                 for j in self.nbw_decomp:
-                    udicti[j]=self.u6f_[:,:,nfreqi]
+                    udicti[j]=self.u2f_[:,:,nfreqi]
                     nfreqi+=1
                 self.du2_lf[i] = udicti.copy()
                 
