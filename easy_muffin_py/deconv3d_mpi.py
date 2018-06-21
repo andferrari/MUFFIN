@@ -169,8 +169,8 @@ class EasyMuffin():
                 
             self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
-            if self.init:
-                self.v = np.load(self.fol_init+'/v.npy')
+#            if self.init:
+#                self.v = np.load(self.fol_init+'/v.npy')
             
             self.tf = np.zeros((self.nxy,self.nxy,self.nfreq),dtype=np.float,order='F')
             self.t = np.zeros((0))
@@ -206,8 +206,8 @@ class EasyMuffin():
                 print('DWT: tau = ', self.tau)
                 print('')
                 
-            self.uf = {}
-            self.u = {}
+#            self.uf = {}
+#            self.u = {}
             
             # Compute spatial and spectral scaling parameters
             if self.pixelweighton ==1:
@@ -249,11 +249,11 @@ class EasyMuffin():
             # x initialization
             if self.dirtyinit:
                 self.x = np.asfortranarray(self.dirtyinit)
-            elif self.init:
-                #print('')
-                #print('process ',self.comm.Get_rank(),'loading x_init from ',self.fol_init,' ... ')
-                self.x = np.load(self.fol_init+'/x0_tst.npy') 
-                self.x = np.asfortranarray(self.x[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
+#            elif self.init:
+#                #print('')
+#                #print('process ',self.comm.Get_rank(),'loading x_init from ',self.fol_init,' ... ')
+#                self.x = np.load(self.fol_init+'/x0_tst.npy') 
+#                self.x = np.asfortranarray(self.x[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
             else:
                 self.x = np.asfortranarray(init_dirty_wiener(self.dirty, self.psf, self.psfadj, self.mu_wiener))
             
@@ -298,11 +298,11 @@ class EasyMuffin():
             self.u = {}
             for freq in range(self.nfreq):
                 self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy),order='F') , self.nbw_decomp)
-            if self.init:
-                tmp = np.ndarray.tolist(np.load(self.fol_init+'/u.npy'))
-                for freq in range(self.nfreq) :
-                    self.u[freq] = tmp[self.nf2[self.idw]+freq]
-            self.uf = np.zeros((0))
+#            if self.init:
+#                tmp = np.ndarray.tolist(np.load(self.fol_init+'/u.npy'))
+#                for freq in range(self.nfreq) :
+#                    self.u[freq] = tmp[self.nf2[self.idw]+freq]
+#            self.uf = np.zeros((0))
                    
             # Compute spatial and spectral scaling parameters
             if self.bandweighton ==1:
@@ -317,11 +317,11 @@ class EasyMuffin():
         #self.displacementsu =[ i*(self.nbw_decomp[-1]+1) for i in self.displacements]
         self.displacementsu =[ i*np.size(self.nbw_decomp) for i in self.displacements]
         
-        if self.master:
-            self.uf_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F')
-        else:
-            # empty uf recv buffer at each worker node
-            self.uf_ = np.zeros((0))
+#        if self.master:
+#            self.uf_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F')
+#        else:
+#            # empty uf recv buffer at each worker node
+#            self.uf_ = np.zeros((0))
                 
                 
         self.alpha_l = self.comm.bcast(self.alpha_l,root=0) 
@@ -330,6 +330,49 @@ class EasyMuffin():
         
         self.costlist = []
         self.comm.Gatherv(self.x,[self.xf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+        
+        if self.master:
+            self.u = {}
+            self.uf = {}
+            self.u_ = np.zeros((0))
+            self.uf_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F')                
+        else:
+            self.uf = np.zeros((0))
+            self.u_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F')
+            self.uf_ = np.zeros((0))
+                
+        if self.init:
+                
+            if self.master:
+                # load v for master 
+                self.v = np.load(self.fol_init+'/v.npy')
+                
+                # load xf and scatter to nodes 
+                self.xf = np.load(self.fol_init+'/x0_tst.npy') 
+            
+                # load u and scatter to nodes 
+                self.uf = np.ndarray.tolist(np.load(self.fol_init+'/u.npy'))
+            
+                self.uf_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire  
+        
+                i = 0
+                for val1 in self.uf.values():
+                    for j in self.nbw_decomp:
+                        self.uf_[:,:,i]=val1[j].copy()
+                        i+=1
+          
+            self.comm.Scatterv([self.xf,self.sendcounts,self.displacements,MPI.DOUBLE],self.x,root=0)
+            self.comm.Scatterv([self.uf_,self.sendcountsu,self.displacementsu,MPI.DOUBLE],self.u_,root=0)
+            
+            if not self.master:
+                udicti = {}
+                nfreqi=0
+                for i in range(self.nfreq):
+                    for j in self.nbw_decomp:
+                        udicti[j]=self.u_[:,:,nfreqi]
+                        nfreqi+=1
+                    self.u[i]=udicti.copy()
+                    
         self.costlist.append(self.cost())
         
         # compute snr, psnr, wmse
@@ -681,12 +724,12 @@ class EasyMuffinSURE(EasyMuffin):
                 self.du2_s = {}
                 self.du2_l = {}
                 
-                if self.init:
-                    self.v2 = np.load(self.fol_init+'/v2.npy')
-                    self.dv_s = np.load(self.fol_init+'/dv_s.npy')
-                    self.dv_l = np.load(self.fol_init+'/dv_l.npy')
-                    self.dv2_s = np.load(self.fol_init+'/dv2_s.npy')
-                    self.dv2_l = np.load(self.fol_init+'/dv2_l.npy')
+#                if self.init:
+#                    self.v2 = np.load(self.fol_init+'/v2.npy')
+#                    self.dv_s = np.load(self.fol_init+'/dv_s.npy')
+#                    self.dv_l = np.load(self.fol_init+'/dv_l.npy')
+#                    self.dv2_s = np.load(self.fol_init+'/dv2_s.npy')
+#                    self.dv2_l = np.load(self.fol_init+'/dv2_l.npy')
             
             else:
                 self.DeltaSURE  = np.asfortranarray(self.DeltaSURE[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
@@ -743,38 +786,38 @@ class EasyMuffinSURE(EasyMuffin):
                 for freq in range(self.nfreq):
                     self.du2_s[freq] = self.Decomp(np.zeros((self.nxy,self.nxy), dtype=np.float,order='F') , self.nbw_decomp)
                 
-                if self.init:
-                    tmp = np.ndarray.tolist(np.load(self.fol_init+'/u2.npy'))
-                    for freq in range(self.nfreq) :
-                        self.u2[freq] = tmp[self.nf2[self.idw]+freq]
-                    
-                    tmp = np.ndarray.tolist(np.load(self.fol_init+'/du_s.npy'))
-                    for freq in range(self.nfreq) :
-                        self.du_s[freq] = tmp[self.nf2[self.idw]+freq]
-                        
-                    tmp = np.ndarray.tolist(np.load(self.fol_init+'/du_l.npy'))
-                    for freq in range(self.nfreq) :
-                        self.du_l[freq] = tmp[self.nf2[self.idw]+freq]
-                        
-                    tmp = np.ndarray.tolist(np.load(self.fol_init+'/du2_s.npy'))
-                    for freq in range(self.nfreq) :
-                        self.du2_s[freq] = tmp[self.nf2[self.idw]+freq]
-                    
-                    tmp = np.ndarray.tolist(np.load(self.fol_init+'/du2_l.npy'))
-                    for freq in range(self.nfreq) :
-                        self.du2_l[freq] = tmp[self.nf2[self.idw]+freq]
-                    
-                    self.x2 = np.load(self.fol_init+'/x2.npy') 
-                    self.x2 = np.asfortranarray(self.x2[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
-                
-                    self.dx_s = np.load(self.fol_init+'/dx_s.npy') 
-                    self.dx_s = np.asfortranarray(self.dx_s[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
-                    self.dx_l = np.load(self.fol_init+'/dx_l.npy') 
-                    self.dx_l = np.asfortranarray(self.dx_l[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
-                    self.dx2_l = np.load(self.fol_init+'/dx2_l.npy') 
-                    self.dx2_l = np.asfortranarray(self.dx2_l[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
-                    self.dx2_s = np.load(self.fol_init+'/dx2_s.npy') 
-                    self.dx2_s = np.asfortranarray(self.dx2_s[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
+#                if self.init:
+#                    tmp = np.ndarray.tolist(np.load(self.fol_init+'/u2.npy'))
+#                    for freq in range(self.nfreq) :
+#                        self.u2[freq] = tmp[self.nf2[self.idw]+freq]
+#                    
+#                    tmp = np.ndarray.tolist(np.load(self.fol_init+'/du_s.npy'))
+#                    for freq in range(self.nfreq) :
+#                        self.du_s[freq] = tmp[self.nf2[self.idw]+freq]
+#                        
+#                    tmp = np.ndarray.tolist(np.load(self.fol_init+'/du_l.npy'))
+#                    for freq in range(self.nfreq) :
+#                        self.du_l[freq] = tmp[self.nf2[self.idw]+freq]
+#                        
+#                    tmp = np.ndarray.tolist(np.load(self.fol_init+'/du2_s.npy'))
+#                    for freq in range(self.nfreq) :
+#                        self.du2_s[freq] = tmp[self.nf2[self.idw]+freq]
+#                    
+#                    tmp = np.ndarray.tolist(np.load(self.fol_init+'/du2_l.npy'))
+#                    for freq in range(self.nfreq) :
+#                        self.du2_l[freq] = tmp[self.nf2[self.idw]+freq]
+#                    
+#                    self.x2 = np.load(self.fol_init+'/x2.npy') 
+#                    self.x2 = np.asfortranarray(self.x2[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
+#                
+#                    self.dx_s = np.load(self.fol_init+'/dx_s.npy') 
+#                    self.dx_s = np.asfortranarray(self.dx_s[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
+#                    self.dx_l = np.load(self.fol_init+'/dx_l.npy') 
+#                    self.dx_l = np.asfortranarray(self.dx_l[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
+#                    self.dx2_l = np.load(self.fol_init+'/dx2_l.npy') 
+#                    self.dx2_l = np.asfortranarray(self.dx2_l[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
+#                    self.dx2_s = np.load(self.fol_init+'/dx2_s.npy') 
+#                    self.dx2_s = np.asfortranarray(self.dx2_s[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
                     
                 self.u2f = {}
                 self.du_sf = {}
@@ -785,6 +828,157 @@ class EasyMuffinSURE(EasyMuffin):
                 self.t2f = np.zeros(0)
                 self.t2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F') 
             
+            if self.init:
+                if self.master:                     
+                    # load v at master node 
+                    self.v2 = np.load(self.fol_init+'/v2.npy')
+                    self.dv_s = np.load(self.fol_init+'/dv_s.npy')
+                    self.dv_l = np.load(self.fol_init+'/dv_l.npy')
+                    self.dv2_s = np.load(self.fol_init+'/dv2_s.npy')
+                    self.dv2_l = np.load(self.fol_init+'/dv2_l.npy')
+                
+                    # load x2 dx_ dx2_ ... and send to nodes 
+                    self.x2f = np.load(self.fol_init+'/x2.npy')
+                    self.dx_sf = np.load(self.fol_init+'/dx_s.npy') 
+                    self.dx_lf = np.load(self.fol_init+'/dx_l.npy') 
+                    self.dx2_lf = np.load(self.fol_init+'/dx2_l.npy') 
+                    self.dx2_sf = np.load(self.fol_init+'/dx2_s.npy') 
+                
+                self.comm.Scatterv([self.x2f,self.sendcounts,self.displacements,MPI.DOUBLE],self.x2,root=0)
+                self.comm.Scatterv([self.dx_sf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dx_s,root=0)
+                self.comm.Scatterv([self.dx_lf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dx_l,root=0)
+                self.comm.Scatterv([self.dx2_sf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dx2_s,root=0)
+                self.comm.Scatterv([self.dx2_lf,self.sendcounts,self.displacements,MPI.DOUBLE],self.dx2_l,root=0)
+            
+                # u2
+                if self.master:
+                    self.uf = {}
+                    self.uf_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F')  
+                else:
+                    self.u_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') 
+                    
+                if self.master:
+                    self.uf = np.ndarray.tolist(np.load(self.fol_init+'/u2.npy'))
+                    i = 0
+                    for val1 in self.uf.values():
+                        for j in self.nbw_decomp:
+                            self.uf_[:,:,i]=val1[j].copy()
+                            i+=1
+          
+                self.comm.Scatterv([self.uf_,self.sendcountsu,self.displacementsu,MPI.DOUBLE],self.u_,root=0)
+            
+                if not self.master:
+                    udicti = {}
+                    nfreqi=0
+                    for i in range(self.nfreq):
+                        for j in self.nbw_decomp:
+                            udicti[j]=self.u_[:,:,nfreqi]
+                            nfreqi+=1
+                        self.u2[i]=udicti.copy()
+                
+                # du_s
+                if self.master:
+                    self.uf = {}
+                    self.uf_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F')  
+                else:
+                    self.u_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') 
+                    
+                if self.master and self.init:
+                    self.uf = np.ndarray.tolist(np.load(self.fol_init+'/du_s.npy'))
+                    i = 0
+                    for val1 in self.uf.values():
+                        for j in self.nbw_decomp:
+                            self.uf_[:,:,i]=val1[j].copy()
+                            i+=1
+          
+                self.comm.Scatterv([self.uf_,self.sendcountsu,self.displacementsu,MPI.DOUBLE],self.u_,root=0)
+            
+                if not self.master:
+                    udicti = {}
+                    nfreqi=0
+                    for i in range(self.nfreq):
+                        for j in self.nbw_decomp:
+                            udicti[j]=self.u_[:,:,nfreqi]
+                            nfreqi+=1
+                        self.du_s[i]=udicti.copy()
+                
+                # du_l
+                if self.master:
+                    self.uf = {}
+                    self.uf_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F')  
+                else:
+                    self.u_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') 
+                    
+                if self.master:
+                    self.uf = np.ndarray.tolist(np.load(self.fol_init+'/du_l.npy'))
+                    i = 0
+                    for val1 in self.uf.values():
+                        for j in self.nbw_decomp:
+                            self.uf_[:,:,i]=val1[j].copy()
+                            i+=1
+          
+                self.comm.Scatterv([self.uf_,self.sendcountsu,self.displacementsu,MPI.DOUBLE],self.u_,root=0)
+            
+                if not self.master:
+                    udicti = {}
+                    nfreqi=0
+                    for i in range(self.nfreq):
+                        for j in self.nbw_decomp:
+                            udicti[j]=self.u_[:,:,nfreqi]
+                            nfreqi+=1
+                        self.du_l[i]=udicti.copy()
+
+                # du2_s
+                if self.master:
+                    self.uf = {}
+                    self.uf_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F')  
+                else:
+                    self.u_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') 
+                    
+                if self.master:
+                    self.uf = np.ndarray.tolist(np.load(self.fol_init+'/du2_s.npy'))
+                    i = 0
+                    for val1 in self.uf.values():
+                        for j in self.nbw_decomp:
+                            self.uf_[:,:,i]=val1[j].copy()
+                            i+=1
+          
+                self.comm.Scatterv([self.uf_,self.sendcountsu,self.displacementsu,MPI.DOUBLE],self.u_,root=0)
+            
+                if not self.master:
+                    udicti = {}
+                    nfreqi=0
+                    for i in range(self.nfreq):
+                        for j in self.nbw_decomp:
+                            udicti[j]=self.u_[:,:,nfreqi]
+                            nfreqi+=1
+                        self.du2_s[i]=udicti.copy()
+
+                # du2_l
+                if self.master:
+                    self.uf = {}
+                    self.uf_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F')  
+                else:
+                    self.u_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') 
+                
+                if self.master:
+                    self.uf = np.ndarray.tolist(np.load(self.fol_init+'/du2_l.npy'))
+                    i = 0
+                    for val1 in self.uf.values():
+                        for j in self.nbw_decomp:
+                            self.uf_[:,:,i]=val1[j].copy()
+                            i+=1
+          
+                self.comm.Scatterv([self.uf_,self.sendcountsu,self.displacementsu,MPI.DOUBLE],self.u_,root=0)
+            
+                if not self.master:
+                    udicti = {}
+                    nfreqi=0
+                    for i in range(self.nfreq):
+                        for j in self.nbw_decomp:
+                            udicti[j]=self.u_[:,:,nfreqi]
+                            nfreqi+=1
+                        self.du2_l[i]=udicti.copy()
             
             self.comm.Gatherv(self.x2,[self.x2f,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
             
@@ -1231,9 +1425,7 @@ class EasyMuffinSURE(EasyMuffin):
                 self.u2f[i] = udicti.copy()
         ##########        
         self.u2_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
-        self.u2f_ = np.zeros((0))
         if self.master:
-            self.u2_ = np.zeros((0))
             self.u2f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
 
         i = 0
@@ -1256,9 +1448,7 @@ class EasyMuffinSURE(EasyMuffin):
                 self.du_sf[i] = udicti.copy()
         #############
         self.u2_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
-        self.u2f_ = np.zeros((0))
         if self.master:
-            self.u2_ = np.zeros((0))
             self.u2f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
 
         i = 0
@@ -1281,9 +1471,7 @@ class EasyMuffinSURE(EasyMuffin):
                 self.du_lf[i] = udicti.copy()
         ############### 
         self.u2_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
-        self.u2f_ = np.zeros((0))
         if self.master:
-            self.u2_ = np.zeros((0))
             self.u2f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
 
         i = 0
@@ -1306,9 +1494,7 @@ class EasyMuffinSURE(EasyMuffin):
                 self.du2_sf[i] = udicti.copy()
         ################
         self.u2_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node 
-        self.u2f_ = np.zeros((0))
         if self.master:
-            self.u2_ = np.zeros((0))
             self.u2f_ = np.zeros((self.nxy,self.nxy,self.nfreq*np.size(self.nbw_decomp)),dtype=np.float,order='F') # defaire self.u at each workers node   
 
         i = 0
@@ -1329,7 +1515,6 @@ class EasyMuffinSURE(EasyMuffin):
                     udicti[j]=self.u2f_[:,:,nfreqi]
                     nfreqi+=1
                 self.du2_lf[i] = udicti.copy()
-                
 
         if self.master:
             np.save('x2.npy',self.x2f)
