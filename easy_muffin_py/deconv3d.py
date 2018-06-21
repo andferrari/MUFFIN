@@ -119,6 +119,7 @@ class EasyMuffin():
         self.nxy = self.dirty.shape[0]
 
         # x initialization 
+        self.x = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
         if self.dirtyinit:
             self.x = self.dirtyinit
         elif self.init:
@@ -130,15 +131,15 @@ class EasyMuffin():
 
         # initializing alg. variables 
         self.hth_fft = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.complex)
-        self.fty = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
-        self.psfadj_fft = self.fft2(self.psfadj).copy()
-        self.hth_fft = self.fft2( myifftshift( self.ifft2( self.psfadj_fft * self.fft2(self.psf) ) ) ).copy()
+        self.fty = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+        self.psfadj_fft = self.fft2(self.psfadj).copy(order='F')
+        self.hth_fft = self.fft2( myifftshift( self.ifft2( self.psfadj_fft * self.fft2(self.psf) ) ) ).copy(order='F')
         tmp = myifftshift(self.ifft2(self.fft2(self.dirty)*self.psfadj_fft))
-        self.fty = tmp.real.copy()
-        self.wstu = np.zeros((self.nxy,self.nxy), dtype=np.float)
-        self.Delta_freq = np.zeros((self.nxy,self.nxy), dtype=np.float)
-        self.xtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
-        self.xt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
+        self.fty = tmp.real.copy(order='F')
+        self.wstu = np.zeros((self.nxy,self.nxy), dtype=np.float,order='F')
+        self.Delta_freq = np.zeros((self.nxy,self.nxy), dtype=np.float,order='F')
+        self.xtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+        self.xt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
 
         if type(self.nb[0]) == int:
             self.Decomp = iuwt_decomp
@@ -170,16 +171,16 @@ class EasyMuffin():
 
         self.utt = {}
         for freq in range(self.nfreq):
-            self.utt[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
+            self.utt[freq] = self.Decomp(np.zeros((self.nxy,self.nxy),dtype=np.float,order='F') , self.nbw_decomp)
         
         self.u = {}
         for freq in range(self.nfreq):
-            self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
+            self.u[freq] = self.Decomp(np.zeros((self.nxy,self.nxy),dtype=np.float,order='F') , self.nbw_decomp)
         if self.init:
             self.u = np.ndarray.tolist(np.load(self.fol_init+'/u.npy'))
         
-        self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
-        self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
+        self.vtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+        self.v = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
         if self.init:
             self.v = np.load(self.fol_init+'/v.npy')
 
@@ -190,7 +191,7 @@ class EasyMuffin():
         if test ==1:
             self.alpha_s = 1/(np.sum(np.sum(self.dirty**2,0),0)+1e-1) # col. vector
             self.alpha_l = 1/(np.sum(self.dirty**2,2)+1e-1) # image
-            self.alpha_l = self.conv(self.alpha_l,np.ones((3,3)),'max').copy()
+            self.alpha_l = self.conv(self.alpha_l,np.ones((3,3)),'max').copy(order='F')
             self.alpha_s = self.alpha_s/self.alpha_s.max()
             self.alpha_l = self.alpha_l/self.alpha_l.max()
         else:
@@ -213,7 +214,7 @@ class EasyMuffin():
             print('')
 
     def conv(self,x,y):
-        tmp0 = self.fft2(x).copy()
+        tmp0 = self.fft2(x).copy(order='F')
         tmp = myifftshift(self.ifft2(tmp0*self.fft2(y)))
         return tmp.real
         
@@ -260,21 +261,28 @@ class EasyMuffin():
         for freq in range(self.nfreq):
             # compute iuwt adjoint
             wstu = self.Recomp(self.u[freq], self.nbw_recomp)
-            
             # compute xt
             self.xtt[:,:,freq] = self.x[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + self.mu_s*self.alpha_s[freq]*wstu + self.mu_l*self.alpha_l*t[:,:,freq])
-            self.xt[:,:,freq] = np.maximum(self.xtt[:,:,freq], 0.0 )
+            self.xt[:,:,freq] = np.maximum(self.xtt[:,:,freq], 0.0, dtype=np.float )
             # update u
             tmp_spat_scal = self.Decomp(2*self.xt[:,:,freq] - self.x[:,:,freq] , self.nbw_decomp)
             for b in self.nbw_decomp:
                 self.utt[freq][b] = self.u[freq][b] + self.sigma*self.mu_s*self.alpha_s[freq]*tmp_spat_scal[b]
                 self.u[freq][b] = sat(self.utt[freq][b])
+#            if freq==0:
+#                print('wstu1:',np.linalg.norm(wstu))
+#                print('xtt:',np.linalg.norm(self.xtt[:,:,freq] ))
+#                print('xt:',np.linalg.norm(self.xt[:,:,freq] ))
+#                print('')
         
         # update v
         self.vtt = self.v + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.xt - self.x, axis=2, norm='ortho')
         self.v = sat(self.vtt)
-        self.x = self.xt.copy()
+        self.x = self.xt.copy(order='F')
         
+#        print('x:',np.linalg.norm(self.x ))
+#        print('xt:',np.linalg.norm(self.xt ))
+            
         # compute cost snr, psnr, wmse if truesky given
         self.costlist.append(self.cost())
         if self.truesky.any():
@@ -359,7 +367,7 @@ class EasyMuffinSURE(EasyMuffin):
             np.random.seed(1)
             self.n = np.random.binomial(1,0.5,(self.nxy,self.nxy,self.nfreq))
             self.n[self.n==0] = -1
-            self.Hn = self.conv(self.n,self.psfadj).copy()
+            self.Hn = self.conv(self.n,self.psfadj).copy(order='F')
 
             # init Jacobians
             self.Jv = np.zeros((self.nxy,self.nxy,self.nfreq))
@@ -396,7 +404,7 @@ class EasyMuffinSURE(EasyMuffin):
             self.DeltaSURE = np.random.randn(self.nxy,self.nxy,self.nfreq)
             self.dirty2 = self.dirty + self.eps*self.DeltaSURE
         
-            self.xt2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
+            self.xt2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.u2 = {}
             for freq in range(self.nfreq):
                 self.u2[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
@@ -412,25 +420,25 @@ class EasyMuffinSURE(EasyMuffin):
             else:
                 self.x2 = init_dirty_wiener(self.dirty2, self.psf, self.psfadj, self.mu_wiener)
 
-            self.v2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
+            self.v2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             if self.init:
                 self.v2 = np.load(self.fol_init+'/v2.npy')
             
-            self.fty2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
+            self.fty2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             tmp = myifftshift(self.ifft2(self.fft2(self.dirty2)*self.psfadj_fft))
-            self.fty2 = tmp.real.copy()
+            self.fty2 = tmp.real.copy(order='F')
             
-            self.xtt2 = self.xtt = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float, order='F')
+            self.xtt2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.utt2 = {}
             for freq in range(self.nfreq):
-                self.utt2[freq] = self.Decomp(np.zeros((self.nxy,self.nxy), order='F') , self.nbw_decomp)
-            self.vtt2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float)
+                self.utt2[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
+            self.vtt2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.wmselistsurefdmc = []
             self.wmselistsurefdmc.append(self.wmsesurefdmc())
             
-            self.dv_s = np.zeros((self.nxy,self.nxy,self.nfreq))
-            self.dx_s = np.zeros((self.nxy,self.nxy,self.nfreq)) # init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
-            self.dxt_s = np.zeros((self.nxy,self.nxy,self.nfreq))
+            self.dv_s = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+            self.dx_s = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F') # init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
+            self.dxt_s = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.du_s = {}
             for freq in range(self.nfreq):
                 self.du_s[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
@@ -440,36 +448,36 @@ class EasyMuffinSURE(EasyMuffin):
                 self.dv_s = np.load(self.fol_init+'/dv_s.npy')
                 self.du_s = np.ndarray.tolist(np.load(self.fol_init+'/du_s.npy'))
                 
-            self.dv_l = np.zeros((self.nxy,self.nxy,self.nfreq))
-            self.dx_l = np.zeros((self.nxy,self.nxy,self.nfreq)) # init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
-            self.dxt_l = np.zeros((self.nxy,self.nxy,self.nfreq))
+            self.dv_l = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+            self.dx_l = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F') # init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
+            self.dxt_l = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.du_l = {}
             for freq in range(self.nfreq):
-                self.du_l[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
+                self.du_l[freq] = self.Decomp(np.zeros((self.nxy,self.nxy), dtype=np.float,order='F') , self.nbw_decomp)
                 
             if self.init:
                 self.dx_l = np.load(self.fol_init+'/dx_l.npy')
                 self.dv_l = np.load(self.fol_init+'/dv_l.npy')
                 self.du_l = np.ndarray.tolist(np.load(self.fol_init+'/du_l.npy'))
                 
-            self.dv2_s = np.zeros((self.nxy,self.nxy,self.nfreq))
-            self.dx2_s = np.zeros((self.nxy,self.nxy,self.nfreq)) # init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
-            self.dxt2_s = np.zeros((self.nxy,self.nxy,self.nfreq))
+            self.dv2_s = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+            self.dx2_s = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F') # init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
+            self.dxt2_s = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.du2_s = {}
             for freq in range(self.nfreq):
-                self.du2_s[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
+                self.du2_s[freq] = self.Decomp(np.zeros((self.nxy,self.nxy), dtype=np.float,order='F') , self.nbw_decomp)
             
             if self.init:
                 self.dx2_s = np.load(self.fol_init+'/dx2_s.npy')
                 self.dv2_s = np.load(self.fol_init+'/dv2_s.npy')
                 self.du2_s = np.ndarray.tolist(np.load(self.fol_init+'/du2_s.npy'))
             
-            self.dv2_l = np.zeros((self.nxy,self.nxy,self.nfreq))
-            self.dx2_l = np.zeros((self.nxy,self.nxy,self.nfreq)) # init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
-            self.dxt2_l = np.zeros((self.nxy,self.nxy,self.nfreq))
+            self.dv2_l = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
+            self.dx2_l = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F') # init_dirty_wiener(self.n, self.psf, self.psfadj, self.mu_wiener)
+            self.dxt2_l = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F')
             self.du2_l = {}
             for freq in range(self.nfreq):
-                self.du2_l[freq] = self.Decomp(np.zeros((self.nxy,self.nxy)) , self.nbw_decomp)
+                self.du2_l[freq] = self.Decomp(np.zeros((self.nxy,self.nxy), dtype=np.float,order='F') , self.nbw_decomp)
 
             if self.init:
                 self.dx2_l = np.load(self.fol_init+'/dx2_l.npy')
@@ -515,7 +523,7 @@ class EasyMuffinSURE(EasyMuffin):
         # update v
         Jvtt = self.Jv + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.Jxt - self.Jx, axis=2, norm='ortho')
         self.Jv = rect(self.vtt)*Jvtt
-        self.Jx = self.Jxt.copy()
+        self.Jx = self.Jxt.copy(order='F')
         # wmsesure
         self.wmselistsure.append(self.wmsesure())
         # psnrsure
@@ -570,11 +578,20 @@ class EasyMuffinSURE(EasyMuffin):
             for b in self.nbw_decomp:
                 self.utt2[freq][b] = self.u2[freq][b] + self.sigma*self.mu_s*self.alpha_s[freq]*tmp_spat_scal[b]
                 self.u2[freq][b] = sat(self.utt2[freq][b])
+#            if freq==0:
+#                print('wstu1:',np.linalg.norm(wstu))
+#                print('xtt:',np.linalg.norm(self.xtt2[:,:,freq] ))
+#                print('xt:',np.linalg.norm(self.xt2[:,:,freq] ))
+#                print('')
+                
         # update v
         self.vtt2 = self.v2 + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.xt2 - self.x2, axis=2, norm='ortho')
         self.v2 = sat(self.vtt2)
-        self.x2 = self.xt2.copy()       
+        self.x2 = self.xt2.copy(order='F')       
         self.wmselistsurefdmc.append(self.wmsesurefdmc())
+        
+#        print('x:',np.linalg.norm(self.x2 ))
+#        print('xt:',np.linalg.norm(self.xt2 ))
 
     def dx_mu(self):
         
@@ -586,27 +603,34 @@ class EasyMuffinSURE(EasyMuffin):
         for freq in range(self.nfreq):
 
             # compute iuwt adjoint
-            wstu = self.Recomp(self.u[freq], self.nbw_recomp) + self.mu_s*self.alpha_s[freq]*self.Recomp(self.du_s[freq], self.nbw_recomp)
-            
+            wstu = self.alpha_s[freq]*self.Recomp(self.u[freq], self.nbw_recomp) + self.mu_s*self.alpha_s[freq]*self.Recomp(self.du_s[freq], self.nbw_recomp)
             # compute xt
             dxtt_s = self.dx_s[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + self.mu_l*self.alpha_l*dt_s[:,:,freq])
             self.dxt_s[:,:,freq] = heavy(self.xtt[:,:,freq] )*dxtt_s
 
             # update u
-            tmp_spat_scal = self.Decomp((2*self.xt[:,:,freq] - self.x[:,:,freq]) + self.mu_s*self.alpha_s[freq]*(2*self.dxt_s[:,:,freq] - self.dx_s[:,:,freq]), self.nbw_decomp)
+            tmp_spat_scal = self.Decomp(self.alpha_s[freq]*(2*self.xt[:,:,freq] - self.x[:,:,freq]) + self.mu_s*self.alpha_s[freq]*(2*self.dxt_s[:,:,freq] - self.dx_s[:,:,freq]), self.nbw_decomp)
 
 
             for b in self.nbw_decomp:
                 dutt_s = self.du_s[freq][b] + self.sigma*tmp_spat_scal[b]
                 self.du_s[freq][b] = rect(self.utt[freq][b])*dutt_s
+                
+#            if freq==0:
+#                print('wstu1:',np.linalg.norm(wstu))
+#                print('xtt:',np.linalg.norm(self.xtt[:,:,freq] ))
+#                print('xt:',np.linalg.norm(self.dxt_s[:,:,freq] ))
+#                print('')
 
         # update v
         dvtt_s = self.dv_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.dxt_s - self.dx_s, axis=2, norm='ortho')
         self.dv_s = rect(self.vtt)*dvtt_s
 
-        self.dx_s = self.dxt_s.copy()
+        self.dx_s = self.dxt_s.copy(order='F')
+        
+#        print('x:',np.linalg.norm(self.dx_s ))
 
-        dt_l = idct(self.dv_l*self.mu_l*self.alpha_l[...,None] + self.v, axis=2, norm='ortho')
+        dt_l = idct(self.dv_l*self.mu_l*self.alpha_l[...,None] + self.v*self.alpha_l[...,None], axis=2, norm='ortho')
 
         # compute gradient
         tmp = myifftshift( self.ifft2( self.fft2(self.dx_l) *self.hth_fft ) )
@@ -628,10 +652,10 @@ class EasyMuffinSURE(EasyMuffin):
                 self.du_l[freq][b] = rect(self.utt[freq][b])*dutt_l
 
         # update v
-        dvtt_l = self.dv_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.dxt_l - self.dx_l, axis=2, norm='ortho') + self.sigma*dct(2*self.xt - self.x, axis=2, norm='ortho')
+        dvtt_l = self.dv_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.dxt_l - self.dx_l, axis=2, norm='ortho') + self.sigma*self.alpha_l[...,None]*dct(2*self.xt - self.x, axis=2, norm='ortho')
         self.dv_l = rect(self.vtt)*dvtt_l
 
-        self.dx_l = self.dxt_l.copy()
+        self.dx_l = self.dxt_l.copy(order='F')
 
         
     def dx2_mu(self):
@@ -643,37 +667,47 @@ class EasyMuffinSURE(EasyMuffin):
         for freq in range(self.nfreq):
 
             # compute iuwt adjoint
-            wstu = self.Recomp(self.u2[freq], self.nbw_recomp) + self.mu_s*self.alpha_s[freq]*self.Recomp(self.du2_s[freq], self.nbw_recomp)
+            wstu = self.alpha_s[freq]*self.Recomp(self.u2[freq], self.nbw_recomp) + self.mu_s*self.alpha_s[freq]*self.Recomp(self.du2_s[freq], self.nbw_recomp)
 
             # compute xt
             dxtt_s = self.dx2_s[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + self.mu_l*self.alpha_l*dt_s[:,:,freq])
             self.dxt2_s[:,:,freq] = heavy(self.xtt2[:,:,freq] )*dxtt_s
 
             # update u
-            tmp_spat_scal = self.Decomp((2*self.xt2[:,:,freq] - self.x2[:,:,freq]) + self.mu_s*self.alpha_s[freq]*(2*self.dxt2_s[:,:,freq] - self.dx2_s[:,:,freq]), self.nbw_decomp)
-
+            tmp_spat_scal = self.Decomp(self.alpha_s[freq]*(2*self.xt2[:,:,freq] - self.x2[:,:,freq]) + self.mu_s*self.alpha_s[freq]*(2*self.dxt2_s[:,:,freq] - self.dx2_s[:,:,freq]), self.nbw_decomp)
 
             for b in self.nbw_decomp:
                 dutt_s = self.du2_s[freq][b] + self.sigma*tmp_spat_scal[b]
                 self.du2_s[freq][b] = rect(self.utt2[freq][b])*dutt_s
+                
+#            if freq==0:
+#                print('wstu1:',np.linalg.norm(wstu))
+#                print('xtt:',np.linalg.norm(self.xtt2[:,:,freq] ))
+#                print('xt:',np.linalg.norm(self.dxt2_s[:,:,freq] ))
+#                print('')
 
         # update v
         dvtt2_s = self.dv2_s + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.dxt2_s - self.dx2_s, axis=2, norm='ortho')
         self.dv2_s = rect(self.vtt2)*dvtt2_s
 
-        self.dx2_s = self.dxt2_s.copy()
+        self.dx2_s = self.dxt2_s.copy(order='F')
+        
+#        print('x:',np.linalg.norm(self.dx2_s ))
 
-
-        dt_l = idct(self.dv2_l*self.mu_l*self.alpha_l[...,None] + self.v2, axis=2, norm='ortho')
+        dt_l = np.asfortranarray(idct(self.dv2_l*self.mu_l*self.alpha_l[...,None] + self.v2*self.alpha_l[...,None], axis=2, norm='ortho'))
+#        print('1:',np.linalg.norm(self.dv2_l))
+#        print('2:',np.linalg.norm(self.v2))
+#        print('3:',np.linalg.norm(dt_l))
 
         # compute gradient
         tmp = myifftshift( self.ifft2( self.fft2(self.dx2_l) *self.hth_fft ) )
         Delta_freq = tmp.real #- self.fty
+        
         for freq in range(self.nfreq):
 
             # compute iuwt adjoint
             wstu = self.mu_s*self.alpha_s[freq]*self.Recomp(self.du2_l[freq], self.nbw_recomp)
-
+        
             # compute xt
             dxtt_l = self.dx2_l[:,:,freq] - self.tau*(Delta_freq[:,:,freq] + wstu + dt_l[:,:,freq])
             self.dxt2_l[:,:,freq] = heavy(self.xtt2[:,:,freq] )*dxtt_l
@@ -684,12 +718,16 @@ class EasyMuffinSURE(EasyMuffin):
             for b in self.nbw_decomp:
                 dutt_l = self.du2_l[freq][b] + self.sigma*tmp_spat_scal[b]
                 self.du2_l[freq][b] = rect(self.utt2[freq][b])*dutt_l
+                
+#            if freq==0:
+#                print('4:',np.linalg.norm(dt_l[:,:,freq]))
+#                print('')
 
         # update v
-        dvtt2_l = self.dv2_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.dxt2_l - self.dx2_l, axis=2, norm='ortho') + self.sigma*dct(2*self.xt2 - self.x, axis=2, norm='ortho')
+        dvtt2_l = self.dv2_l + self.sigma*self.mu_l*self.alpha_l[...,None]*dct(2*self.dxt2_l - self.dx2_l, axis=2, norm='ortho') + self.sigma*self.alpha_l[...,None]*dct(2*self.xt2 - self.x2, axis=2, norm='ortho')
         self.dv2_l = rect(self.vtt2)*dvtt2_l
 
-        self.dx2_l = self.dxt2_l.copy()
+        self.dx2_l = self.dxt2_l.copy(order='F')
         
         
     def sugarfdmc(self):
