@@ -250,6 +250,8 @@ class EasyMuffin():
             if self.dirtyinit:
                 self.x = np.asfortranarray(self.dirtyinit)
             elif self.init:
+                #print('')
+                #print('process ',self.comm.Get_rank(),'loading x_init from ',self.fol_init,' ... ')
                 self.x = np.load(self.fol_init+'/x0_tst.npy') 
                 self.x = np.asfortranarray(self.x[:,:,self.nf2[self.idw]:self.nf2[self.idw]+self.nfreq])
             else:
@@ -991,7 +993,7 @@ class EasyMuffinSURE(EasyMuffin):
         else:
             self.dx_s = self.dxt_s.copy(order='F')
             
-        self.comm.Gatherv(self.dx_s,[self.dx_sf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+#        self.comm.Gatherv(self.dx_s,[self.dx_sf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
 #        if self.master:
 #            print('x:',np.linalg.norm(self.dx_sf ))
@@ -1030,7 +1032,7 @@ class EasyMuffinSURE(EasyMuffin):
         else:
             self.dx_l = self.dxt_l.copy(order='F')
             
-        #self.comm.Gatherv(self.dx_l,[self.dx_lf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+#        self.comm.Gatherv(self.dx_l,[self.dx_lf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
     def dx2_mu(self):
         if self.master:
@@ -1112,50 +1114,42 @@ class EasyMuffinSURE(EasyMuffin):
         else:
             self.dx2_l = self.dxt2_l.copy(order='F')
             
-        self.comm.Gatherv(self.dx2_l,[self.dx2_lf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+#        self.comm.Gatherv(self.dx2_l,[self.dx2_lf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
         
 
     def sugarfdmc(self):
-#        if self.master:
-#            res1 = 0
-#            res2 = 0
-#        else:
-#            tmp = 2*self.conv(self.psf,self.dx_s)*(self.conv(self.psf,self.x)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_s-self.dx_s)*self.DeltaSURE/self.eps
-#            res1 = np.sum(tmp)/(self.nxy*self.nxy)
-#            tmp = 2*self.conv(self.psf,self.dx_l)*(self.conv(self.psf,self.x)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_l-self.dx_l)*self.DeltaSURE/self.eps
-#            res2 = np.sum(tmp)/(self.nxy*self.nxy)
-#            
-#            res1 = np.sum(2*self.conv(self.psf,self.dx_s)*(self.conv(self.psf,self.x)-self.dirty)) 
-#            res2 = np.sum(2*self.var*self.conv(self.psf,self.dx2_s-self.dx_s))
-#            
-#        
-#        res1_lst = self.comm.gather(res1)
-#        res2_lst = self.comm.gather(res2)
-#        
-#        if self.master:
-#            res1 = sum(res1_lst)#/self.nfreq
-#            res2 = sum(res2_lst)#/self.nfreq
-#            
-#            print('n1:',res1)
-#            print('n2:',res2)
-        
-            
-        self.comm.Gatherv(self.dx_s,[self.dx_sf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
-        self.comm.Gatherv(self.x,[self.xf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
-        self.comm.Gatherv(self.dx2_s,[self.dx2_sf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
-        self.comm.Gatherv(self.dx_l,[self.dx_lf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
-        self.comm.Gatherv(self.dx2_l,[self.dx2_lf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
-        
         if self.master:
-            tmp = 2*self.conv(self.psf,self.dx_sf)*(self.conv(self.psf,self.xf)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_sf-self.dx_sf)*self.DeltaSURE/self.eps
-            res1 = np.sum(tmp)/(self.nxy*self.nxy*self.nfreq)
-
-            tmp = 2*self.conv(self.psf,self.dx_lf)*(self.conv(self.psf,self.xf)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_lf-self.dx_lf)*self.DeltaSURE/self.eps
-            res2 = np.sum(tmp)/(self.nxy*self.nxy*self.nfreq)
-        
-        else:
             res1 = 0
             res2 = 0
+        else:
+            tmp = 2*self.conv(self.psf,self.dx_s)*(self.conv(self.psf,self.x)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_s-self.dx_s)*self.DeltaSURE/self.eps
+            res1 = np.sum(tmp)/(self.nxy*self.nxy)
+            tmp = 2*self.conv(self.psf,self.dx_l)*(self.conv(self.psf,self.x)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_l-self.dx_l)*self.DeltaSURE/self.eps
+            res2 = np.sum(tmp)/(self.nxy*self.nxy)
+        
+        res1_lst = self.comm.gather(res1)
+        res2_lst = self.comm.gather(res2)
+        
+        if self.master:
+            res1 = sum(res1_lst)/self.nfreq
+            res2 = sum(res2_lst)/self.nfreq
+            
+#        self.comm.Gatherv(self.dx_s,[self.dx_sf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+#        self.comm.Gatherv(self.x,[self.xf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+#        self.comm.Gatherv(self.dx2_s,[self.dx2_sf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+#        self.comm.Gatherv(self.dx_l,[self.dx_lf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+#        self.comm.Gatherv(self.dx2_l,[self.dx2_lf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
+#        
+#        if self.master:
+#            tmp = 2*self.conv(self.psf,self.dx_sf)*(self.conv(self.psf,self.xf)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_sf-self.dx_sf)*self.DeltaSURE/self.eps
+#            res1 = np.sum(tmp)/(self.nxy*self.nxy*self.nfreq)
+#
+#            tmp = 2*self.conv(self.psf,self.dx_lf)*(self.conv(self.psf,self.xf)-self.dirty) + 2*self.var*self.conv(self.psf,self.dx2_lf-self.dx_lf)*self.DeltaSURE/self.eps
+#            res2 = np.sum(tmp)/(self.nxy*self.nxy*self.nfreq)
+#        
+#        else:
+#            res1 = 0
+#            res2 = 0
             
         res1 = self.comm.bcast(res1,root=0) # root bcasts res1 to everyone else
         res2 = self.comm.bcast(res2,root=0) # root bcasts res2 to everyone else
