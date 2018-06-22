@@ -25,9 +25,10 @@ import deconv3d as dcv
 parser = argparse.ArgumentParser(description='Awesome Argument Parser')
 parser.add_argument('-fol','--folder',help='Path to data folder')
 parser.add_argument('-nam','--file_in',help='Data Prefix')
-parser.add_argument('-sav','--save',default=0,help='Save Output Variables')
+parser.add_argument('-sav','--save',default=0,type=int,help='Save Output Variables')
 parser.add_argument('-init','--init',default=0,type=int,help='Init with Saved Variables')
 parser.add_argument('-fol_init','--folder_init',help='Path to init data folder')
+parser.add_argument('-N','--niter',default=3,type=int,help='Number of iterations')
 
 args = parser.parse_args()
 
@@ -36,7 +37,7 @@ file_in = args.file_in
 save = args.save
 init = args.init
 folder_init = args.folder_init
-
+N = args.niter
 # ==============================================================================
 # OPEN PSF AND DIRTY CUBE - SKY to check results
 # ==============================================================================
@@ -71,10 +72,10 @@ rank = comm.Get_rank()
 
 nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 nb=(7,0)
-nitermax = 6
+nitermax = N
 mu_s = 1
 mu_l = 1
-fftw = 1
+fftw = 0
 
 #if rank==0:
 #    print('')
@@ -109,8 +110,11 @@ fftw = 1
 tm.tic()
 EM= dcvMpi.EasyMuffinSURE(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,step_mu=[5e-1,5e-1],fftw=fftw,init=init,
                fol_init=folder_init,save=save)
-#EM.loop(nitermax)
 EM.loop_fdmc(nitermax)
+#EM= dcvMpi.EasyMuffin(mu_s=mu_s, mu_l = mu_l, nb=nb,truesky=sky,psf=cube_psf,dirty=cube_dirty,var=var,fftw=fftw,init=init,
+#               fol_init=folder_init,save=save)
+#EM.loop(nitermax)
+
 
 #%% ===========================================================================
 # Validating results  
@@ -166,7 +170,7 @@ if rank == 0: # I look at the results in EM created by master node even though o
     print('')    
 
     print('')
-    print('EM.dx2_s: ',np.linalg.norm(EM.dx2_lf))
+    print('EM.dx2_l: ',np.linalg.norm(EM.dx2_lf))
     print('')    
 
     print('')
