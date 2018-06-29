@@ -51,7 +51,8 @@ class EasyMuffin():
                  fftw = 0,
                  init=0,
                  fol_init=0,
-                 save=0):
+                 save=0,
+                 odir='.'):
         
         self.comm = comm
         self.nbw = self.comm.Get_size() - 1
@@ -96,6 +97,7 @@ class EasyMuffin():
         self.nf2[0:0] = [0]
         
         self.save = save
+        self.odir = odir
 
         if self.master:
             print('')
@@ -586,10 +588,16 @@ class EasyMuffin():
                 self.uf[i] = udicti.copy()
                 
         if self.master:
-            np.save('x0_tst.npy',self.xf)
-            np.save('u.npy',self.uf)
-            np.save('v.npy',self.v)
+            np.save(self.odir+'/x0_tst.npy',self.xf)
+            np.save(self.odir+'/u.npy',self.uf)
+            np.save(self.odir+'/v.npy',self.v)
+            np.save(self.odir+'/cost.npy',self.costlist)
+            
+            if self.truesky is not None:
+                np.save(self.odir+'/wmse_tst.npy',self.wmselist)
+                np.save(self.odir+'/snr_tst.npy',self.snrlist)
                 
+        
 
 class EasyMuffinSURE(EasyMuffin):
 
@@ -612,7 +620,8 @@ class EasyMuffinSURE(EasyMuffin):
                  fftw = 0,
                  init=0,
                  fol_init=0,
-                 save = 0):
+                 save = 0,
+                 odir='.'):
         
         self.step_mu = step_mu
 
@@ -634,7 +643,8 @@ class EasyMuffinSURE(EasyMuffin):
                  fftw,
                  init,
                  fol_init,
-                 save)
+                 save,
+                 odir)
 
 
     def init_algo(self):
@@ -829,6 +839,24 @@ class EasyMuffinSURE(EasyMuffin):
                 self.t2 = np.zeros((self.nxy,self.nxy,self.nfreq), dtype=np.float,order='F') 
             
             if self.init:
+                
+                self.step_mu = np.load(self.fol_init+'/step_mu.npy').tolist()
+                
+                if self.master:
+                    tmp1 = np.load(self.fol_init+'/mu_s_tst.npy')
+                    tmp2 = np.load(self.fol_init+'/mu_l_tst.npy')
+                    tmp1 = tmp1[-1]
+                    tmp2 = tmp2[-1]
+                else:
+                    tmp1 = 0
+                    tmp2 = 0
+                    
+                self.mu_s = self.comm.bcast(tmp1,root=0)
+                self.mu_l = self.comm.bcast(tmp2,root=0)    
+                
+                self.mu_slist[-1]=self.mu_s
+                self.mu_llist[-1]=self.mu_l
+            
                 if self.master:                     
                     # load v at master node 
                     self.v2 = np.load(self.fol_init+'/v2.npy')
@@ -892,6 +920,7 @@ class EasyMuffinSURE(EasyMuffin):
                             i+=1
           
                 self.comm.Scatterv([self.uf_,self.sendcountsu,self.displacementsu,MPI.DOUBLE],self.u_,root=0)
+            
             
                 if not self.master:
                     udicti = {}
@@ -1517,24 +1546,38 @@ class EasyMuffinSURE(EasyMuffin):
                 self.du2_lf[i] = udicti.copy()
 
         if self.master:
-            np.save('x2.npy',self.x2f)
-            np.save('u2.npy',self.u2f)
-            np.save('v2.npy',self.v2)
+            np.save(self.odir+'/x2.npy',self.x2f)
+            np.save(self.odir+'/u2.npy',self.u2f)
+            np.save(self.odir+'/v2.npy',self.v2)
             
-            np.save('dx_s.npy',self.dx_sf)
-            np.save('dx_l.npy',self.dx_lf)
-            np.save('dx2_s.npy',self.dx2_sf)
-            np.save('dx2_l.npy',self.dx2_lf)
+            np.save(self.odir+'/dx_s.npy',self.dx_sf)
+            np.save(self.odir+'/dx_l.npy',self.dx_lf)
+            np.save(self.odir+'/dx2_s.npy',self.dx2_sf)
+            np.save(self.odir+'/dx2_l.npy',self.dx2_lf)
             
-            np.save('dv_s.npy',self.dv_s)
-            np.save('dv_l.npy',self.dv_l)
-            np.save('dv2_s.npy',self.dv2_s)
-            np.save('dv2_l.npy',self.dv2_l)
+            np.save(self.odir+'/dv_s.npy',self.dv_s)
+            np.save(self.odir+'/dv_l.npy',self.dv_l)
+            np.save(self.odir+'/dv2_s.npy',self.dv2_s)
+            np.save(self.odir+'/dv2_l.npy',self.dv2_l)
             
-            np.save('du_s.npy',self.du_sf)
-            np.save('du_l.npy',self.du_lf)
-            np.save('du2_s.npy',self.du2_sf)
-            np.save('du2_l.npy',self.du2_lf)
+            np.save(self.odir+'/du_s.npy',self.du_sf)
+            np.save(self.odir+'/du_l.npy',self.du_lf)
+            np.save(self.odir+'/du2_s.npy',self.du2_sf)
+            np.save(self.odir+'/du2_l.npy',self.du2_lf)
+            
+            np.save(self.odir+'/wmses_tst.npy',self.wmselistsure)
+            np.save(self.odir+'/wmsesfdmc_tst.npy',self.wmselistsurefdmc)
+            np.save(self.odir+'/mu_s_tst.npy',self.mu_slist)
+            np.save(self.odir+'/mu_l_tst.npy',self.mu_llist)
+            np.save(self.odir+'/dxs.npy',self.dx_sf)
+            np.save(self.odir+'/dxl.npy',self.dx_lf)
+            np.save(self.odir+'/sugar0.npy',self.sugarfdmclist[0])
+            np.save(self.odir+'/sugar1.npy',self.sugarfdmclist[1])
+            np.save(self.odir+'/cost.npy',self.costlist)
+            np.save(self.odir+'/psnrsure.npy',self.psnrlistsure)
+            
+            np.save(self.odir+'/step_mu.npy',self.step_mu)
+                
 
     def graddes_mu(self,step=[1e-3,1e-3]):
         self.mu_s = np.maximum(self.mu_s - step[0]*self.sugarfdmclist[0][-1],0)

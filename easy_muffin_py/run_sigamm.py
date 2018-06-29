@@ -71,7 +71,7 @@ sure = args.sure
 save = args.save
 init = args.init
 folder_init = args.folder_init
-
+odir = args.output_dir
 folder = args.folder
 
 # =============================================================================
@@ -119,7 +119,7 @@ nb=('db1','db2','db3','db4','db5','db6','db7','db8')
 
 if sure:
     flavor = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'step_mu':step_mu,'pixelweighton':pxl_w,'bandweighton':bnd_w,
-              'init':init,'fol_init':folder_init,'save':save}
+              'init':init,'fol_init':folder_init,'save':save,'odir':odir}
     tic()
     EM= dcvMpi.EasyMuffinSURE(comm,**flavor)
     if master:
@@ -128,7 +128,7 @@ if sure:
     EM.loop_fdmc(nitermax)
 else:
     flavor = {'mu_s':mu_s,'mu_l':mu_l,'mu_wiener':mu_wiener,'nb':nb,'truesky':sky,'psf':cube_psf,'dirty':cube_dirty,'var':var,'pixelweighton':pxl_w,'bandweighton':bnd_w,
-              'init':init,'fol_init':folder_init,'save':save}
+              'init':init,'fol_init':folder_init,'save':save,'odir':odir}
     tic()
     EM= dcvMpi.EasyMuffin(comm,**flavor)
     if master:
