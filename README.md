@@ -22,12 +22,20 @@ python3 plot_figures_Run_tst_mpi.py -res_fol /home/rammanouil/Bureau/easy_muffin
 ```
 
 ## Testing MUFFIN on a cluster using SLURM  
-- [run_tst_mpi_sigamm.py](easy_muffin_py/run_tst_mpi_sigamm.py): adapted version of [run_tst_mpi.py](easy_muffin_py/run_tst_mpi.py) to run on a cluster using SLURM
-- [run_batch_test.slurm](easy_muffin_py/run_batch_test.slurm): sets the number of nodes, wall time for running [run_test_mpi_sigamm.py](easy_muffin_py/run_test_mpi_sigamm.py) on a cluster using SLURM 
+- [run_sigamm.py](easy_muffin_py/run_sigamm.py): adapted version of [run_tst_mpi.py](easy_muffin_py/run_tst_mpi.py) to run on a cluster using SLURM
+- [run_sigamm.slurm](easy_muffin_py/run_sigamm.slurm): sets the number of nodes, and all algorithm parameters, and wall time for running [run_sigamm.py](easy_muffin_py/run_sigamm.py) on a cluster using SLURM 
 ```
-sbatch run_batch_test.slurm 
+ ssh licallo.oca.eu
+ cd ../../SCRATCH/rammanouil/easy_muffin/easy_muffin_py/
+ arguments=" -s 1 -L 256 -N 5000 -mu_s 0.005 -mu_l 3 -mu_w 10 -stp_s 0 -stp_l 0 -pxl_w 1 -bnd_w 1 -data M31_skyline220db -fol data/data_david -sav 1 -init 0 -fol_init output_sigamm/7844989"; export arguments
+ sbatch run_sigamm.slurm
+ squeue -u rammanouil
 ```
-
+- example with dependency 
+```
+ arguments=" -s 1 -L 256 -N 5000 -mu_s 0.005 -mu_l 3 -mu_w 10 -stp_s 0 -stp_l 0 -pxl_w 1 -bnd_w 1 -data M31_skyline220db -fol data/data_david -sav 1 -init 1 -fol_init output_sigamm/7844989"; export arguments
+ sbatch --dependency=afterok:7645246 run_sigamm.slurm
+```
 ## MUFFIN algorithm & related functions 
 - [super_nice_spectra_deconv.py](easy_muffin_py/super_nice_spectra_deconv.py) : original code with the `muffin` iterative algorithms
 - [deconv3d.py](easy_muffin_py/deconv3d.py)  : code for the `muffin` iterative algorithm written using a class framework
