@@ -219,8 +219,12 @@ class EasyMuffin():
                 self.alpha_l = 1/(np.sum(tmp**2,2)+1e-1) # image
                 self.alpha_l = convolve(self.alpha_l,np.ones((3,3)),'max')
                 self.alpha_l = self.alpha_l/self.alpha_l.max()
+                print('')
+                print('alpha_l.max',self.alpha_l.max())
             else:
                 self.alpha_l = np.ones((self.nxy,self.nxy))
+                
+            self.alpha_s_max = 0
             
         else:
             
@@ -309,8 +313,10 @@ class EasyMuffin():
             # Compute spatial and spectral scaling parameters
             if self.bandweighton ==1:
                 self.alpha_s = 1/(np.sum(np.sum(self.x**2,0),0)+1e-1) # col. vector
+                self.alpha_s_max = np.max(self.alpha_s)
             else:
                 self.alpha_s = np.ones(self.nfreq)
+                self.alpha_s_max = 1
                 
             self.alpha_l = np.ones((self.nxy,self.nxy))
 
@@ -325,10 +331,21 @@ class EasyMuffin():
 #            # empty uf recv buffer at each worker node
 #            self.uf_ = np.zeros((0))
                 
-                
         self.alpha_l = self.comm.bcast(self.alpha_l,root=0) 
         self.tau = self.comm.bcast(self.tau,root=0) # root bcasts tau to everyone else 
         self.nitertot = 0
+        
+        alpha_s_max_list = []
+        alpha_s_max_list = self.comm.gather(self.alpha_s_max)
+        
+        if self.master:
+            self.alpha_s_max = np.max(alpha_s_max_list)
+        
+        self.alpha_s_max = self.comm.bcast(self.alpha_s_max,root=0)
+        
+        if not self.master:
+            # normalisation 
+            self.alpha_s = self.alpha_s/self.alpha_s_max
         
         self.costlist = []
         self.comm.Gatherv(self.x,[self.xf,self.sendcounts,self.displacements,MPI.DOUBLE],root=0)
