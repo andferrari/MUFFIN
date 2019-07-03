@@ -1,6 +1,9 @@
-A parallel \& automatically tuned algorithm for multispectral image deconvolution. R. Ammanouil, A. Ferrari, D. Mary, C. Ferrari and F. Loi. MNRAS, 2019.
+Code for:
+>A parallel \& automatically tuned algorithm for multispectral image deconvolution. <br />
+>R. Ammanouil, A. Ferrari, D. Mary, C. Ferrari and F. Loi. <br />
+>Submitted to MNRAS, 2019.<br />
 
-#### Verification Demos for centralized and distributed versions of MUFFIN
+#### Verification demos for centralized and distributed versions of MUFFIN
 
 - [`example_class.py`](muffin/example_class.py): executes centralized version of  `muffin` takes as input the path to the data and the prefix of the data. The data is supposed to be named `data/prefix_dirty prefix_sky prefix_psf`. 
 ``` bash
@@ -12,7 +15,7 @@ python3 example_class.py -fol data -nam m31_3d_conv_10db
 mpirun --np 6 python3 example_class_mpi_sure.py -fol data -nam m31_3d_conv_10db
 ```
 
-#### Running Tests of MUFFIN on a node 
+#### Running tests of MUFFIN on a single node 
 
 - [`run_tst_mpi.py`](muffin/run_tst_mpi.py): executes & saves results of the distributed `muffin`. You have to set the algorithm parameters from the terminal. 
 ``` bash
