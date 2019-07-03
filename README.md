@@ -1,6 +1,3 @@
-#### MUFFIN: MUlti Frequency image reconstruction For radio INterferometry
-
-Code for:
 A parallel \& automatically tuned algorithm for multispectral image deconvolution. R. Ammanouil, A. Ferrari, D. Mary, C. Ferrari and F. Loi. MNRAS, 2019.
 
 #### Verification Demos for centralized and distributed versions of MUFFIN
